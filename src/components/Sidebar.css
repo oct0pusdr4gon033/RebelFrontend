@@ -1,0 +1,516 @@
+/* ════════════════════════════════════════════════════
+   Sidebar.css — Componente Reutilizable de Barra Lateral
+   Paleta: Blanco + Azul #4F9AFF y acentos por rol
+   Totalmente Responsive con Drawer Móvil y Colapso Desktop
+   ════════════════════════════════════════════════════ */
+
+/* ── Backdrop Móvil (Overlay Oscuro) ─────────────── */
+.sb-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 998;
+  animation: sbFadeIn 0.2s ease-out forwards;
+}
+
+@keyframes sbFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── Contenedor Principal del Sidebar ────────────── */
+.sb-container {
+  width: 270px;
+  flex-shrink: 0;
+  background: #ffffff;
+  border-right: 1.5px solid #e0ecff;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 0 16px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  box-shadow: 2px 0 16px rgba(79, 154, 255, 0.08);
+  z-index: 20;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+}
+
+/* ── Marca / Header del Sidebar ──────────────────── */
+.sb-brand-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 16px;
+  border-bottom: 1.5px solid #e0ecff;
+  margin-bottom: 12px;
+}
+
+.sb-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
+  flex: 1;
+  min-width: 0;
+}
+
+.sb-brand__logo-wrap {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 2px solid rgba(79, 154, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(79, 154, 255, 0.15);
+  background: #f8faff;
+}
+
+.sb-brand__logo-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sb-brand__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sb-brand__text strong {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0a2540;
+  letter-spacing: -0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sb-brand__text span {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Botón de cierre para móvil */
+.sb-mobile-close-btn {
+  display: none; /* Oculto en desktop */
+  background: #f1f5f9;
+  border: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  color: #475569;
+}
+
+.sb-mobile-close-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* ── Navegación ───────────────────────────────────── */
+.sb-nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0 12px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sb-nav::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sb-nav::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 4px;
+}
+
+.sb-nav::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
+
+.sb-nav__section {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  padding: 12px 10px 4px;
+}
+
+.sb-nav__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  color: #475569;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  border: 1px solid transparent;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.sb-nav__item:hover {
+  background: #f0f6ff;
+  color: #0a2540;
+  transform: translateX(3px);
+}
+
+.sb-nav__item--active {
+  font-weight: 700 !important;
+}
+
+.sb-nav__item-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.sb-nav__item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.sb-nav__item-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sb-nav__item-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #fee2e2;
+  color: #dc2626;
+  flex-shrink: 0;
+}
+
+/* ── Sub-opciones en el Sidebar (Estilo limpio con hover) ── */
+.sb-sub-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 3px 0 6px 18px;
+  padding-left: 10px;
+  border-left: 2px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.sb-sub-list--collapsed {
+  margin: 3px 0 6px;
+  padding-left: 0;
+  border-left: none;
+  align-items: center;
+}
+
+.sb-sub-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  box-sizing: border-box;
+  transition: all 0.18s ease;
+}
+
+.sb-sub-item:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  transform: translateX(4px);
+}
+
+.sb-sub-item--active {
+  font-weight: 700 !important;
+}
+
+.sb-sub-item__left {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.sb-sub-item__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.sb-sub-item__label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12.5px;
+}
+
+.sb-sub-item__badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1.5px 6px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+
+
+/* ── Toggle de Colapso en Desktop ─────────────────── */
+.sb-collapse-toggle-wrapper {
+  padding: 4px 12px;
+  margin-top: auto;
+}
+
+.sb-collapse-toggle-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sb-collapse-toggle-btn:hover {
+  background: #f1f5f9;
+  color: #0a2540;
+  border-color: #cbd5e1;
+}
+
+/* ── Pie de usuario / Acceso a Mi Cuenta ──────────── */
+.sb-user-card {
+  margin: 10px 12px 0;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: #f8faff;
+  border: 1.5px solid #dbeafe;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.sb-user-card:hover {
+  border-color: #93c5fd;
+  box-shadow: 0 4px 14px rgba(79, 154, 255, 0.12);
+}
+
+.sb-user-card__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  text-align: left;
+  font-family: inherit;
+}
+
+.sb-user-card__avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.sb-user-card__avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(79, 154, 255, 0.25);
+}
+
+.sb-user-card__online-dot {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  background: #10b981;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+}
+
+.sb-user-card__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.sb-user-card__name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0a2540;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.sb-user-card__role {
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.sb-user-card__logout-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.sb-user-card__logout-btn:hover {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+/* ── Modo Colapsado en Desktop (Icon-only) ────────── */
+.sb-container--collapsed {
+  width: 78px;
+  padding: 16px 0;
+}
+
+.sb-container--collapsed .sb-brand-wrapper {
+  padding: 0 0 14px;
+  justify-content: center;
+}
+
+.sb-container--collapsed .sb-brand {
+  justify-content: center;
+}
+
+.sb-container--collapsed .sb-nav {
+  padding: 0 8px;
+}
+
+.sb-container--collapsed .sb-nav__item {
+  padding: 12px 0;
+  justify-content: center;
+}
+
+.sb-container--collapsed .sb-nav__item:hover {
+  transform: none;
+}
+
+.sb-container--collapsed .sb-user-card {
+  margin: 10px 8px 0;
+  padding: 8px;
+  justify-content: center;
+}
+
+.sb-container--collapsed .sb-collapse-toggle-btn {
+  justify-content: center;
+  padding: 8px 0;
+}
+
+/* ════════════════════════════════════════════════════
+   RESPONSIVIDAD MÓVIL Y TABLET (<= 1024px)
+   El Sidebar se transforma en un Drawer emergente suave
+   ════════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  .sb-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 290px;
+    max-width: 85vw;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 0 30px rgba(10, 37, 64, 0.22);
+    border-right: 1.5px solid #e0ecff;
+  }
+
+  /* Cuando el estado isOpen es true, el sidebar se desliza hacia la pantalla */
+  .sb-container.sb-container--mobile-open {
+    transform: translateX(0);
+  }
+
+  /* Mostrar botón de cerrar en móvil */
+  .sb-mobile-close-btn {
+    display: flex;
+  }
+
+  .sb-collapse-toggle-wrapper {
+    display: none; /* No aplica en modo drawer móvil */
+  }
+}

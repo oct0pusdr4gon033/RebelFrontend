@@ -1,0 +1,315 @@
+/* ═══════════════════════════════════════════════════
+   LoginPage.css — Blanco y Azul #4F9AFF
+   ═══════════════════════════════════════════════════ */
+
+/* ── Página / fondo ─────────────────────────────── */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  position: relative;
+  overflow: hidden;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+/* ── Orbes animadas ─────────────────────────────── */
+.login-bg {
+  display: none;
+}
+
+.login-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.4;
+  animation: orbFloat 8s ease-in-out infinite;
+}
+
+.login-orb--1 {
+  width: 520px;
+  height: 520px;
+  background: radial-gradient(circle, #4F9AFF 0%, transparent 70%);
+  top: -160px;
+  left: -120px;
+  animation-delay: 0s;
+}
+
+.login-orb--2 {
+  width: 380px;
+  height: 380px;
+  background: radial-gradient(circle, #1a73e8 0%, transparent 70%);
+  bottom: -80px;
+  right: -60px;
+  animation-delay: -3s;
+}
+
+.login-orb--3 {
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, #7bb8ff 0%, transparent 70%);
+  top: 50%;
+  left: 60%;
+  transform: translate(-50%, -50%);
+  animation-delay: -5s;
+}
+
+@keyframes orbFloat {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%       { transform: translateY(-30px) scale(1.05); }
+}
+
+/* ── Card principal ──────────────────────────────── */
+.login-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 460px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 28px;
+  padding: 52px 48px 36px;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.04),
+    0 20px 45px -10px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    padding: 36px 28px 24px;
+    border-radius: 22px;
+  }
+}
+
+/* ── Brand / Logo ────────────────────────────────── */
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.login-brand__icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(79, 154, 255, 0.3);
+  border: 2px solid rgba(79, 154, 255, 0.2);
+}
+
+.login-brand__icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.login-brand__title {
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: #0a2540;
+  margin: 0 0 2px;
+  letter-spacing: -0.5px;
+}
+
+.login-brand__subtitle {
+  font-size: 12px;
+  color: #4F9AFF;
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* ── Divisor ─────────────────────────────────────── */
+.login-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 0 -40px;
+}
+
+/* ── Formulario ──────────────────────────────────── */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.login-form__heading {
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #0a2540;
+  margin: 0 0 10px;
+  letter-spacing: -0.4px;
+}
+
+.login-form__desc {
+  font-size: 14px;
+  color: #64748b;
+  margin: -16px 0 4px;
+}
+
+/* ── Error ───────────────────────────────────────── */
+.login-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 12px;
+  color: #dc2626;
+  font-size: 13.5px;
+  font-weight: 500;
+  animation: slideDown 0.25s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Campo ───────────────────────────────────────── */
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.login-field__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  letter-spacing: 0.2px;
+}
+
+.login-field__wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.login-field__icon {
+  position: absolute;
+  left: 14px;
+  color: #94a3b8;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.login-field__input {
+  width: 100%;
+  padding: 15px 14px 15px 46px;
+  background: #f8faff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  color: #0a2540;
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  box-sizing: border-box;
+}
+
+.login-field__input::placeholder {
+  color: #b0bec5;
+}
+
+.login-field__input:focus {
+  border-color: #4F9AFF;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(79, 154, 255, 0.18);
+}
+
+.login-field__input--password {
+  padding-right: 48px;
+}
+
+.login-field__eye {
+  position: absolute;
+  right: 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.login-field__eye:hover {
+  color: #4F9AFF;
+}
+
+/* ── Botón submit ────────────────────────────────── */
+.login-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #4F9AFF 0%, #1a73e8 100%);
+  border: none;
+  border-radius: 14px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 4px 20px rgba(79, 154, 255, 0.4);
+  letter-spacing: 0.2px;
+}
+
+.login-btn:hover:not(:disabled) {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 28px rgba(79, 154, 255, 0.5);
+}
+
+.login-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.login-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* ── Spinner ─────────────────────────────────────── */
+.login-btn__spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255,255,255,0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Footer ──────────────────────────────────────── */
+.login-footer {
+  text-align: center;
+}
+
+.login-footer p {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+}
