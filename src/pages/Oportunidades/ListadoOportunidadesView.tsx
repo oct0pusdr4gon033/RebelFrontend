@@ -9,6 +9,7 @@ interface ListadoOportunidadesViewProps {
   roleAccent: string;
   onEdit: (op: Oportunidad) => void;
   onSubirEvidencia: (opId: string | number) => void;
+  onEstadoCambiado?: (op: Oportunidad) => void;
   getVencimientoBadge: (fechaIso: string) => VencimientoBadge | null;
 }
 
@@ -17,10 +18,11 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
   roleAccent,
   onEdit,
   onSubirEvidencia,
+  onEstadoCambiado,
   getVencimientoBadge,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'Todos' | 'En Licitación' | 'Cotizada' | 'Adjudicada'>('Todos');
+  const [statusFilter, setStatusFilter] = useState<'Todos' | 'En Licitación' | 'Cotizada' | 'Adjudicada' | 'Desestimada'>('Todos');
   const [selectedOpDetail, setSelectedOpDetail] = useState<Oportunidad | null>(null);
   const [detalleDrawerOp, setDetalleDrawerOp] = useState<Oportunidad | null>(null);
 
@@ -133,7 +135,7 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
           </div>
 
           <div className="reg-filter-pills">
-            {(['Todos', 'En Licitación', 'Cotizada', 'Adjudicada'] as const).map((st) => (
+            {(['Todos', 'En Licitación', 'Cotizada', 'Adjudicada', 'Desestimada'] as const).map((st) => (
               <button
                 key={st}
                 type="button"
@@ -363,6 +365,10 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
           onClose={() => setDetalleDrawerOp(null)}
           onEdit={(op) => { setDetalleDrawerOp(null); onEdit(op); }}
           onSubirEvidencia={(id) => { setDetalleDrawerOp(null); onSubirEvidencia(id); }}
+          onEstadoCambiado={(op) => {
+            setDetalleDrawerOp(op);
+            onEstadoCambiado?.(op);
+          }}
           getVencimientoBadge={getVencimientoBadge}
         />
       )}

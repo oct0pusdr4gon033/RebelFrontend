@@ -25,6 +25,12 @@ export const masterNavItems: NavItem[] = [
         path: '/master/registro-oportunidad?tab=registrar',
       },
       {
+        id: 'mis-oportunidades',
+        tabKey: 'mis-oportunidades',
+        label: 'Mis Oportunidades',
+        path: '/master/registro-oportunidad?tab=mis-oportunidades',
+      },
+      {
         id: 'listar',
         tabKey: 'listar',
         label: 'Listar',

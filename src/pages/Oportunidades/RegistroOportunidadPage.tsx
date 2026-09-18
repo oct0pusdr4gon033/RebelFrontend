@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleIcon } from '../../components/GoogleIcon';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -21,6 +21,7 @@ import type { OportunidadTab } from './OportunidadNavButtons';
 import { ListadoOportunidadesView } from './ListadoOportunidadesView';
 import { PodioComercialView } from './PodioComercialView';
 import { SubirEvidenciaView } from './SubirEvidenciaView';
+import { MisOportunidadesView } from './MisOportunidadesView';
 
 export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = ({
   roleAccent = '#06b6d4',
@@ -31,7 +32,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
   // Tab de navegación push button sincronizado con URL y Sidebar
   const tabParam = searchParams.get('tab');
   const activeTab: OportunidadTab =
-    tabParam === 'listar' || tabParam === 'podio' || tabParam === 'subir-evidencia'
+    tabParam === 'listar' || tabParam === 'podio' || tabParam === 'subir-evidencia' || tabParam === 'mis-oportunidades'
       ? tabParam
       : 'registrar';
 
@@ -133,6 +134,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
             estado: (op.estado as any) || 'En Licitación',
             creadoPor: op.creadoPorNombre || 'Ejecutiva',
             createdAt: new Date(op.fechaRegistro).toLocaleString('es-PE'),
+            fechaRegistro: op.fechaRegistro,
             updatedAt: op.fechaActualizacion ? new Date(op.fechaActualizacion).toLocaleString('es-PE') : undefined,
           }));
           setOportunidades(mapped);
@@ -148,6 +150,12 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
     localStorage.setItem('sales_rebel_oportunidades', JSON.stringify(oportunidades));
   }, [oportunidades]);
 
+  // Actualizar oportunidad cuando cambia su estado desde el detalle
+  const handleEstadoCambiado = useCallback((opActualizada: Oportunidad) => {
+    setOportunidades((prev) =>
+      prev.map((op) => (op.id === opActualizada.id ? opActualizada : op))
+    );
+  }, []);
   // Cerrar dropdowns al hacer clic afuera
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -1133,6 +1141,16 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
         </>
       )}
 
+      {/* ── VISTA 1.5: MIS OPORTUNIDADES (Pipeline personal de la ejecutiva) ── */}
+      {activeTab === 'mis-oportunidades' && empleado && (
+        <MisOportunidadesView
+          oportunidades={oportunidades}
+          userEmail={empleado.userEmail || ''}
+          roleAccent={roleAccent}
+          onEdit={handleStartEdit}
+          onEstadoCambiado={handleEstadoCambiado}
+        />
+      )}
       {/* ── VISTA 2: LISTAR (Todas las Oportunidades con KPIs, Búsqueda y Filtros) ── */}
       {activeTab === 'listar' && (
         <ListadoOportunidadesView
@@ -1142,6 +1160,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
             handleStartEdit(op);
           }}
           onSubirEvidencia={handleIrASubirEvidencia}
+          onEstadoCambiado={handleEstadoCambiado}
           getVencimientoBadge={getVencimientoBadge}
         />
       )}

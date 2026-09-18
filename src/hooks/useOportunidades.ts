@@ -52,6 +52,7 @@ function mapApiToOportunidad(op: any): Oportunidad {
     estado: (op.estado as Oportunidad['estado']) || 'En Licitación',
     creadoPor: op.creadoPorNombre || 'Ejecutiva',
     createdAt: new Date(op.fechaRegistro).toLocaleString('es-PE'),
+    fechaRegistro: op.fechaRegistro,
     updatedAt: op.fechaActualizacion
       ? new Date(op.fechaActualizacion).toLocaleString('es-PE')
       : undefined,

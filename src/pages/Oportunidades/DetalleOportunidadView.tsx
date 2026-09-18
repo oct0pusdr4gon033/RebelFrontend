@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { GoogleIcon } from '../../components/GoogleIcon';
 import type { Oportunidad, ProductoItem } from '../../types/oportunidades';
+import { cambiarEstadoApi } from '../../api/services/oportunidades.service';
 
 interface DetalleOportunidadViewProps {
   oportunidad: Oportunidad;
@@ -8,6 +9,7 @@ interface DetalleOportunidadViewProps {
   onClose: () => void;
   onEdit: (op: Oportunidad) => void;
   onSubirEvidencia: (opId: string | number) => void;
+  onEstadoCambiado?: (op: Oportunidad) => void;
   getVencimientoBadge: (fechaIso: string) => { label: string; color: string; bg: string } | null;
 }
 
@@ -16,6 +18,7 @@ const ESTADO_CONFIG: Record<string, { color: string; bg: string; icon: string }>
   'Por Vencer':    { color: '#dc2626', bg: '#fee2e2', icon: 'timer' },
   'Cotizada':      { color: '#0284c7', bg: '#e0f2fe', icon: 'description' },
   'Adjudicada':    { color: '#059669', bg: '#d1fae5', icon: 'verified' },
+  'Desestimada':   { color: '#dc2626', bg: '#fee2e2', icon: 'cancel' },
 };
 
 export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
@@ -24,8 +27,11 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
   onClose,
   onEdit,
   onSubirEvidencia,
+  onEstadoCambiado,
   getVencimientoBadge,
 }) => {
+  const [cambiandoEstado, setCambiandoEstado] = useState(false);
+  const [errorEstado, setErrorEstado] = useState<string | null>(null);
   const vBadge = getVencimientoBadge(op.fechaVencimiento);
   const estadoCfg = ESTADO_CONFIG[op.estado] ?? { color: '#64748b', bg: '#f1f5f9', icon: 'circle' };
   const totalLimite = op.items.reduce(
@@ -33,6 +39,28 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
     0,
   );
 
+  const transicionesPermitidas: Record<string, string[]> = {
+    'En Licitación': ['Cotizada', 'Desestimada'],
+    'Cotizada': ['Adjudicada', 'Desestimada'],
+  };
+
+  const estadosSiguientes = transicionesPermitidas[op.estado] ?? [];
+
+  const handleCambiarEstado = async (nuevoEstado: string) => {
+    setCambiandoEstado(true);
+    setErrorEstado(null);
+    try {
+      const actualizada = await cambiarEstadoApi(op.id, nuevoEstado);
+      onEstadoCambiado?.({
+        ...op,
+        estado: actualizada.estado as Oportunidad['estado'],
+      });
+    } catch (err: any) {
+      setErrorEstado(err.message || 'Error al cambiar estado');
+    } finally {
+      setCambiandoEstado(false);
+    }
+  };
   return (
     <>
       {/* Overlay */}
@@ -307,7 +335,42 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
             zIndex: 10,
           }}
         >
-          <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', gap: 12, justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap' }}>
+          {errorEstado && (
+            <span style={{ color: '#dc2626', fontSize: '12px', fontWeight: 600 }}>{errorEstado}</span>
+          )}
+          {estadosSiguientes.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, marginRight: 'auto' }}>
+              {estadosSiguientes.map((estado) => {
+                const cfg = ESTADO_CONFIG[estado] ?? { color: '#64748b', bg: '#f1f5f9', icon: 'circle' };
+                return (
+                  <button
+                    key={estado}
+                    type="button"
+                    disabled={cambiandoEstado}
+                    onClick={() => handleCambiarEstado(estado)}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: 8,
+                      border: `1.5px solid ${cfg.color}40`,
+                      background: cfg.bg,
+                      color: cfg.color,
+                      fontWeight: 700,
+                      fontSize: '12px',
+                      cursor: cambiandoEstado ? 'not-allowed' : 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      opacity: cambiandoEstado ? 0.6 : 1,
+                    }}
+                  >
+                    <GoogleIcon name={cfg.icon} size={13} color={cfg.color} />
+                    Marcar como {estado}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <button type="button" onClick={onClose} style={{ padding: '10px 18px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#f8fafc', color: '#64748b', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
             Cerrar
           </button>

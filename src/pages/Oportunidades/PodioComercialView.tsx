@@ -27,12 +27,33 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
 
   // Calcular ranking según el modo (Licitaciones vs Ventas)
   const ranking: EjecutivaRanking[] = useMemo(() => {
+    // Filtrar oportunidades por período usando fechas reales
+    const ahora = new Date();
+    const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+    const inicioMesAnterior = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1);
+    const inicioAnio = new Date(ahora.getFullYear(), 0, 1);
+
+    const oportunidadesFiltradas = oportunidades.filter((op: Oportunidad) => {
+      if (!op.fechaRegistro) return true;
+      const fecha = new Date(op.fechaRegistro);
+      switch (periodo) {
+        case 'mes':
+          return fecha >= inicioMes;
+        case 'anterior':
+          return fecha >= inicioMesAnterior && fecha < inicioMes;
+        case 'anual':
+          return fecha >= inicioAnio;
+        default:
+          return true;
+      }
+    });
+
     const mapa = new Map<
       string,
       {
         nombre: string;
+        email: string;
         totalOportunidades: number;
-        reqsGanadosPrimero: number;
         totalCotizado: number;
         totalGanado: number;
         tiempoPromedioMinutos: number;
@@ -40,65 +61,14 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
       }
     >();
 
-    // Mock base con ejecutivas del equipo comercial
-    const defaults = [
-      {
-        nombre: 'Luciana Morales',
-        totalOportunidades: 9,
-        reqsGanadosPrimero: 8,
-        totalCotizado: 185000,
-        totalGanado: 142000,
-        tiempoPromedioMinutos: 1.4,
-        licitacionesAdjudicadas: 6,
-      },
-      {
-        nombre: 'Valeria Quispe',
-        totalOportunidades: 7,
-        reqsGanadosPrimero: 6,
-        totalCotizado: 145000,
-        totalGanado: 98000,
-        tiempoPromedioMinutos: 2.1,
-        licitacionesAdjudicadas: 4,
-      },
-      {
-        nombre: 'Camila Delgado',
-        totalOportunidades: 5,
-        reqsGanadosPrimero: 4,
-        totalCotizado: 110000,
-        totalGanado: 75000,
-        tiempoPromedioMinutos: 2.8,
-        licitacionesAdjudicadas: 3,
-      },
-      {
-        nombre: 'Andrea Benites',
-        totalOportunidades: 4,
-        reqsGanadosPrimero: 3,
-        totalCotizado: 89000,
-        totalGanado: 54000,
-        tiempoPromedioMinutos: 3.2,
-        licitacionesAdjudicadas: 2,
-      },
-      {
-        nombre: 'Sofia Carranza',
-        totalOportunidades: 3,
-        reqsGanadosPrimero: 2,
-        totalCotizado: 62000,
-        totalGanado: 38000,
-        tiempoPromedioMinutos: 3.9,
-        licitacionesAdjudicadas: 1,
-      },
-    ];
-
-    defaults.forEach((d) => mapa.set(d.nombre.toLowerCase(), { ...d }));
-
-    // Integrar las oportunidades reales del sistema
-    oportunidades.forEach((op: Oportunidad) => {
-      const nombreNorm = (op.creadoPor || 'Ejecutiva').trim();
-      const key = nombreNorm.toLowerCase();
+    // Construir ranking SOLO con datos reales del sistema
+    oportunidadesFiltradas.forEach((op: Oportunidad) => {
+      const email = (op.creadoPor || 'Sin asignar').trim();
+      const key = email.toLowerCase();
       const existing = mapa.get(key) || {
-        nombre: nombreNorm,
+        nombre: email.split('@')[0].replace('.', ' ').replace(/\b\w/g, c => c.toUpperCase()),
+        email,
         totalOportunidades: 0,
-        reqsGanadosPrimero: 0,
         totalCotizado: 0,
         totalGanado: 0,
         tiempoPromedioMinutos: 2.0,
@@ -106,7 +76,6 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
       };
 
       existing.totalOportunidades += 1;
-      existing.reqsGanadosPrimero += 1; // Prioridad otorgada al primer registro
       existing.totalCotizado += Number(op.limiteTotal) || 0;
       if (op.estado === 'Cotizada' || op.estado === 'Adjudicada') {
         existing.totalGanado += Number(op.limiteTotal) || 0;
@@ -116,28 +85,21 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
       mapa.set(key, existing);
     });
 
-    const mult = periodo === 'anterior' ? 0.85 : periodo === 'anual' ? 4.2 : 1.0;
-
     const lista = Array.from(mapa.values()).map((item) => {
-      const totalCotizado = Math.round(item.totalCotizado * mult);
-      const totalGanado = Math.round(item.totalGanado * mult);
-      const totalOportunidades = Math.max(1, Math.round(item.totalOportunidades * mult));
-      const reqsGanadosPrimero = Math.max(1, Math.round(item.reqsGanadosPrimero * mult));
-      const licitacionesAdjudicadas = Math.round(item.licitacionesAdjudicadas * mult);
-      const tasaEfectividad = Math.min(100, Math.round((totalGanado / (totalCotizado || 1)) * 100));
+      const tasaEfectividad = Math.min(100, Math.round((item.totalGanado / (item.totalCotizado || 1)) * 100));
 
       return {
         posicion: 0,
         nombre: item.nombre,
         cargo: tipoPodio === 'licitaciones' ? 'Ejecutiva Licitaciones Perú Compras' : 'Ejecutiva de Ventas Corporativas',
-        totalOportunidades,
-        reqsGanadosPrimero,
-        totalCotizado,
-        totalGanado,
+        totalOportunidades: item.totalOportunidades,
+        reqsGanadosPrimero: item.totalOportunidades,
+        totalCotizado: item.totalCotizado,
+        totalGanado: item.totalGanado,
         tiempoPromedioMinutos: item.tiempoPromedioMinutos,
-        licitacionesAdjudicadas,
-        ticketPromedio: Math.round(totalGanado / (licitacionesAdjudicadas || 1)),
-        ventasCerradas: licitacionesAdjudicadas,
+        licitacionesAdjudicadas: item.licitacionesAdjudicadas,
+        ticketPromedio: Math.round(item.totalGanado / (item.licitacionesAdjudicadas || 1)),
+        ventasCerradas: item.licitacionesAdjudicadas,
         tasaEfectividad: tasaEfectividad > 0 ? tasaEfectividad : 75,
       };
     });
@@ -152,8 +114,8 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
         return b.totalCotizado - a.totalCotizado;
       });
     } else {
-      // Ventas: Facturación total ganada
-      lista.sort((a, b) => b.totalGanado - a.totalGanado);
+      // Ventas: Total cotizado (volumen licitado)
+      lista.sort((a, b) => b.totalCotizado - a.totalCotizado);
     }
 
     return lista.map((item, index) => ({
@@ -162,7 +124,7 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
       insignia:
         tipoPodio === 'licitaciones'
           ? index === 0
-            ? '🥇 1° en Llegada (Reina Licitaciones)'
+            ? '🥇 Top Licitaciones (Reina Rebel)'
             : index === 1
               ? '🥈 Cazadora de Convocatorias'
               : index === 2
@@ -193,8 +155,8 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
             <GoogleIcon name="military_tech" size={16} color="#eab308" />
             <span>
               {tipoPodio === 'licitaciones'
-                ? 'Convocatorias & Prioridad por Orden de Llegada'
-                : 'Revenue Comercial & Ventas Ganadas'}
+                ? 'Convocatorias & Ranking por Volumen'
+                : 'Ranking por Volumen Licitado'}
             </span>
           </div>
           <h2>
@@ -204,8 +166,8 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
           </h2>
           <p>
             {tipoPodio === 'licitaciones'
-              ? 'Reconocimiento en tiempo real a las ejecutivas más veloces en asegurar requerimientos de Perú Compras con prioridad por orden de llegada (First-Come, First-Served).'
-              : 'Ranking en tiempo real de facturación neta, órdenes adjudicadas y cumplimiento de metas comerciales.'}
+              ? 'Reconocimiento en tiempo real a las ejecutivas con mayor volumen de licitaciones registradas.'
+              : 'Ranking en tiempo real del monto total licitado por cada ejecutiva.'}
           </p>
         </div>
 
@@ -249,25 +211,25 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
             </div>
             <div className="reg-podium-name">{top2.nombre}</div>
             <div className="reg-podium-amount">
-              S/ {(tipoPodio === 'licitaciones' ? top2.totalCotizado : top2.totalGanado).toLocaleString('es-PE')}
+              S/ {top2.totalCotizado.toLocaleString('es-PE')}
             </div>
             <div className="reg-podium-stats">
               {tipoPodio === 'licitaciones' ? (
                 <>
-                  <span>🥇 {top2.reqsGanadosPrimero} asegurados 1°</span> &bull;{' '}
+                  <span>🥇 {top2.reqsGanadosPrimero} oportunidades</span> &bull;{' '}
                   <span>{top2.tiempoPromedioMinutos} min prom.</span>
                 </>
               ) : (
                 <>
-                  <span>{top2.ventasCerradas} ventas</span> &bull;{' '}
-                  <span>{top2.tasaEfectividad}% éxito</span>
+                  <span>{top2.totalOportunidades} oportunidades</span> &bull;{' '}
+                  <span>{top2.licitacionesAdjudicadas} adjudicadas</span>
                 </>
               )}
             </div>
             <div className="reg-pedestal pedestal-2">
               <span className="pedestal-num">2</span>
               <span className="pedestal-label">
-                {tipoPodio === 'licitaciones' ? 'CAZADORA DE REQS' : 'SEGUNDO LUGAR'}
+                {tipoPodio === 'licitaciones' ? 'CAZADORA DE REQS' : 'SEGUNDO PUESTO'}
               </span>
             </div>
           </div>
@@ -287,25 +249,25 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
             </div>
             <div className="reg-podium-name">{top1.nombre}</div>
             <div className="reg-podium-amount gold-text">
-              S/ {(tipoPodio === 'licitaciones' ? top1.totalCotizado : top1.totalGanado).toLocaleString('es-PE')}
+              S/ {top1.totalCotizado.toLocaleString('es-PE')}
             </div>
             <div className="reg-podium-stats">
               {tipoPodio === 'licitaciones' ? (
                 <>
-                  <span>🥇 {top1.reqsGanadosPrimero} asegurados 1°</span> &bull;{' '}
+                  <span>🥇 {top1.reqsGanadosPrimero} oportunidades</span> &bull;{' '}
                   <span>⚡ {top1.tiempoPromedioMinutos} min récord</span>
                 </>
               ) : (
                 <>
-                  <span>{top1.ventasCerradas} ventas</span> &bull;{' '}
-                  <span>{top1.tasaEfectividad}% éxito</span>
+                  <span>{top1.totalOportunidades} oportunidades</span> &bull;{' '}
+                  <span>{top1.licitacionesAdjudicadas} adjudicadas</span>
                 </>
               )}
             </div>
             <div className="reg-pedestal pedestal-1">
               <span className="pedestal-num">1</span>
               <span className="pedestal-label">
-                {tipoPodio === 'licitaciones' ? 'REINA LICITACIONES' : 'LÍDER REBEL'}
+                {tipoPodio === 'licitaciones' ? 'TOP LICITACIONES' : 'TOP VENTAS'}
               </span>
             </div>
           </div>
@@ -324,25 +286,25 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
             </div>
             <div className="reg-podium-name">{top3.nombre}</div>
             <div className="reg-podium-amount">
-              S/ {(tipoPodio === 'licitaciones' ? top3.totalCotizado : top3.totalGanado).toLocaleString('es-PE')}
+              S/ {top3.totalCotizado.toLocaleString('es-PE')}
             </div>
             <div className="reg-podium-stats">
               {tipoPodio === 'licitaciones' ? (
                 <>
-                  <span>🥇 {top3.reqsGanadosPrimero} asegurados 1°</span> &bull;{' '}
+                  <span>🥇 {top3.reqsGanadosPrimero} oportunidades</span> &bull;{' '}
                   <span>{top3.tiempoPromedioMinutos} min prom.</span>
                 </>
               ) : (
                 <>
-                  <span>{top3.ventasCerradas} ventas</span> &bull;{' '}
-                  <span>{top3.tasaEfectividad}% éxito</span>
+                  <span>{top3.totalOportunidades} oportunidades</span> &bull;{' '}
+                  <span>{top3.licitacionesAdjudicadas} adjudicadas</span>
                 </>
               )}
             </div>
             <div className="reg-pedestal pedestal-3">
               <span className="pedestal-num">3</span>
               <span className="pedestal-label">
-                {tipoPodio === 'licitaciones' ? 'ESTRATEGA PERÚ COMPRAS' : 'TERCER LUGAR'}
+                {tipoPodio === 'licitaciones' ? 'ESTRATEGA PERÚ COMPRAS' : 'TERCER PUESTO'}
               </span>
             </div>
           </div>
@@ -369,9 +331,9 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
                 <GoogleIcon name="verified" size={22} color="#0284c7" />
               </div>
               <div>
-                <div className="reg-award-title">🥇 Mayor Prioridad de Llegada</div>
-                <div className="reg-award-winner">{top1?.reqsGanadosPrimero ?? 8} Requerimientos Asegurados</div>
-                <div className="reg-award-desc">100% de prioridad ganada por First-Come, First-Served</div>
+                <div className="reg-award-title">🥇 Mayor Volumen de Licitaciones</div>
+                <div className="reg-award-winner">{top1?.reqsGanadosPrimero ?? 0} Oportunidades Registradas</div>
+                <div className="reg-award-desc">Mayor cantidad de oportunidades en el sistema</div>
               </div>
             </div>
 
@@ -393,9 +355,9 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
                 <GoogleIcon name="monetization_on" size={22} color="#ca8a04" />
               </div>
               <div>
-                <div className="reg-award-title">💰 Top Facturación Comercial</div>
-                <div className="reg-award-winner">{top1?.nombre ?? 'Luciana Morales'}</div>
-                <div className="reg-award-desc">S/ {top1?.totalGanado.toLocaleString('es-PE')} facturados</div>
+                <div className="reg-award-title">💰 Mayor Volumen Licitado</div>
+                <div className="reg-award-winner">{top1?.nombre ?? '-'}</div>
+                <div className="reg-award-desc">S/ {top1?.totalCotizado.toLocaleString('es-PE') || 0} en licitaciones</div>
               </div>
             </div>
 
@@ -404,9 +366,9 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
                 <GoogleIcon name="shopping_cart_checkout" size={22} color="#0284c7" />
               </div>
               <div>
-                <div className="reg-award-title">📦 Mayor Volumen de Ventas</div>
-                <div className="reg-award-winner">{top1?.ventasCerradas ?? 6} Órdenes Cerradas</div>
-                <div className="reg-award-desc">Mayor cantidad de contratos comerciales completados</div>
+                <div className="reg-award-title">📦 Mayor Cantidad de Oportunidades</div>
+                <div className="reg-award-winner">{top1?.totalOportunidades ?? 0} Oportunidades Registradas</div>
+                <div className="reg-award-desc">Mayor actividad de registro en el sistema</div>
               </div>
             </div>
 
@@ -415,9 +377,9 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
                 <GoogleIcon name="trending_up" size={22} color="#059669" />
               </div>
               <div>
-                <div className="reg-award-title">🎯 Efectividad de Cierre</div>
-                <div className="reg-award-winner">{top1?.tasaEfectividad ?? 85}% de Conversión</div>
-                <div className="reg-award-desc">Tasa récord de oportunidades convertidas en ventas</div>
+                <div className="reg-award-title">🎯 Promedio por Oportunidad</div>
+                <div className="reg-award-winner">S/ {top1?.ticketPromedio.toLocaleString('es-PE') || 0}</div>
+                <div className="reg-award-desc">Ticket promedio por oportunidad registrada</div>
               </div>
             </div>
           </>
@@ -433,13 +395,13 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
           <div>
             <h3>
               {tipoPodio === 'licitaciones'
-                ? 'Ranking de Licitaciones — Prioridad por Orden de Llegada'
-                : 'Ranking Comercial — Facturación Neta Ganada'}
+                ? 'Ranking de Licitaciones — Volumen por Ejecutiva'
+                : 'Ranking de Ventas — Monto Total Licitado'}
             </h3>
             <p>
               {tipoPodio === 'licitaciones'
-                ? 'Ordenado por requerimientos asegurados primero y volumen total en licitaciones.'
-                : 'Ordenado por facturación neta ganada y efectividad de cierre comercial.'}
+                ? 'Ordenado por oportunidades registradas y volumen total en licitaciones.'
+                : 'Ordenado por monto total licitado por cada ejecutiva.'}
             </p>
           </div>
         </div>
@@ -452,7 +414,7 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
                   <th style={{ width: '80px', textAlign: 'center' }}>Posición</th>
                   <th>Ejecutiva</th>
                   <th>Cargo</th>
-                  <th style={{ textAlign: 'center' }}>Reqs. Asegurados 1°</th>
+                  <th style={{ textAlign: 'center' }}>Oportunidades</th>
                   <th style={{ textAlign: 'right' }}>Total Licitado</th>
                   <th style={{ textAlign: 'center' }}>Tiempo Prom.</th>
                   <th style={{ textAlign: 'center' }}>Adjudicadas</th>
@@ -463,10 +425,10 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
                   <th style={{ width: '80px', textAlign: 'center' }}>Posición</th>
                   <th>Ejecutiva</th>
                   <th>Cargo</th>
-                  <th style={{ textAlign: 'center' }}>Ventas Cerradas</th>
-                  <th style={{ textAlign: 'right' }}>Facturación Ganada</th>
+                  <th style={{ textAlign: 'center' }}>Oportunidades</th>
+                  <th style={{ textAlign: 'right' }}>Total Licitado</th>
                   <th style={{ textAlign: 'right' }}>Ticket Promedio</th>
-                  <th style={{ textAlign: 'center' }}>Efectividad</th>
+                  <th style={{ textAlign: 'center' }}>Adjudicadas</th>
                   <th>Insignia</th>
                 </tr>
               )}
@@ -498,8 +460,8 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
                   {tipoPodio === 'licitaciones' ? (
                     <>
                       <td style={{ textAlign: 'center' }}>
-                        <span className="reg-priority-badge" title="Requerimientos asegurados con prioridad 1° por llegar primero">
-                          🥇 {item.reqsGanadosPrimero} asegurados
+                <span className="reg-priority-badge" title="Oportunidades registradas en el sistema">
+                           🥇 {item.reqsGanadosPrimero} oportunidades
                         </span>
                       </td>
                       <td style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>
@@ -518,18 +480,18 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
                     <>
                       <td style={{ textAlign: 'center' }}>
                         <span className="reg-pill" style={{ background: '#f1f5f9', color: '#334155', fontWeight: 700 }}>
-                          {item.ventasCerradas}
+                          {item.totalOportunidades}
                         </span>
                       </td>
-                      <td style={{ textAlign: 'right', fontWeight: 700, color: '#059669' }}>
-                        S/ {item.totalGanado.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>
+                        S/ {item.totalCotizado.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                       </td>
                       <td style={{ textAlign: 'right', fontSize: '12.5px', color: '#64748b' }}>
                         S/ {(item.ticketPromedio || 0).toLocaleString('es-PE')}
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>
-                          {item.tasaEfectividad}%
+                        <span className="reg-pill" style={{ background: '#ecfdf5', color: '#059669', fontWeight: 700 }}>
+                          {item.licitacionesAdjudicadas}
                         </span>
                       </td>
                     </>

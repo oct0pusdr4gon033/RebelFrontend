@@ -1,7 +1,7 @@
 import React from 'react';
 import { GoogleIcon } from '../../components/GoogleIcon';
 
-export type OportunidadTab = 'registrar' | 'listar' | 'podio' | 'subir-evidencia';
+export type OportunidadTab = 'registrar' | 'mis-oportunidades' | 'listar' | 'podio' | 'subir-evidencia';
 
 interface OportunidadNavButtonsProps {
   activeTab: OportunidadTab;
@@ -30,6 +30,12 @@ export const OportunidadNavButtons: React.FC<OportunidadNavButtonsProps> = ({
       label: 'Registrar',
       icon: 'flash_on',
       description: 'Formulario Exprés',
+    },
+    {
+      id: 'mis-oportunidades',
+      label: 'Mis Oportunidades',
+      icon: 'person',
+      description: 'Mi Pipeline',
     },
     {
       id: 'listar',

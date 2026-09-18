@@ -40,7 +40,8 @@ export type EstadoOportunidad =
   | 'En Licitación'
   | 'Por Vencer'
   | 'Cotizada'
-  | 'Adjudicada';
+  | 'Adjudicada'
+  | 'Desestimada';
 
 /** Tipo de Podio: Licitaciones vs Ventas */
 export type TipoPodio = 'licitaciones' | 'ventas';
@@ -62,6 +63,8 @@ export interface Oportunidad {
   creadoPor: string;
   createdAt: string;
   updatedAt?: string;
+  /** ISO 8601 original para filtrado por período */
+  fechaRegistro?: string;
   /** Hora exacta con segundos para desempate y prioridad por orden de llegada */
   horaRegistroExacta?: string;
   /** Indicador de prioridad 1° asignada por orden de llegada */

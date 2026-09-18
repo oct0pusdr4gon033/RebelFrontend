@@ -192,3 +192,22 @@ export async function updateOportunidadApi(
   }
   return response.json();
 }
+/**
+ * Cambiar estado de una oportunidad
+ * Solo la ejecutiva que registró la oportunidad puede cambiar su estado.
+ */
+export async function cambiarEstadoApi(
+  id: number | string,
+  estado: string
+): Promise<OportunidadApiResponse> {
+  const response = await fetch(`${API_BASE}/api/oportunidades/${id}/estado`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ estado }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ mensaje: 'Error al cambiar estado' }));
+    throw new Error(err.mensaje ?? 'Error en el cambio de estado');
+  }
+  return response.json();
+}
