@@ -1,0 +1,1842 @@
+/* ════════════════════════════════════════════════════
+   RegistroOportunidad.css — Sales Rebel & Perú Compras
+   ════════════════════════════════════════════════════ */
+
+.reg-oportunidad {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 1300px;
+  margin: 0 auto;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* ── Banner Superior ─────────────────────────────── */
+.reg-hero {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 24px 28px;
+  border: 1.5px solid #e2e8f0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.reg-hero__left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.reg-hero__badge-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.reg-hero__title h1 {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px;
+  letter-spacing: -0.4px;
+}
+
+.reg-hero__title p {
+  font-size: 13.5px;
+  color: #64748b;
+  margin: 0;
+}
+
+.reg-hero__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ── Layout de Dos Columnas (Formulario + Resumen) ── */
+.reg-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 1040px) {
+  .reg-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Tarjetas de Secciones ───────────────────────── */
+.reg-card {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
+  margin-bottom: 20px;
+  transition: border-color 0.2s;
+}
+
+.reg-card:hover {
+  border-color: #cbd5e1;
+}
+
+.reg-card__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1.5px solid #f1f5f9;
+}
+
+.reg-card__header-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reg-card__header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.reg-card__header span {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-left: auto;
+}
+
+/* ── Form Inputs ─────────────────────────────────── */
+.reg-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 640px) {
+  .reg-form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.reg-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+
+.reg-field label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.reg-field label .required {
+  color: #ef4444;
+  font-weight: 800;
+}
+
+.reg-field input,
+.reg-field textarea,
+.reg-field select {
+  font-family: inherit;
+  font-size: 13.5px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  color: #0f172a;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.reg-field input:focus,
+.reg-field textarea:focus,
+.reg-field select:focus {
+  border-color: var(--accent-color, #06b6d4);
+  background: #ffffff;
+  box-shadow: 0 0 0 3.5px var(--accent-bg, rgba(6, 182, 212, 0.12));
+}
+
+.reg-field input::placeholder {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.reg-field-hint {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+/* ── Combobox de Búsqueda Interactiva (Searchable Select) ── */
+.reg-combobox {
+  position: relative;
+  width: 100%;
+}
+
+.reg-combobox__input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.reg-combobox__input {
+  width: 100%;
+  padding-left: 36px !important;
+  padding-right: 32px !important;
+}
+
+.reg-combobox__icon {
+  position: absolute;
+  left: 10px;
+  pointer-events: none;
+  color: #94a3b8;
+}
+
+.reg-combobox__clear {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.reg-combobox__clear:hover {
+  color: #0f172a;
+  background: #e2e8f0;
+}
+
+.reg-combobox__dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 50;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.reg-combobox__item {
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: all 0.15s;
+  text-align: left;
+  border: none;
+  background: none;
+  width: 100%;
+}
+
+.reg-combobox__item:hover,
+.reg-combobox__item.active {
+  background: #f0fdfa;
+  color: #0f172a;
+}
+
+.reg-combobox__item-code {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-color, #06b6d4);
+  letter-spacing: 0.3px;
+}
+
+.reg-combobox__item-desc {
+  font-size: 13px;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.reg-combobox__empty {
+  padding: 14px;
+  text-align: center;
+  font-size: 12.5px;
+  color: #94a3b8;
+}
+
+/* ── Selector de Múltiples Marcas (Chips) ────────── */
+.reg-brand-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  min-height: 28px;
+}
+
+.reg-brand-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  transition: all 0.15s ease;
+}
+
+.reg-brand-chip:hover {
+  background: #e2e8f0;
+}
+
+.reg-brand-chip__remove {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  color: #64748b;
+}
+
+.reg-brand-chip__remove:hover {
+  color: #ef4444;
+}
+
+/* ── Productos / Ítems de la Licitación ──────────── */
+.reg-items-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.reg-btn-add-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent-bg, rgba(6, 182, 212, 0.1));
+  border: 1.5px solid var(--accent-border, rgba(6, 182, 212, 0.28));
+  color: var(--accent-color, #06b6d4);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reg-btn-add-item:hover {
+  background: var(--accent-color, #06b6d4);
+  color: #ffffff;
+}
+
+.reg-item-box {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.reg-item-box:hover {
+  border-color: #cbd5e1;
+  background: #ffffff;
+}
+
+.reg-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.reg-item-number {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.reg-item-delete {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reg-item-delete:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.reg-item-subtotal-badge {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed #e2e8f0;
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+.reg-item-subtotal-badge strong {
+  font-size: 14px;
+  color: #0f172a;
+  font-weight: 800;
+}
+
+/* ── Columna Derecha: Tarjeta de Resumen ──────────── */
+.reg-summary-card {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  position: sticky;
+  top: 84px;
+}
+
+.reg-summary-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1.5px solid #f1f5f9;
+}
+
+.reg-summary-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f8fafc;
+  font-size: 13px;
+}
+
+.reg-summary-label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.reg-summary-val {
+  color: #0f172a;
+  font-weight: 700;
+  text-align: right;
+  max-width: 60%;
+}
+
+.reg-summary-total-box {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.08), rgba(8, 145, 178, 0.04));
+  border: 1.5px solid var(--accent-border, rgba(6, 182, 212, 0.28));
+  border-radius: 14px;
+  padding: 18px;
+  margin: 20px 0;
+  text-align: center;
+}
+
+.reg-summary-total-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.reg-summary-total-amount {
+  font-size: 30px;
+  font-weight: 900;
+  color: var(--accent-color, #06b6d4);
+  letter-spacing: -0.6px;
+}
+
+.reg-summary-total-hint {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.reg-btn-submit {
+  width: 100%;
+  padding: 14px 20px;
+  background: var(--accent-color, #06b6d4);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px var(--accent-bg, rgba(6, 182, 212, 0.35));
+  transition: all 0.2s ease;
+}
+
+.reg-btn-submit:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px var(--accent-bg, rgba(6, 182, 212, 0.45));
+}
+
+.reg-btn-submit:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ── Sección de Tabla / Historial de Oportunidades ─ */
+.reg-history-card {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
+  margin-top: 10px;
+}
+
+.reg-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.reg-table-container {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.reg-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+
+.reg-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 700;
+  padding: 12px 16px;
+  border-bottom: 1.5px solid #e2e8f0;
+  white-space: nowrap;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.reg-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+  vertical-align: middle;
+}
+
+.reg-table tr:last-child td {
+  border-bottom: none;
+}
+
+.reg-table tr:hover td {
+  background: #f8fafc;
+}
+
+.reg-status-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.reg-status-badge.licitacion {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.reg-status-badge.por-vencer {
+  background: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.reg-status-badge.cotizada {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+/* ── Alertas de Éxito / Feedback ─────────────────── */
+.reg-toast-success {
+  background: #ecfdf5;
+  border: 1.5px solid #a7f3d0;
+  border-radius: 14px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #065f46;
+  margin-bottom: 16px;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Modo Edición y Bloqueos de Convocatoria ──────── */
+.reg-edit-banner {
+  background: #fffbeb;
+  border: 1.5px solid #fde68a;
+  border-radius: 14px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: #92400e;
+  margin-bottom: 20px;
+  animation: slideDown 0.3s ease;
+}
+
+.reg-lock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #b45309;
+  background: #fef3c7;
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-left: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.reg-field input:disabled {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+  cursor: not-allowed !important;
+  border-color: #cbd5e1 !important;
+}
+
+.reg-action-btn-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+  color: #0d9488;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.reg-action-btn-edit:hover {
+  background: #0d9488;
+  color: #ffffff;
+  border-color: #0d9488;
+}
+
+.reg-btn-cancel-edit {
+  background: #ffffff;
+  border: 1.5px solid #d1d5db;
+  color: #4b5563;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.reg-btn-cancel-edit:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+/* ── Estilos de Registro Exprés y Sección de Empresa Opcional ── */
+.reg-pill-express {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #b45309;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.reg-card--optional {
+  border-color: #fde68a;
+  background: linear-gradient(180deg, #ffffff 0%, #fffdfa 100%);
+}
+
+.reg-badge-opcional {
+  font-size: 11px;
+  font-weight: 700;
+  color: #92400e;
+  background: #fef3c7;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid #fde68a;
+}
+
+.reg-badge-obligatorio {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0369a1;
+  background: #e0f2fe;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.reg-express-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #fffbeb;
+  border: 1px dashed #f59e0b;
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 12.5px;
+  color: #92400e;
+  line-height: 1.45;
+}
+
+.reg-table-badge-express {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #b45309;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.reg-btn-action-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f0f9ff;
+  border: 1.5px solid #bae6fd;
+  color: #0284c7;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reg-btn-action-edit:hover {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(2, 132, 199, 0.2);
+}
+
+.reg-btn-cancel-sidebar {
+  width: 100%;
+  margin-top: 8px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  color: #64748b;
+  padding: 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reg-btn-cancel-sidebar:hover {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+/* ── UI: Modal y Selección de Empresa ────────────── */
+.reg-btn-open-modal {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  color: #475569;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reg-btn-open-modal:hover {
+  background: #f0f9ff;
+  border-color: #38bdf8;
+  color: #0284c7;
+}
+
+.reg-empresa-selected-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f0fdfa;
+  border: 1.5px solid #5eead4;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-top: 4px;
+}
+
+.reg-empresa-selected-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.reg-empresa-selected-ruc {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #0f766e;
+  font-family: monospace;
+}
+
+.reg-empresa-selected-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #134e4a;
+}
+
+.reg-empresa-selected-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reg-empresa-btn-change {
+  background: #ffffff;
+  border: 1.5px solid #99f6e4;
+  color: #0d9488;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reg-empresa-btn-change:hover {
+  background: #14b8a6;
+  color: #ffffff;
+  border-color: #14b8a6;
+}
+
+.reg-empresa-btn-remove {
+  background: #ffffff;
+  border: 1.5px solid #fecaca;
+  color: #ef4444;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reg-empresa-btn-remove:hover {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+/* ════════════════════════════════════════════════════
+   BARRA PUSH BUTTON (REGISTRAR, LISTAR, PODIO, EVIDENCIA)
+   ════════════════════════════════════════════════════ */
+.reg-push-bar {
+  display: flex;
+  align-items: center;
+  background: #f1f5f9;
+  padding: 6px;
+  border-radius: 16px;
+  border: 1.5px solid #e2e8f0;
+  gap: 8px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.03);
+  overflow-x: auto;
+}
+
+.reg-push-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  background: transparent;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  flex: 1;
+  min-width: 170px;
+  text-align: left;
+}
+
+.reg-push-btn:hover {
+  background: rgba(255, 255, 255, 0.7);
+  color: #0f172a;
+}
+
+.reg-push-btn.active {
+  background: #ffffff;
+  border-color: rgba(14, 165, 233, 0.35);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.reg-push-btn__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.reg-push-btn__text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.reg-push-btn__label {
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.reg-push-btn__desc {
+  font-size: 11.5px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.reg-push-btn.active .reg-push-btn__desc {
+  color: #475569;
+}
+
+.reg-push-btn__badge {
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  background: rgba(100, 116, 139, 0.12);
+  color: #64748b;
+  letter-spacing: -0.2px;
+}
+
+/* ── Métricas Rápidas en Listado ── */
+.reg-kpis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 4px;
+}
+
+.reg-kpi-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 18px 20px;
+  border: 1.5px solid #e2e8f0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.reg-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+}
+
+.reg-kpi-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.reg-kpi-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.reg-kpi-value {
+  font-size: 24px;
+  font-weight: 900;
+  color: #0f172a;
+  margin: 2px 0;
+  line-height: 1.1;
+}
+
+.reg-kpi-sub {
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+/* ── Barra de Búsqueda y Filtros en Listado ── */
+.reg-list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1.5px solid #f1f5f9;
+}
+
+.reg-search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px 14px;
+  flex: 1;
+  min-width: 280px;
+  max-width: 550px;
+  transition: all 0.2s;
+}
+
+.reg-search-box:focus-within {
+  border-color: #0284c7;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+}
+
+.reg-search-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  font-size: 13.5px;
+  color: #0f172a;
+}
+
+.reg-filter-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.reg-filter-chip {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1.5px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.reg-filter-chip:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.reg-items-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(2, 132, 199, 0.08);
+  border: 1px solid rgba(2, 132, 199, 0.25);
+  color: #0284c7;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reg-items-btn:hover {
+  background: #0284c7;
+  color: #ffffff;
+}
+
+/* ════════════════════════════════════════════════════
+   PODIO COMERCIAL DE VENTAS (GAMIFICACIÓN)
+   ════════════════════════════════════════════════════ */
+.reg-podio-container {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.reg-podio-header {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 24px 28px;
+  border: 1.5px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.reg-podio-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(234, 179, 8, 0.12);
+  color: #ca8a04;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.reg-podio-header__info h2 {
+  font-size: 22px;
+  font-weight: 900;
+  color: #0f172a;
+  margin: 0 0 4px;
+}
+
+.reg-podio-header__info p {
+  font-size: 13.5px;
+  color: #64748b;
+  margin: 0;
+  max-width: 650px;
+}
+
+.reg-podio-period-tabs {
+  display: flex;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 12px;
+  gap: 4px;
+}
+
+.reg-period-tab {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+/* ── Podio Visual de 3 Pedestales ── */
+.reg-podium-visual {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 24px;
+  padding: 30px 20px 0;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.5) 0%, #ffffff 100%);
+  border-radius: 20px;
+  border: 1.5px solid #e2e8f0;
+  min-height: 380px;
+}
+
+.reg-podium-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 220px;
+  text-align: center;
+  position: relative;
+}
+
+.slot-first {
+  order: 2;
+  transform: translateY(-8px);
+}
+
+.slot-second {
+  order: 1;
+}
+
+.slot-third {
+  order: 3;
+}
+
+.reg-podium-crown {
+  font-size: 32px;
+  margin-bottom: -10px;
+  animation: bounceSlow 2.5s infinite ease-in-out;
+  z-index: 2;
+}
+
+@keyframes bounceSlow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.reg-podium-medal {
+  font-size: 26px;
+  margin-bottom: 6px;
+}
+
+.reg-podium-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+  margin-bottom: 10px;
+  font-weight: 900;
+  font-size: 22px;
+}
+
+.slot-first .reg-podium-avatar {
+  width: 84px;
+  height: 84px;
+  border: 4px solid #facc15;
+  background: linear-gradient(135deg, #fef08a, #facc15);
+  color: #854d0e;
+}
+
+.slot-second .reg-podium-avatar {
+  border: 4px solid #94a3b8;
+  background: linear-gradient(135deg, #f1f5f9, #cbd5e1);
+  color: #334155;
+}
+
+.slot-third .reg-podium-avatar {
+  border: 4px solid #d97706;
+  background: linear-gradient(135deg, #fed7aa, #fb923c);
+  color: #9a3412;
+}
+
+.reg-podium-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.reg-podium-amount {
+  font-size: 16px;
+  font-weight: 900;
+  color: #0284c7;
+  margin-bottom: 4px;
+}
+
+.gold-text {
+  color: #b45309 !important;
+  font-size: 18px !important;
+}
+
+.reg-podium-stats {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 12px;
+}
+
+.reg-pedestal {
+  width: 100%;
+  border-radius: 14px 14px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  padding: 16px 8px;
+  box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.05);
+}
+
+.pedestal-1 {
+  height: 140px;
+  background: linear-gradient(180deg, #f59e0b, #d97706);
+}
+
+.pedestal-2 {
+  height: 105px;
+  background: linear-gradient(180deg, #64748b, #475569);
+}
+
+.pedestal-3 {
+  height: 85px;
+  background: linear-gradient(180deg, #b45309, #92400e);
+}
+
+.pedestal-num {
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.pedestal-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  opacity: 0.9;
+  margin-top: 4px;
+}
+
+/* ── Galardones Especiales ── */
+.reg-podio-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.reg-award-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1.5px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.reg-award-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.reg-award-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.reg-award-winner {
+  font-size: 16px;
+  font-weight: 900;
+  color: #0f172a;
+  margin: 2px 0;
+}
+
+.reg-award-desc {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* ── Posiciones en Tabla ── */
+.pos-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.pos-1 { background: #fef08a; color: #854d0e; }
+.pos-2 { background: #e2e8f0; color: #334155; }
+.pos-3 { background: #ffedd5; color: #9a3412; }
+
+.reg-avatar-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.reg-progress-bar {
+  width: 60px;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.reg-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.reg-insignia-pill {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+}
+
+/* ════════════════════════════════════════════════════
+   SUBIR EVIDENCIA (PERÚ COMPRAS)
+   ════════════════════════════════════════════════════ */
+.reg-evidencia-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.reg-dropzone {
+  border: 2px dashed #cbd5e1;
+  border-radius: 16px;
+  padding: 34px 20px;
+  margin-top: 14px;
+  cursor: pointer;
+  transition: all 0.22s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reg-dropzone:hover {
+  border-color: #0284c7;
+  background: rgba(2, 132, 199, 0.03) !important;
+}
+
+.reg-dropzone.drag-over {
+  border-color: #0284c7 !important;
+  background: rgba(2, 132, 199, 0.08) !important;
+  transform: scale(1.01);
+}
+
+.reg-dropzone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.reg-dropzone-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reg-dropzone-remove-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fee2e2;
+  color: #ef4444;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+/* ── Conmutador de Tipo de Podio (Licitaciones vs Ventas) ── */
+.reg-podio-type-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 6px;
+  flex-wrap: wrap;
+}
+
+.reg-podio-type-btn {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  border-radius: 10px;
+  border: 1.5px solid transparent;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+  font-family: inherit;
+}
+
+.reg-podio-type-btn:hover {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+.reg-podio-type-btn.active {
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.reg-podio-type-btn .type-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.reg-podio-type-btn .type-sub {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+/* ── Advertencia en Vivo de Requerimiento Duplicado / Prioridad ── */
+.reg-field-conflict-warning {
+  margin-top: 6px;
+  padding: 8px 12px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #92400e;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.4;
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* ── Modal de Conflicto de Prioridad por Concurrencia ── */
+.reg-priority-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 0.2s ease;
+}
+
+.reg-priority-modal {
+  background: #ffffff;
+  width: 100%;
+  max-width: 480px;
+  border-radius: 18px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+  border: 1.5px solid #fde68a;
+  overflow: hidden;
+  animation: popIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.reg-priority-modal-header {
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1.5px solid #fef08a;
+}
+
+.reg-priority-modal-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #fef08a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.reg-priority-modal-title h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #92400e;
+}
+
+.reg-priority-modal-title span {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #b45309;
+}
+
+.reg-priority-modal-body {
+  padding: 22px 24px;
+  font-size: 13.5px;
+  color: #334155;
+  line-height: 1.55;
+}
+
+.reg-priority-conflict-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px;
+  margin: 14px 0;
+}
+
+.reg-priority-conflict-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  padding: 3px 0;
+}
+
+.reg-priority-conflict-row strong {
+  color: #0f172a;
+}
+
+.reg-priority-modal-footer {
+  padding: 16px 24px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.reg-priority-modal-btn {
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
+  border-radius: 9px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.reg-priority-modal-btn:hover {
+  background: #0369a1;
+}
+
+/* ── Badge de Prioridad 1° Asignada ── */
+.reg-priority-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ── Estilos para la Tabla con Scroll Horizontal ── */
+.reg-table-wrapper {
+  overflow-x: auto;
+  width: 100%;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  -webkit-overflow-scrolling: touch;
+}
+
+.reg-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1100px; /* Trigger scroll on smaller screens */
+  text-align: left;
+}
+
+.reg-table th {
+  background: #f8fafc;
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.reg-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.reg-table tr:hover td {
+  background: #f8fafc;
+}
+
+/* ── Tags de Marcas en Tabla ── */
+.reg-table-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.reg-table-tag {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── Botón de Ver Ítems ── */
+.reg-items-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #0369a1;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reg-items-btn:hover {
+  background: #f0f9ff;
+  border-color: #38bdf8;
+  color: #0284c7;
+}
+
+.reg-items-btn:active {
+  transform: translateY(1px);
+}
+
+/* ── Etiquetas Tipo Píldora (Estado, Vencimiento) ── */
+.reg-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}

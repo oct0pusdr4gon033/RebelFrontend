@@ -1,0 +1,441 @@
+/* ════════════════════════════════════════════════════
+   MiCuentaPage.css — Pantalla de Mi Cuenta
+   Paleta: Blanco + Azul #4F9AFF con acentos corporativos
+   ════════════════════════════════════════════════════ */
+
+.account-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: pageFadeIn 0.25s ease-out;
+}
+
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Breadcrumb & Encabezado ──────────────────────── */
+.account-page__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.account-page__breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.account-page__breadcrumb span.active {
+  color: #0a2540;
+  font-weight: 700;
+}
+
+.account-page__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.account-btn {
+  padding: 9px 18px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  border: none;
+}
+
+.account-btn--outline {
+  background: #ffffff;
+  color: #0a2540;
+  border: 1.5px solid #dbeafe;
+}
+
+.account-btn--outline:hover {
+  background: #f0f6ff;
+  border-color: #93c5fd;
+}
+
+.account-btn--danger {
+  background: #fff1f2;
+  color: #e11d48;
+  border: 1.5px solid #fecdd3;
+}
+
+.account-btn--danger:hover {
+  background: #e11d48;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(225, 29, 72, 0.25);
+}
+
+/* ── Hero Profile Card ────────────────────────────── */
+.account-hero {
+  background: #ffffff;
+  border: 1.5px solid #e0ecff;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(79, 154, 255, 0.08);
+}
+
+.account-hero__cover {
+  height: 140px;
+  background: linear-gradient(135deg, #0a2540 0%, #1e40af 50%, #4F9AFF 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.account-hero__cover-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px);
+  background-size: 16px 16px;
+  opacity: 0.7;
+}
+
+.account-hero__body {
+  padding: 0 32px 28px;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.account-hero__user {
+  display: flex;
+  align-items: flex-end;
+  gap: 24px;
+  margin-top: -50px;
+}
+
+.account-hero__avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.account-hero__avatar {
+  width: 104px;
+  height: 104px;
+  border-radius: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  font-weight: 800;
+  color: #ffffff;
+  border: 4px solid #ffffff;
+  box-shadow: 0 8px 24px rgba(10, 37, 64, 0.25);
+}
+
+.account-hero__online-badge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  background: #10b981;
+  border: 3.5px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
+
+.account-hero__meta {
+  padding-bottom: 4px;
+}
+
+.account-hero__name {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0a2540;
+  letter-spacing: -0.5px;
+  margin: 0 0 6px;
+}
+
+.account-hero__pills {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.account-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.account-pill--role {
+  background: rgba(79, 154, 255, 0.12);
+  color: #1a73e8;
+  border: 1px solid rgba(79, 154, 255, 0.3);
+}
+
+.account-pill--sede {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.account-pill--active {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+/* ── Grilla Principal ─────────────────────────────── */
+.account-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .account-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Tarjetas de Información ──────────────────────── */
+.account-card {
+  background: #ffffff;
+  border: 1.5px solid #e0ecff;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(79, 154, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.account-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 12px;
+}
+
+.account-card__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0a2540;
+}
+
+.account-card__tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.account-fields-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #f8faff;
+}
+
+.account-row__label-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.account-row__icon {
+  font-size: 16px;
+  color: #64748b;
+}
+
+.account-row__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.account-row__val-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-row__value {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0a2540;
+  text-align: right;
+}
+
+.account-copy-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  padding: 3px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.15s ease;
+}
+
+.account-copy-btn:hover {
+  background: #e2e8f0;
+  color: #0a2540;
+}
+
+.account-copy-btn--copied {
+  background: #ecfdf5 !important;
+  color: #059669 !important;
+  border-color: #a7f3d0 !important;
+}
+
+/* ── Credencial Digital Card ──────────────────────── */
+.account-digital-badge {
+  background: linear-gradient(135deg, #0a2540 0%, #173b67 50%, #1e40af 100%);
+  border-radius: 20px;
+  padding: 24px;
+  color: #ffffff;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(10, 37, 64, 0.25);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 220px;
+}
+
+.account-digital-badge::before {
+  content: '';
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(79, 154, 255, 0.3) 0%, transparent 70%);
+}
+
+.account-digital-badge__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.account-digital-badge__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.account-digital-badge__brand img {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.account-digital-badge__chip {
+  width: 38px;
+  height: 28px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #fcd34d 0%, #d97706 100%);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+}
+
+.account-digital-badge__middle {
+  margin: 16px 0;
+}
+
+.account-digital-badge__name {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+}
+
+.account-digital-badge__role {
+  font-size: 13px;
+  color: #93c5fd;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.account-digital-badge__bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+.account-digital-badge__code {
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+/* ── Permisos y Seguridad ─────────────────────────── */
+.account-perms-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.account-perm-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f8faff;
+  border: 1px solid #e0ecff;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.account-perm-item span.check {
+  color: #10b981;
+  font-weight: 800;
+}

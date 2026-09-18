@@ -1,0 +1,589 @@
+/* ════════════════════════════════════════════════════
+   SysAdminTelemetry.css — Telemetría, Estado DB y Logs
+   ════════════════════════════════════════════════════ */
+
+/* ── Encabezado de Telemetría ─────────────────────── */
+.telem-header-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  background: #ffffff;
+  border: 1.5px solid #e0ecff;
+  border-radius: 16px;
+  padding: 14px 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 10px rgba(79, 154, 255, 0.05);
+}
+
+.telem-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.telem-pulse-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  animation: telemPulse 2s infinite;
+}
+
+@keyframes telemPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+.telem-status-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0a2540;
+}
+
+.telem-status-desc {
+  font-size: 12px;
+  color: #64748b;
+  margin-left: 6px;
+}
+
+.telem-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.telem-badge-live {
+  font-size: 11px;
+  font-weight: 700;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  padding: 4px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.telem-btn-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8faff;
+  border: 1.5px solid #dbeafe;
+  color: #3b82f6;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.telem-btn-refresh:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  transform: translateY(-1px);
+}
+
+.telem-btn-refresh.spinning .telem-spin-icon {
+  animation: telemSpin 0.8s linear infinite;
+}
+
+@keyframes telemSpin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Grid de Métricas de Servidor ─────────────────── */
+.telem-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.telem-card {
+  background: #ffffff;
+  border: 1.5px solid #e0ecff;
+  border-radius: 16px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(79, 154, 255, 0.04);
+}
+
+.telem-card:hover {
+  border-color: rgba(79, 154, 255, 0.4);
+  box-shadow: 0 6px 20px rgba(79, 154, 255, 0.08);
+  transform: translateY(-2px);
+}
+
+.telem-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.telem-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.telem-metric-tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+  letter-spacing: 0.3px;
+}
+
+.telem-metric-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0a2540;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+
+.telem-metric-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 12px;
+}
+
+.telem-progress-bg {
+  width: 100%;
+  height: 7px;
+  background: #f1f5f9;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.telem-progress-fill {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.telem-metric-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+/* ── Panel de Base de Datos y Servicios ──────────── */
+.telem-services-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 960px) {
+  .telem-services-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.telem-db-card {
+  background: #ffffff;
+  border: 1.5px solid #e0ecff;
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: 0 2px 8px rgba(79, 154, 255, 0.04);
+}
+
+.telem-db-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.telem-db-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.telem-db-header-left strong {
+  display: block;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: #0a2540;
+}
+
+.telem-db-header-left span {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.telem-db-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.telem-db-stat {
+  background: #f8faff;
+  border: 1px solid #e8f0fe;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.telem-db-stat-label {
+  font-size: 11.5px;
+  color: #64748b;
+  font-weight: 500;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.telem-db-stat-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0a2540;
+}
+
+/* Lista de Micro-servicios */
+.telem-microservices-card {
+  background: #ffffff;
+  border: 1.5px solid #e0ecff;
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: 0 2px 8px rgba(79, 154, 255, 0.04);
+}
+
+.telem-microservices-title {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: #0a2540;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.telem-service-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.telem-service-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #f8faff;
+  border: 1px solid #eef3ff;
+  border-radius: 12px;
+  font-size: 13px;
+  transition: all 0.15s ease;
+}
+
+.telem-service-item:hover {
+  background: #f0f6ff;
+  border-color: #dbeafe;
+}
+
+.telem-service-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.telem-service-info strong {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.telem-service-info span {
+  font-size: 11.5px;
+  color: #64748b;
+}
+
+.telem-service-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.telem-service-badge.ok {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.telem-service-badge.warn {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+/* ── Consola de Logs del Servidor ─────────────────── */
+.telem-logs-container {
+  background: #0f172a;
+  border: 1.5px solid #1e293b;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.2);
+  margin-bottom: 28px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+.telem-logs-topbar {
+  background: #1e293b;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  border-bottom: 1px solid #334155;
+}
+
+.telem-logs-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.telem-term-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.telem-term-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+}
+
+.telem-term-dot.red { background: #ef4444; }
+.telem-term-dot.yellow { background: #f59e0b; }
+.telem-term-dot.green { background: #10b981; }
+
+.telem-logs-title {
+  color: #f8fafc;
+  font-size: 13.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.telem-logs-count {
+  background: #334155;
+  color: #94a3b8;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.telem-logs-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.telem-filter-btn {
+  background: #334155;
+  border: 1px solid #475569;
+  color: #cbd5e1;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.telem-filter-btn:hover {
+  background: #475569;
+  color: #ffffff;
+}
+
+.telem-filter-btn.active {
+  background: #3b82f6;
+  border-color: #60a5fa;
+  color: #ffffff;
+}
+
+.telem-search-input {
+  background: #0f172a;
+  border: 1px solid #475569;
+  color: #f8fafc;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  outline: none;
+  width: 160px;
+  transition: all 0.2s;
+}
+
+.telem-search-input:focus {
+  border-color: #3b82f6;
+  width: 200px;
+}
+
+.telem-tool-btn {
+  background: #334155;
+  border: none;
+  color: #94a3b8;
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.telem-tool-btn:hover {
+  background: #475569;
+  color: #f8fafc;
+}
+
+.telem-logs-body {
+  padding: 16px;
+  max-height: 320px;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.telem-logs-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.telem-logs-body::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+.telem-logs-body::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+.telem-log-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 3px 0;
+  transition: background 0.1s;
+  border-radius: 4px;
+}
+
+.telem-log-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.telem-log-time {
+  color: #64748b;
+  flex-shrink: 0;
+  font-size: 11.5px;
+}
+
+.telem-log-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.telem-log-badge.info {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+.telem-log-badge.warn {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+
+.telem-log-badge.error {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.telem-log-source {
+  color: #a855f7;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.telem-log-msg {
+  color: #e2e8f0;
+  word-break: break-word;
+}
+
+.telem-logs-empty {
+  padding: 24px;
+  text-align: center;
+  color: #64748b;
+}
+
+/* ── Banner de Mock / Aviso de Endpoints ─────────── */
+.telem-mock-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, rgba(79, 154, 255, 0.08), rgba(59, 130, 246, 0.04));
+  border: 1.5px dashed rgba(79, 154, 255, 0.35);
+  border-radius: 14px;
+  padding: 12px 18px;
+  margin-bottom: 24px;
+  font-size: 13px;
+  color: #1e40af;
+}
+
+.telem-mock-alert-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.telem-mock-alert code {
+  background: rgba(79, 154, 255, 0.15);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
