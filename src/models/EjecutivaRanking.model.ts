@@ -19,4 +19,11 @@ export interface EjecutivaRanking {
     // Métricas específicas de Podio de Ventas
     ticketPromedio?: number;
     ventasCerradas?: number;
+    // Métricas para orden de llegada por Requerimiento
+    horaRegistro?: string;
+    diferenciaTiempo?: string;
+    esGanadoraReq?: boolean;
+    numeroRequerimiento?: string;
+    esEmpateTecnico?: boolean;
+    puestoTexto?: string;
 }

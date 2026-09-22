@@ -1,6 +1,6 @@
 import type { AcuerdoMarco } from '../Dtos/AcuerdoMarco';
 
-const API_BASE = 'https://localhost:7010';
+import { API_BASE } from '../../env/envoviment';
 
 export const getAcuerdoMarco = async (): Promise<AcuerdoMarco[]> => {
     const response = await fetch(`${API_BASE}/api/acuerdosmarco`);

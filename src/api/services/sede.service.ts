@@ -1,7 +1,7 @@
 import type { SedeDto, CrearSedeRequest, ActualizarSedeRequest } from '../Dtos/Sede';
 import { getAuthHeaders } from './oportunidades.service';
 
-const API_BASE = 'https://localhost:7010';
+import { API_BASE } from '../../env/envoviment';
 
 export async function getSedes(incluirInactivas = false): Promise<SedeDto[]> {
   const url = `${API_BASE}/api/sedes?incluirInactivas=${incluirInactivas}`;

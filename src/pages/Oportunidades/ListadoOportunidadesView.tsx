@@ -1,14 +1,39 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { GoogleIcon } from '../../components/GoogleIcon';
+import { useAuth } from '../../context/AuthContext';
+import { isOportunidadOwner } from '../../utils/oportunidadUtils';
 import type { Oportunidad, VencimientoBadge, Marca, ProductoItem } from '../../types/oportunidades';
 import { DetalleOportunidadView } from './DetalleOportunidadView';
 
+const PAGE_SIZE = 10;
+
+function generatePageNumbers(current: number, total: number): (number | string)[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  const pages: (number | string)[] = [];
+  pages.push(1);
+  if (current > 3) {
+    pages.push('...');
+  }
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+  for (let i = start; i <= end; i++) {
+    pages.push(i);
+  }
+  if (current < total - 2) {
+    pages.push('...');
+  }
+  pages.push(total);
+  return pages;
+}
 
 interface ListadoOportunidadesViewProps {
   oportunidades: Oportunidad[];
   roleAccent: string;
   onEdit: (op: Oportunidad) => void;
   onSubirEvidencia: (opId: string | number) => void;
+  onEstadoCambiado?: (op: Oportunidad) => void;
   getVencimientoBadge: (fechaIso: string) => VencimientoBadge | null;
 }
 
@@ -17,12 +42,26 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
   roleAccent,
   onEdit,
   onSubirEvidencia,
+  onEstadoCambiado,
   getVencimientoBadge,
 }) => {
+  const { empleado } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'Todos' | 'En Licitación' | 'Cotizada' | 'Adjudicada'>('Todos');
+  const [statusFilter, setStatusFilter] = useState<'Todos' | 'En Licitación' | 'Cotizada' | 'Adjudicada' | 'Desestimada'>('Todos');
+  const [ownerFilter, setOwnerFilter] = useState<'todos' | 'mios'>('todos');
   const [selectedOpDetail, setSelectedOpDetail] = useState<Oportunidad | null>(null);
   const [detalleDrawerOp, setDetalleDrawerOp] = useState<Oportunidad | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reiniciar a la primera página si cambian los filtros o término de búsqueda
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, ownerFilter]);
+
+  // Conteo de requerimientos registrados por el usuario en sesión
+  const misOportunidadesCount = useMemo(() => {
+    return oportunidades.filter((op) => isOportunidadOwner(op, empleado)).length;
+  }, [oportunidades, empleado]);
 
   // Estadísticas rápidas
   const totalMonto = useMemo(() => {
@@ -40,6 +79,11 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
   // Filtrado
   const filteredOportunidades = useMemo(() => {
     return oportunidades.filter((op) => {
+      // Filtro de pertenencia (Todos vs Solo míos)
+      if (ownerFilter === 'mios' && !isOportunidadOwner(op, empleado)) {
+        return false;
+      }
+
       const matchesStatus = statusFilter === 'Todos' || op.estado === statusFilter;
       const term = searchTerm.toLowerCase().trim();
       if (!term) return matchesStatus;
@@ -55,7 +99,16 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
 
       return matchesStatus && matchesTerm;
     });
-  }, [oportunidades, searchTerm, statusFilter]);
+  }, [oportunidades, searchTerm, statusFilter, ownerFilter, empleado]);
+
+  // Paginación (10 licitaciones por página)
+  const totalPages = Math.max(1, Math.ceil(filteredOportunidades.length / PAGE_SIZE));
+  const safePage = Math.min(Math.max(currentPage, 1), totalPages);
+  const startIndex = (safePage - 1) * PAGE_SIZE;
+  const endIndex = Math.min(startIndex + PAGE_SIZE, filteredOportunidades.length);
+  const paginatedOportunidades = useMemo(() => {
+    return filteredOportunidades.slice(startIndex, endIndex);
+  }, [filteredOportunidades, startIndex, endIndex]);
 
   return (
     <div className="reg-listado-container">
@@ -111,43 +164,112 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
       {/* ── Tarjeta Principal del Listado ── */}
       <div className="reg-card">
         {/* Barra de Filtros y Búsqueda */}
-        <div className="reg-list-toolbar">
-          <div className="reg-search-box">
-            <GoogleIcon name="manage_search" size={18} color="#94a3b8" />
-            <input
-              type="text"
-              placeholder="Buscar por N° Requerimiento, Acuerdo Marco, Empresa, Marca o Ejecutiva..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="reg-search-input"
-            />
-            {searchTerm && (
+        <div className="reg-list-toolbar" style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'stretch' }}>
+          {/* Fila Superior: Buscador y Filtro Todos / Solo míos */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+            <div className="reg-search-box" style={{ margin: 0, flex: '1 1 320px', maxWidth: 'none' }}>
+              <GoogleIcon name="manage_search" size={18} color="#94a3b8" />
+              <input
+                type="text"
+                placeholder="Buscar por N° Requerimiento, Acuerdo Marco, Empresa, Marca o Ejecutiva..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="reg-search-input"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+                >
+                  <GoogleIcon name="close" size={14} color="#94a3b8" />
+                </button>
+              )}
+            </div>
+
+            {/* Segmented Control: Todos / Solo míos */}
+            <div
+              className="reg-owner-filter-toggle"
+              style={{
+                display: 'inline-flex',
+                background: '#f1f5f9',
+                padding: '4px',
+                borderRadius: '10px',
+                border: '1.5px solid #e2e8f0',
+                gap: 4,
+              }}
+            >
               <button
                 type="button"
-                onClick={() => setSearchTerm('')}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+                onClick={() => setOwnerFilter('todos')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '7px 14px',
+                  borderRadius: '7px',
+                  fontSize: '12.5px',
+                  fontWeight: 700,
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.18s ease',
+                  background: ownerFilter === 'todos' ? '#ffffff' : 'transparent',
+                  color: ownerFilter === 'todos' ? '#0f172a' : '#64748b',
+                  boxShadow: ownerFilter === 'todos' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                }}
               >
-                <GoogleIcon name="close" size={14} color="#94a3b8" />
+                <GoogleIcon name="groups" size={16} color={ownerFilter === 'todos' ? roleAccent : '#64748b'} />
+                <span>Todos ({oportunidades.length})</span>
               </button>
-            )}
+              <button
+                type="button"
+                onClick={() => setOwnerFilter('mios')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '7px 14px',
+                  borderRadius: '7px',
+                  fontSize: '12.5px',
+                  fontWeight: 700,
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.18s ease',
+                  background: ownerFilter === 'mios' ? roleAccent : 'transparent',
+                  color: ownerFilter === 'mios' ? '#ffffff' : '#64748b',
+                  boxShadow: ownerFilter === 'mios' ? `0 2px 8px ${roleAccent}40` : 'none',
+                }}
+              >
+                <GoogleIcon name="person" size={16} color={ownerFilter === 'mios' ? '#ffffff' : '#64748b'} />
+                <span>Solo míos ({misOportunidadesCount})</span>
+              </button>
+            </div>
           </div>
 
-          <div className="reg-filter-pills">
-            {(['Todos', 'En Licitación', 'Cotizada', 'Adjudicada'] as const).map((st) => (
-              <button
-                key={st}
-                type="button"
-                className={`reg-filter-chip ${statusFilter === st ? 'active' : ''}`}
-                onClick={() => setStatusFilter(st)}
-                style={
-                  statusFilter === st
-                    ? { background: roleAccent, color: '#ffffff', borderColor: roleAccent }
-                    : undefined
-                }
-              >
-                {st}
-              </button>
-            ))}
+          {/* Fila Inferior: Chips de Estado y Conteo */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+            <div className="reg-filter-pills">
+              {(['Todos', 'En Licitación', 'Cotizada', 'Adjudicada', 'Desestimada'] as const).map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  className={`reg-filter-chip ${statusFilter === st ? 'active' : ''}`}
+                  onClick={() => setStatusFilter(st)}
+                  style={
+                    statusFilter === st
+                      ? { background: roleAccent, color: '#ffffff', borderColor: roleAccent }
+                      : undefined
+                  }
+                >
+                  {st}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ fontSize: '12.5px', color: '#64748b', fontWeight: 600 }}>
+              Mostrando <strong style={{ color: '#0f172a' }}>{filteredOportunidades.length}</strong> {filteredOportunidades.length === 1 ? 'oportunidad' : 'oportunidades'}
+              {ownerFilter === 'mios' && <span style={{ color: roleAccent, fontWeight: 700 }}> (solo mis registros)</span>}
+            </div>
           </div>
         </div>
 
@@ -156,7 +278,9 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
           <div className="reg-empty-history">
             <GoogleIcon name="inbox" size={40} color="#94a3b8" />
             <p>
-              {searchTerm || statusFilter !== 'Todos'
+              {ownerFilter === 'mios' && misOportunidadesCount === 0
+                ? 'No tienes oportunidades registradas actualmente a tu nombre.'
+                : searchTerm || statusFilter !== 'Todos' || ownerFilter !== 'todos'
                 ? 'No se encontraron oportunidades con los filtros seleccionados.'
                 : 'Aún no hay oportunidades registradas en el sistema.'}
             </p>
@@ -179,8 +303,9 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
                 </tr>
               </thead>
               <tbody>
-                {filteredOportunidades.map((op) => {
+                {paginatedOportunidades.map((op) => {
                   const vBadge = getVencimientoBadge(op.fechaVencimiento);
+                  const isOwner = isOportunidadOwner(op, empleado);
                   return (
                     <tr key={op.id}>
                       <td>
@@ -263,9 +388,14 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
                       </td>
                       <td>
                         <div className="reg-creado-por">
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
                             <GoogleIcon name="person" size={13} color="#64748b" />
                             <span style={{ fontWeight: 600 }}>{op.creadoPor}</span>
+                            {isOwner && (
+                              <span className="reg-badge-tu" title="Licitación registrada por tu cuenta">
+                                Tú
+                              </span>
+                            )}
                           </div>
                           {op.horaRegistroExacta && (
                             <div style={{ fontSize: '11px', color: '#0369a1', display: 'flex', alignItems: 'center', gap: '3px', marginTop: '2px' }}>
@@ -299,51 +429,63 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
                             <GoogleIcon name="open_in_full" size={13} color="#4f46e5" />
                             <span>Detalle</span>
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => onEdit(op)}
-                            title="Editar Oportunidad"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: 4,
-                              background: 'rgba(2, 132, 199, 0.1)',
-                              color: '#0284c7',
-                              border: '1px solid rgba(2, 132, 199, 0.25)',
-                              padding: '5px 8px',
-                              borderRadius: '6px',
-                              fontSize: '12px',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            <GoogleIcon name="edit" size={13} color="#0284c7" />
-                            <span>Editar</span>
-                          </button>
-                          <button
-                            type="button"
-                            className="reg-table-btn-evidence"
-                            onClick={() => onSubirEvidencia(op.id)}
-                            title="Subir Evidencia de esta Oportunidad"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: 4,
-                              background: 'rgba(16, 185, 129, 0.1)',
-                              color: '#059669',
-                              border: '1px solid rgba(16, 185, 129, 0.25)',
-                              padding: '5px 8px',
-                              borderRadius: '6px',
-                              fontSize: '12px',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            <GoogleIcon name="upload_file" size={13} color="#059669" />
-                            <span>Evidencia</span>
-                          </button>
+                          {isOwner ? (
+                            <button
+                              type="button"
+                              onClick={() => onEdit(op)}
+                              title="Editar Oportunidad"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 4,
+                                background: 'rgba(2, 132, 199, 0.1)',
+                                color: '#0284c7',
+                                border: '1px solid rgba(2, 132, 199, 0.25)',
+                                padding: '5px 8px',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <GoogleIcon name="edit" size={13} color="#0284c7" />
+                              <span>Editar</span>
+                            </button>
+                          ) : (
+                            <span
+                              className="reg-table-readonly-badge"
+                              title={`Solo lectura: Esta licitación fue registrada por ${op.creadoPor || 'otro usuario'}`}
+                            >
+                              <GoogleIcon name="lock" size={12} color="#94a3b8" />
+                              <span>Solo lectura</span>
+                            </span>
+                          )}
+                          {isOwner && (
+                            <button
+                              type="button"
+                              className="reg-table-btn-evidence"
+                              onClick={() => onSubirEvidencia(op.id)}
+                              title="Subir Evidencia de esta Oportunidad"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 4,
+                                background: 'rgba(16, 185, 129, 0.1)',
+                                color: '#059669',
+                                border: '1px solid rgba(16, 185, 129, 0.25)',
+                                padding: '5px 8px',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <GoogleIcon name="upload_file" size={13} color="#059669" />
+                              <span>Evidencia</span>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -351,6 +493,68 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* ── Controles de Paginación (10 por página) ── */}
+        {filteredOportunidades.length > 0 && (
+          <div className="reg-pagination-bar">
+            <div className="reg-pagination-info">
+              Mostrando <strong>{startIndex + 1}</strong> - <strong>{endIndex}</strong> de <strong>{filteredOportunidades.length}</strong> {filteredOportunidades.length === 1 ? 'licitación' : 'licitaciones'}
+            </div>
+            {totalPages > 1 && (
+              <div className="reg-pagination-controls">
+                <button
+                  type="button"
+                  className="reg-page-btn nav-btn"
+                  disabled={safePage <= 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  title="Página anterior"
+                >
+                  <GoogleIcon name="chevron_left" size={16} />
+                  <span>Anterior</span>
+                </button>
+
+                <div className="reg-page-numbers">
+                  {generatePageNumbers(safePage, totalPages).map((p, idx) => {
+                    if (typeof p === 'string') {
+                      return (
+                        <span key={`ellipsis-${idx}`} className="reg-page-ellipsis">
+                          …
+                        </span>
+                      );
+                    }
+                    const isCurrent = p === safePage;
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        className={`reg-page-btn ${isCurrent ? 'active' : ''}`}
+                        style={
+                          isCurrent
+                            ? { background: roleAccent, color: '#ffffff', borderColor: roleAccent }
+                            : undefined
+                        }
+                        onClick={() => setCurrentPage(p)}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  className="reg-page-btn nav-btn"
+                  disabled={safePage >= totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  title="Página siguiente"
+                >
+                  <span>Siguiente</span>
+                  <GoogleIcon name="chevron_right" size={16} />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -363,6 +567,10 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
           onClose={() => setDetalleDrawerOp(null)}
           onEdit={(op) => { setDetalleDrawerOp(null); onEdit(op); }}
           onSubirEvidencia={(id) => { setDetalleDrawerOp(null); onSubirEvidencia(id); }}
+          onEstadoCambiado={(op) => {
+            setDetalleDrawerOp(op);
+            onEstadoCambiado?.(op);
+          }}
           getVencimientoBadge={getVencimientoBadge}
         />
       )}
@@ -466,19 +674,21 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
             </div>
 
             <div style={{ marginTop: 20, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button
-                type="button"
-                onClick={() => {
-                  const op = selectedOpDetail;
-                  setSelectedOpDetail(null);
-                  onEdit(op);
-                }}
-                className="reg-table-btn-edit"
-                style={{ padding: '8px 16px' }}
-              >
-                <GoogleIcon name="edit" size={15} color="#0284c7" />
-                <span>Editar Requerimiento</span>
-              </button>
+              {isOportunidadOwner(selectedOpDetail, empleado) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const op = selectedOpDetail;
+                    setSelectedOpDetail(null);
+                    onEdit(op);
+                  }}
+                  className="reg-table-btn-edit"
+                  style={{ padding: '8px 16px' }}
+                >
+                  <GoogleIcon name="edit" size={15} color="#0284c7" />
+                  <span>Editar Requerimiento</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setSelectedOpDetail(null)}

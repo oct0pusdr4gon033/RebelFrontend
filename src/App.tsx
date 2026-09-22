@@ -10,6 +10,7 @@ import MiCuentaPage from './pages/MiCuenta';
 import RegistroOportunidadPage from './pages/Oportunidades';
 import { EmpresaLayout, SedesPage, EmpleadosPage, UsuariosPage } from './pages/Admin/Empresa';
 import RolesPage from './pages/SysAdmin/RolesPage';
+import GlobalSessionGuard from './components/SessionModal/GlobalSessionGuard';
 
 function MiCuentaRedirect() {
   const { empleado } = useAuth();
@@ -27,7 +28,9 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <GlobalSessionGuard />
         <Routes>
+
           {/* Ruta raíz → login */}
           <Route path="/" element={<Navigate to="/login" replace />} />
 

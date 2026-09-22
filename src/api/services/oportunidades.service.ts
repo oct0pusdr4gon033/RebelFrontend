@@ -1,4 +1,4 @@
-const API_BASE = 'https://localhost:7010';
+import { API_BASE } from '../../env/envoviment';
 
 export function getAuthToken(): string | null {
   // 1. Verificar si hay token directo
@@ -158,8 +158,18 @@ export async function createOportunidadApi(data: CrearOportunidadApiRequest): Pr
         errMsg = err.mensaje;
       // ASP.NET Core ModelState: { errors: { field: ['msg'] } } or { title: '...', errors: {...} }
       } else if (err?.errors) {
-        const firstKey = Object.keys(err.errors)[0];
-        errMsg = err.errors[firstKey]?.[0] ?? err.title ?? 'Error de validación';
+        // Ignorar la clave genérica 'dto' si existen errores específicos de campos
+        const specificKeys = Object.keys(err.errors).filter((k) => k !== 'dto' && k !== '$');
+        if (specificKeys.length > 0) {
+          const key = specificKeys[0];
+          const cleanKey = key.replace(/^\$\./, '');
+          errMsg = `${cleanKey}: ${err.errors[key]?.[0] ?? 'Inválido'}`;
+        } else if (err.errors['$']?.[0]) {
+          errMsg = err.errors['$'][0];
+        } else {
+          const firstKey = Object.keys(err.errors)[0];
+          errMsg = err.errors[firstKey]?.[0] ?? err.title ?? 'Error de validación';
+        }
       } else if (err?.title) {
         errMsg = err.title;
       }
@@ -189,6 +199,25 @@ export async function updateOportunidadApi(
   if (!response.ok) {
     const err = await response.json().catch(() => ({ mensaje: 'Error al actualizar oportunidad' }));
     throw new Error(err.mensaje ?? 'Error en la actualización');
+  }
+  return response.json();
+}
+/**
+ * Cambiar estado de una oportunidad
+ * Solo la ejecutiva que registró la oportunidad puede cambiar su estado.
+ */
+export async function cambiarEstadoApi(
+  id: number | string,
+  estado: string
+): Promise<OportunidadApiResponse> {
+  const response = await fetch(`${API_BASE}/api/oportunidades/${id}/estado`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ estado }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ mensaje: 'Error al cambiar estado' }));
+    throw new Error(err.mensaje ?? 'Error en el cambio de estado');
   }
   return response.json();
 }

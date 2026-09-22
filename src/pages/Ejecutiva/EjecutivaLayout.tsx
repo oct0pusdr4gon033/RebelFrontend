@@ -25,6 +25,12 @@ export const ejecutivaNavItems: NavItem[] = [
         path: '/ejecutiva/registro-oportunidad?tab=registrar',
       },
       {
+        id: 'mis-oportunidades',
+        tabKey: 'mis-oportunidades',
+        label: 'Mis Oportunidades',
+        path: '/ejecutiva/registro-oportunidad?tab=mis-oportunidades',
+      },
+      {
         id: 'listar',
         tabKey: 'listar',
         label: 'Listar',

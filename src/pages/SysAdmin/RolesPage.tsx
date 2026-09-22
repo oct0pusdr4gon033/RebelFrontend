@@ -5,7 +5,7 @@ import { getAuthHeaders } from '../../api/services/oportunidades.service';
 import { GoogleIcon } from '../../components/GoogleIcon';
 import '../Admin/Empresa/EmpresaAdmin.css';
 
-const API_BASE = 'https://localhost:7010';
+import { API_BASE } from '../../env/envoviment';
 
 // ── DTOs locales para la UI ───────────────────────────────────────────────────
 interface RolDetalleDto extends RolDto {

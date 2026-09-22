@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleIcon } from '../../components/GoogleIcon';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -14,6 +14,7 @@ import type { ProductoItem } from '../../api/Dtos/ProductoItem';
 import type { EmpresaOption } from '../../api/Dtos/Empresa';
 import type { RegistroOportunidadPageProps } from '../../props/RegistroOportunidad';
 import type { Oportunidad } from '../../models/Oportunidad.model';
+import { formatFechaHoraPeru, formatHoraPeru } from '../../utils/dateUtils';
 import './RegistroOportunidad.css';
 import { BuscadorEmpresaModal } from '../../components/BuscadorEmpresaModal/BuscadorEmpresaModal';
 import { useSearchParams } from 'react-router-dom';
@@ -21,6 +22,8 @@ import type { OportunidadTab } from './OportunidadNavButtons';
 import { ListadoOportunidadesView } from './ListadoOportunidadesView';
 import { PodioComercialView } from './PodioComercialView';
 import { SubirEvidenciaView } from './SubirEvidenciaView';
+import { MisOportunidadesView } from './MisOportunidadesView';
+import { isOportunidadOwner } from '../../utils/oportunidadUtils';
 
 export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = ({
   roleAccent = '#06b6d4',
@@ -31,7 +34,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
   // Tab de navegación push button sincronizado con URL y Sidebar
   const tabParam = searchParams.get('tab');
   const activeTab: OportunidadTab =
-    tabParam === 'listar' || tabParam === 'podio' || tabParam === 'subir-evidencia'
+    tabParam === 'listar' || tabParam === 'podio' || tabParam === 'subir-evidencia' || tabParam === 'mis-oportunidades'
       ? tabParam
       : 'registrar';
 
@@ -86,68 +89,89 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Historial de oportunidades registradas
+  // Clave de almacenamiento aislada por usuario para evitar contaminación de datos entre cuentas
+  const userCacheKey = empleado?.userId ? `sales_rebel_oportunidades_${empleado.userId}` : null;
+
+  // Historial de oportunidades registradas (aislado por usuario)
   const [oportunidades, setOportunidades] = useState<Oportunidad[]>(() => {
-    const saved = localStorage.getItem('sales_rebel_oportunidades');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.filter((op: any) => op && op.acuerdoMarco);
+    if (userCacheKey) {
+      const saved = localStorage.getItem(userCacheKey);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            return parsed.filter((op: any) => op && op.acuerdoMarco);
+          }
+        } catch {
+          return [];
         }
-      } catch {
-        return [];
       }
     }
     return [];
   });
 
-  // Cargar oportunidades desde backend si está disponible
-  useEffect(() => {
-    getOportunidadesApi()
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          const mapped: Oportunidad[] = data.map((op) => ({
-            id: op.id,
-            numeroRequerimiento: op.numeroRequerimiento,
-            acuerdoMarco: {
-              id: op.acuerdoMarcoId,
-              codigo: op.acuerdoMarcoCodigo || 'N/A',
-              descripcion: op.acuerdoMarcoDescripcion || '',
-              activo: true,
-            },
-            empresaId: op.empresaId,
-            empresaRazonSocial: op.empresaRazonSocial,
-            empresaRuc: op.empresaRuc,
-            entidadConvocante: op.entidadConvocante,
-            marcas: op.marcas.map((m) => ({ id: m.id, nombre: m.nombre })),
-            fechaVencimiento: op.fechaVencimientoLicitacion,
-            items: op.productos.map((p) => ({
-              id: p.id,
-              numeroParte: p.numeroParte,
-              descripcion: p.descripcion || '',
-              cantidad: p.cantidad,
-              limiteUnitario: p.limiteUnitario,
-            })),
-            limiteTotal: op.limiteTotal,
-            estado: (op.estado as any) || 'En Licitación',
-            creadoPor: op.creadoPorNombre || 'Ejecutiva',
-            createdAt: new Date(op.fechaRegistro).toLocaleString('es-PE'),
-            updatedAt: op.fechaActualizacion ? new Date(op.fechaActualizacion).toLocaleString('es-PE') : undefined,
-          }));
-          setOportunidades(mapped);
+  // Cargar oportunidades desde backend sincronizadas por usuario
+  const cargarOportunidades = useCallback(async () => {
+    try {
+      const data = await getOportunidadesApi();
+      if (Array.isArray(data)) {
+        const mapped: Oportunidad[] = data.map((op) => ({
+          id: op.id,
+          numeroRequerimiento: op.numeroRequerimiento,
+          acuerdoMarco: {
+            id: op.acuerdoMarcoId,
+            codigo: op.acuerdoMarcoCodigo || 'N/A',
+            descripcion: op.acuerdoMarcoDescripcion || '',
+            activo: true,
+          },
+          empresaId: op.empresaId,
+          empresaRazonSocial: op.empresaRazonSocial,
+          empresaRuc: op.empresaRuc,
+          entidadConvocante: op.entidadConvocante,
+          marcas: op.marcas.map((m) => ({ id: m.id, nombre: m.nombre })),
+          fechaVencimiento: op.fechaVencimientoLicitacion || '',
+          items: op.productos.map((p) => ({
+            id: p.id,
+            numeroParte: p.numeroParte,
+            descripcion: p.descripcion || '',
+            cantidad: p.cantidad,
+            limiteUnitario: p.limiteUnitario,
+          })),
+          limiteTotal: op.limiteTotal,
+          estado: (op.estado as any) || 'En Licitación',
+          creadoPor: op.creadoPorNombre || 'Ejecutiva',
+          creadoPorUsuarioId: op.creadoPorUsuarioId,
+          createdAt: formatFechaHoraPeru(op.fechaRegistro),
+          fechaRegistro: op.fechaRegistro,
+          updatedAt: op.fechaActualizacion ? formatFechaHoraPeru(op.fechaActualizacion) : undefined,
+        }));
+        setOportunidades(mapped);
+        if (userCacheKey) {
+          localStorage.setItem(userCacheKey, JSON.stringify(mapped));
         }
-      })
-      .catch(() => {
-        // Backend no conectado aún o sin token: usa estado local
-      });
-  }, []);
+      }
+    } catch {
+      // Backend no conectado aún o sin token
+    }
+  }, [userCacheKey]);
 
-  // Guardar en localStorage cuando cambie la lista
   useEffect(() => {
-    localStorage.setItem('sales_rebel_oportunidades', JSON.stringify(oportunidades));
-  }, [oportunidades]);
+    cargarOportunidades();
+  }, [cargarOportunidades]);
 
+  // Guardar en localStorage aislado del usuario activo cuando cambie la lista
+  useEffect(() => {
+    if (userCacheKey && oportunidades.length > 0) {
+      localStorage.setItem(userCacheKey, JSON.stringify(oportunidades));
+    }
+  }, [oportunidades, userCacheKey]);
+
+  // Actualizar oportunidad cuando cambia su estado desde el detalle
+  const handleEstadoCambiado = useCallback((opActualizada: Oportunidad) => {
+    setOportunidades((prev) =>
+      prev.map((op) => (op.id === opActualizada.id ? opActualizada : op))
+    );
+  }, []);
   // Cerrar dropdowns al hacer clic afuera
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -275,8 +299,12 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
 
   const vencimientoStatus = getVencimientoBadge(fechaVencimiento);
 
-  // Iniciar Modo Edición
+  // Iniciar Modo Edición (Solo permitido para el usuario que registró la licitación)
   const handleStartEdit = (op: Oportunidad) => {
+    if (!isOportunidadOwner(op, empleado)) {
+      alert(`No tienes permisos para editar esta licitación. Solo puede ser editada por ${op.creadoPor || 'el usuario que la registró'}.`);
+      return;
+    }
     setActiveTab('registrar');
     setEditingId(op.id);
     setNumeroRequerimiento(op.numeroRequerimiento);
@@ -298,8 +326,13 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
     window.scrollTo({ top: 120, behavior: 'smooth' });
   };
 
-  // Redirigir a Subir Evidencia con oportunidad preseleccionada
+  // Redirigir a Subir Evidencia con oportunidad preseleccionada (solo si es el propietario)
   const handleIrASubirEvidencia = (opId: string | number) => {
+    const op = oportunidades.find((o) => String(o.id) === String(opId));
+    if (op && !isOportunidadOwner(op, empleado)) {
+      alert(`No puedes subir evidencias para este requerimiento. Solo puede hacerlo ${op.creadoPor || 'el usuario que lo registró'}.`);
+      return;
+    }
     setPreselectedEvidenciaOpId(opId);
     setActiveTab('subir-evidencia');
     window.scrollTo({ top: 80, behavior: 'smooth' });
@@ -326,6 +359,9 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
     ]);
   };
 
+  // Prevenir envíos dobles o clicks concurrentes en 0ms
+  const isSubmittingRef = useRef(false);
+
   // Validaciones para habilitar botón:
   // IMPORTANTE: Empresa e Ítems son 100% opcionales (Registro Exprés), no bloquean el botón
   const isFormValid =
@@ -336,12 +372,31 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
   // Guardar (Crear o Actualizar)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFormValid || !selectedAcuerdo) return;
+    if (!isFormValid || !selectedAcuerdo || loading || isSubmittingRef.current) return;
 
+    const reqUpper = numeroRequerimiento.toUpperCase().trim();
+
+    // Validación preventiva en cliente para la misma ejecutiva
+    if (!editingId) {
+      const yaRegistrado = oportunidades.some(
+        (op) =>
+          op.numeroRequerimiento.trim().toUpperCase() === reqUpper &&
+          (op.creadoPorUsuarioId === empleado?.userId || !op.creadoPorUsuarioId)
+      );
+      if (yaRegistrado) {
+        setSuccessMsg(
+          `❌ Ya has registrado previamente el requerimiento "${reqUpper}". Cada ejecutiva puede registrar solo una oportunidad por requerimiento.`
+        );
+        return;
+      }
+    }
+
+    isSubmittingRef.current = true;
     setLoading(true);
 
     const validItems = items.filter((it) => it.numeroParte.trim());
     const validTotalLimite = validItems.reduce((acc, it) => acc + (Number(it.cantidad) || 0) * (Number(it.limiteUnitario) || 0), 0);
+
 
     try {
       if (editingId) {
@@ -384,7 +439,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
               marcas: selectedMarcas,
               items: validItems.map((it) => ({ ...it })),
               limiteTotal: validTotalLimite,
-              updatedAt: new Date().toLocaleString('es-PE'),
+              updatedAt: formatFechaHoraPeru(new Date()),
             };
           })
         );
@@ -405,7 +460,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
           const res = await createOportunidadApi({
             numeroRequerimiento: numeroRequerimiento.toUpperCase().trim(),
             acuerdoMarcoId: Number(selectedAcuerdo.id),  // Backend: int
-            fechaVencimientoLicitacion: fechaVencimiento || null,  // Backend: DateTime? (nullable)
+            fechaVencimientoLicitacion: fechaVencimiento ? new Date(fechaVencimiento).toISOString() : null,
             empresaId: selectedEmpresa ? selectedEmpresa.id : null,
             entidadConvocante: entidadConvocante.trim() || undefined,
             marcaIds: selectedMarcas.map((m) => Number(m.id)),  // Backend: List<int>
@@ -428,11 +483,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
           return;
         }
 
-        const horaExacta = new Date().toLocaleTimeString('es-PE', {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        });
+        const horaExacta = formatHoraPeru(new Date());
 
         const nuevaOportunidad: Oportunidad = {
           id: backendId,
@@ -447,8 +498,10 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
           items: validItems,
           limiteTotal: validTotalLimite,
           estado: 'En Licitación',
-          creadoPor: empleado?.nombres ? `${empleado.nombres} (${empleado.rolNombre})` : 'Ejecutiva',
-          createdAt: new Date().toLocaleString('es-PE'),
+          creadoPor: empleado?.nombreCompleto || (empleado?.nombres ? `${empleado.nombres} ${empleado.apellidos}` : 'Ejecutiva'),
+          creadoPorUsuarioId: empleado?.userId,
+          createdAt: formatFechaHoraPeru(new Date()),
+          fechaRegistro: new Date().toISOString(),
           horaRegistroExacta: horaExacta,
           prioridadGanada: true,
         };
@@ -460,6 +513,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
         handleCancelEdit();
       }
     } finally {
+      isSubmittingRef.current = false;
       setLoading(false);
       setTimeout(() => {
         setSuccessMsg(null);
@@ -1074,7 +1128,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                   <div className="reg-summary-row">
                     <span className="reg-summary-label">Vencimiento:</span>
                     <span className="reg-summary-val">
-                      {fechaVencimiento ? new Date(fechaVencimiento).toLocaleString('es-PE') : 'No definido'}
+                      {fechaVencimiento ? formatFechaHoraPeru(fechaVencimiento) : 'No definido'}
                     </span>
                   </div>
 
@@ -1133,6 +1187,16 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
         </>
       )}
 
+      {/* ── VISTA 1.5: MIS OPORTUNIDADES (Pipeline personal de la ejecutiva) ── */}
+      {activeTab === 'mis-oportunidades' && empleado && (
+        <MisOportunidadesView
+          oportunidades={oportunidades}
+          userEmail={empleado.userEmail || ''}
+          roleAccent={roleAccent}
+          onEdit={handleStartEdit}
+          onEstadoCambiado={handleEstadoCambiado}
+        />
+      )}
       {/* ── VISTA 2: LISTAR (Todas las Oportunidades con KPIs, Búsqueda y Filtros) ── */}
       {activeTab === 'listar' && (
         <ListadoOportunidadesView
@@ -1142,6 +1206,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
             handleStartEdit(op);
           }}
           onSubirEvidencia={handleIrASubirEvidencia}
+          onEstadoCambiado={handleEstadoCambiado}
           getVencimientoBadge={getVencimientoBadge}
         />
       )}

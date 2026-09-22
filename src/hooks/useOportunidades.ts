@@ -19,6 +19,7 @@ import type {
   ProductoItem,
   VencimientoBadge,
 } from '../types/oportunidades';
+import { formatFechaHoraPeru } from '../utils/dateUtils';
 
 const LS_KEY = 'sales_rebel_oportunidades';
 
@@ -51,9 +52,11 @@ function mapApiToOportunidad(op: any): Oportunidad {
     limiteTotal: op.limiteTotal,
     estado: (op.estado as Oportunidad['estado']) || 'En Licitación',
     creadoPor: op.creadoPorNombre || 'Ejecutiva',
-    createdAt: new Date(op.fechaRegistro).toLocaleString('es-PE'),
+    creadoPorUsuarioId: op.creadoPorUsuarioId,
+    createdAt: formatFechaHoraPeru(op.fechaRegistro),
+    fechaRegistro: op.fechaRegistro,
     updatedAt: op.fechaActualizacion
-      ? new Date(op.fechaActualizacion).toLocaleString('es-PE')
+      ? formatFechaHoraPeru(op.fechaActualizacion)
       : undefined,
   };
 }

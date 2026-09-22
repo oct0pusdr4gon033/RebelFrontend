@@ -1,7 +1,7 @@
 import type { UsuarioDto, CrearUsuarioRequest, ActualizarUsuarioRequest, RolDto } from '../Dtos/Usuario';
 import { getAuthHeaders } from './oportunidades.service';
 
-const API_BASE = 'https://localhost:7010';
+import { API_BASE } from '../../env/envoviment';
 
 export async function getUsuarios(incluirInactivos = false): Promise<UsuarioDto[]> {
   const url = `${API_BASE}/api/usuarios?incluirInactivos=${incluirInactivos}`;

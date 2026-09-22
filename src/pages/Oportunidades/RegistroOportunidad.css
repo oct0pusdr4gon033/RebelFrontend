@@ -1228,43 +1228,54 @@
   transition: all 0.2s;
 }
 
-/* ── Podio Visual de 3 Pedestales ── */
+/* ── Podio Visual de 5 Pedestales (1ro al 5to) ── */
 .reg-podium-visual {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  gap: 24px;
-  padding: 30px 20px 0;
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.5) 0%, #ffffff 100%);
+  gap: 14px;
+  padding: 34px 16px 0;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.7) 0%, #ffffff 100%);
   border-radius: 20px;
   border: 1.5px solid #e2e8f0;
-  min-height: 380px;
+  min-height: 410px;
+  overflow-x: auto;
 }
 
 .reg-podium-slot {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 220px;
+  flex: 1;
+  min-width: 150px;
+  max-width: 210px;
   text-align: center;
   position: relative;
 }
 
-.slot-first {
-  order: 2;
-  transform: translateY(-8px);
-}
-
-.slot-second {
+.slot-fourth {
   order: 1;
 }
 
-.slot-third {
+.slot-second {
+  order: 2;
+}
+
+.slot-first {
   order: 3;
+  transform: translateY(-10px);
+}
+
+.slot-third {
+  order: 4;
+}
+
+.slot-fifth {
+  order: 5;
 }
 
 .reg-podium-crown {
-  font-size: 32px;
+  font-size: 34px;
   margin-bottom: -10px;
   animation: bounceSlow 2.5s infinite ease-in-out;
   z-index: 2;
@@ -1281,8 +1292,6 @@
 }
 
 .reg-podium-avatar {
-  width: 72px;
-  height: 72px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1290,38 +1299,67 @@
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
   margin-bottom: 10px;
   font-weight: 900;
-  font-size: 22px;
 }
 
 .slot-first .reg-podium-avatar {
-  width: 84px;
-  height: 84px;
+  width: 86px;
+  height: 86px;
+  font-size: 24px;
   border: 4px solid #facc15;
   background: linear-gradient(135deg, #fef08a, #facc15);
   color: #854d0e;
+  box-shadow: 0 8px 24px rgba(234, 179, 8, 0.35);
 }
 
 .slot-second .reg-podium-avatar {
+  width: 74px;
+  height: 74px;
+  font-size: 20px;
   border: 4px solid #94a3b8;
   background: linear-gradient(135deg, #f1f5f9, #cbd5e1);
   color: #334155;
 }
 
 .slot-third .reg-podium-avatar {
+  width: 70px;
+  height: 70px;
+  font-size: 19px;
   border: 4px solid #d97706;
   background: linear-gradient(135deg, #fed7aa, #fb923c);
   color: #9a3412;
 }
 
+.slot-fourth .reg-podium-avatar {
+  width: 66px;
+  height: 66px;
+  font-size: 18px;
+  border: 3.5px solid #60a5fa;
+  background: linear-gradient(135deg, #eff6ff, #bfdbfe);
+  color: #1e40af;
+}
+
+.slot-fifth .reg-podium-avatar {
+  width: 62px;
+  height: 62px;
+  font-size: 17px;
+  border: 3.5px solid #34d399;
+  background: linear-gradient(135deg, #ecfdf5, #a7f3d0);
+  color: #065f46;
+}
+
 .reg-podium-name {
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 800;
   color: #0f172a;
   margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .reg-podium-amount {
-  font-size: 16px;
+  font-size: 15.5px;
   font-weight: 900;
   color: #0284c7;
   margin-bottom: 4px;
@@ -1329,13 +1367,37 @@
 
 .gold-text {
   color: #b45309 !important;
-  font-size: 18px !important;
+  font-size: 17.5px !important;
 }
 
 .reg-podium-stats {
-  font-size: 12px;
+  font-size: 11.5px;
   color: #64748b;
   margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.reg-podium-timing-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.timing-gold {
+  background: #fef9c3;
+  color: #854d0e;
+  border: 1px solid #fde047;
+}
+
+.timing-delta {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
 }
 
 .reg-pedestal {
@@ -1351,32 +1413,96 @@
 }
 
 .pedestal-1 {
-  height: 140px;
+  height: 160px;
   background: linear-gradient(180deg, #f59e0b, #d97706);
 }
 
 .pedestal-2 {
-  height: 105px;
+  height: 125px;
   background: linear-gradient(180deg, #64748b, #475569);
 }
 
 .pedestal-3 {
-  height: 85px;
+  height: 98px;
   background: linear-gradient(180deg, #b45309, #92400e);
 }
 
+.pedestal-4 {
+  height: 75px;
+  background: linear-gradient(180deg, #3b82f6, #1d4ed8);
+}
+
+.pedestal-5 {
+  height: 58px;
+  background: linear-gradient(180deg, #10b981, #047857);
+}
+
 .pedestal-num {
-  font-size: 32px;
+  font-size: 30px;
   font-weight: 900;
   line-height: 1;
 }
 
 .pedestal-label {
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 800;
   letter-spacing: 0.6px;
-  opacity: 0.9;
+  opacity: 0.95;
   margin-top: 4px;
+  text-transform: uppercase;
+}
+
+/* ── Selector de Requerimiento para el Podio ── */
+.reg-podio-req-selector-box {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  flex-wrap: wrap;
+}
+
+.reg-podio-req-selector-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reg-podio-req-selector-title h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.reg-podio-req-selector-title p {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+.reg-podio-req-select {
+  padding: 9px 14px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  background: #f8fafc;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s ease;
+  min-width: 220px;
+}
+
+.reg-podio-req-select:focus {
+  border-color: #0284c7;
+  background: #ffffff;
 }
 
 /* ── Galardones Especiales ── */
@@ -1439,6 +1565,19 @@
 .pos-1 { background: #fef08a; color: #854d0e; }
 .pos-2 { background: #e2e8f0; color: #334155; }
 .pos-3 { background: #ffedd5; color: #9a3412; }
+.pos-badge.pos-tie {
+  width: auto;
+  min-height: 26px;
+  padding: 3px 12px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  white-space: nowrap;
+  gap: 5px;
+}
 
 .reg-avatar-circle {
   width: 32px;
@@ -1840,3 +1979,125 @@
   font-weight: 700;
   white-space: nowrap;
 }
+
+/* ── Badge "Tú" para el usuario activo ── */
+.reg-badge-tu {
+  display: inline-flex;
+  align-items: center;
+  background: #e0f2fe;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  box-shadow: 0 1px 2px rgba(2, 132, 199, 0.08);
+}
+
+/* ── Badge "Solo lectura" en Acciones ── */
+.reg-table-readonly-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: #f8fafc;
+  color: #94a3b8;
+  border: 1px dashed #cbd5e1;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: default;
+  user-select: none;
+}
+
+/* ── Barra de Paginación ── */
+.reg-pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+  border-radius: 0 0 16px 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.reg-pagination-info {
+  font-size: 13px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.reg-pagination-info strong {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.reg-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reg-page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.reg-page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.reg-page-btn:hover:not(:disabled):not(.active) {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.reg-page-btn.active {
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.reg-page-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: #f8fafc;
+}
+
+.reg-page-btn.nav-btn {
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.reg-page-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 700;
+  user-select: none;
+}
+

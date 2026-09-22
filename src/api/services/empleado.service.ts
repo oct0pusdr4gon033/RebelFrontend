@@ -1,7 +1,7 @@
 import type { EmpleadoDto, CrearEmpleadoRequest, ActualizarEmpleadoRequest } from '../Dtos/Empleado';
 import { getAuthHeaders } from './oportunidades.service';
 
-const API_BASE = 'https://localhost:7010';
+import { API_BASE } from '../../env/envoviment';
 
 export async function getEmpleados(incluirInactivos = false): Promise<EmpleadoDto[]> {
   const url = `${API_BASE}/api/empleados?incluirInactivos=${incluirInactivos}`;

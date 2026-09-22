@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { EmpleadoDto } from '../api/Dtos/Empleado';
+import { sessionHubService } from '../services/sessionHubService';
 
 interface AuthState {
   token: string | null;
@@ -42,8 +43,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    try {
+      sessionHubService.disconnect();
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem('token');
+      localStorage.removeItem('sales_rebel_oportunidades');
+      localStorage.removeItem('sales_rebel_oportunidades_v1');
+      Object.keys(localStorage).forEach((k) => {
+        if (k.startsWith('sales_rebel_')) {
+          localStorage.removeItem(k);
+        }
+      });
+    } catch {
+      // ignore
+    }
     setState({ token: null, empleado: null });
   };
+
 
   return (
     <AuthContext.Provider
