@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { GoogleIcon } from '../../components/GoogleIcon';
+import { useAuth } from '../../context/AuthContext';
+import { isOportunidadOwner } from '../../utils/oportunidadUtils';
 import type { Oportunidad } from '../../types/oportunidades';
 import { cambiarEstadoApi } from '../../api/services/oportunidades.service';
 
@@ -82,18 +84,15 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
   onEdit,
   onEstadoCambiado,
 }) => {
+  const { empleado } = useAuth();
   const [cambiandoId, setCambiandoId] = useState<number | string | null>(null);
   const [filtro, setFiltro] = useState<'todos' | 'activas' | 'ganadas' | 'perdidas'>('activas');
   const [vista, setVista] = useState<'pipeline' | 'lista'>('pipeline');
   const [confirmDesestimar, setConfirmDesestimar] = useState<Oportunidad | null>(null);
 
   const misOportunidades = useMemo(() => {
-    return oportunidades.filter((op) => {
-      const creator = (op.creadoPor || '').toLowerCase().trim();
-      const current = userEmail.toLowerCase().trim();
-      return creator === current;
-    });
-  }, [oportunidades, userEmail]);
+    return oportunidades.filter((op) => isOportunidadOwner(op, empleado, userEmail));
+  }, [oportunidades, userEmail, empleado]);
 
   const oportunidadesFiltradas = useMemo(() => {
     switch (filtro) {

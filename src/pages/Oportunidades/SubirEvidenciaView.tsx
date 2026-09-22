@@ -1,5 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { GoogleIcon } from '../../components/GoogleIcon';
+import { useAuth } from '../../context/AuthContext';
+import { isOportunidadOwner } from '../../utils/oportunidadUtils';
 import type { Oportunidad, EvidenciaItem } from '../../types/oportunidades';
 
 interface SubirEvidenciaViewProps {
@@ -13,9 +15,41 @@ export const SubirEvidenciaView: React.FC<SubirEvidenciaViewProps> = ({
   roleAccent,
   preselectedOportunidadId,
 }) => {
-  const [selectedOpId, setSelectedOpId] = useState<string | number>(
-    preselectedOportunidadId || (oportunidades[0]?.id ?? '')
-  );
+  const { empleado } = useAuth();
+
+  // Filtrar exclusivamente los requerimientos registrados por el usuario en sesión
+  const misOportunidades = useMemo(() => {
+    return oportunidades.filter((op) => isOportunidadOwner(op, empleado));
+  }, [oportunidades, empleado]);
+
+  const [selectedOpId, setSelectedOpId] = useState<string | number>(() => {
+    if (preselectedOportunidadId) {
+      const match = oportunidades.find((o) => String(o.id) === String(preselectedOportunidadId));
+      if (match && isOportunidadOwner(match, empleado)) {
+        return preselectedOportunidadId;
+      }
+    }
+    const primeraPropia = oportunidades.find((o) => isOportunidadOwner(o, empleado));
+    return primeraPropia?.id ?? '';
+  });
+
+  useEffect(() => {
+    if (preselectedOportunidadId) {
+      const match = misOportunidades.find((o) => String(o.id) === String(preselectedOportunidadId));
+      if (match) {
+        setSelectedOpId(preselectedOportunidadId);
+      } else if (misOportunidades.length > 0) {
+        setSelectedOpId(misOportunidades[0].id);
+      } else {
+        setSelectedOpId('');
+      }
+    } else if (misOportunidades.length > 0 && !misOportunidades.some((o) => String(o.id) === String(selectedOpId))) {
+      setSelectedOpId(misOportunidades[0].id);
+    } else if (misOportunidades.length === 0) {
+      setSelectedOpId('');
+    }
+  }, [preselectedOportunidadId, misOportunidades]);
+
   const [tipoDoc, setTipoDoc] = useState<string>('Comprobante de Cotización en Perú Compras');
   const [comentario, setComentario] = useState<string>('');
   const [archivo, setArchivo] = useState<File | null>(null);
@@ -70,10 +104,14 @@ export const SubirEvidenciaView: React.FC<SubirEvidenciaViewProps> = ({
     e.preventDefault();
     if (!selectedOpId || !archivo) return;
 
-    setLoading(true);
+    const opEncontrada = misOportunidades.find((o) => String(o.id) === String(selectedOpId));
+    if (!opEncontrada) {
+      alert('Solo puedes subir evidencias a los requerimientos registrados por tu usuario.');
+      return;
+    }
 
-    const opEncontrada = oportunidades.find((o) => String(o.id) === String(selectedOpId));
-    const reqCode = opEncontrada ? opEncontrada.numeroRequerimiento : `REQ-${selectedOpId}`;
+    setLoading(true);
+    const reqCode = opEncontrada.numeroRequerimiento;
 
     setTimeout(() => {
       const nuevaEvidencia: EvidenciaItem = {
@@ -83,7 +121,7 @@ export const SubirEvidenciaView: React.FC<SubirEvidenciaViewProps> = ({
         tipoDocumento: tipoDoc,
         nombreArchivo: archivo.name,
         tamanoArchivo: `${(archivo.size / (1024 * 1024)).toFixed(2)} MB`,
-        subidoPor: 'Ejecutiva Actual',
+        subidoPor: empleado?.nombreCompleto || empleado?.userNombre || 'Usuario Actual',
         fechaSubida: new Date().toLocaleString('es-PE'),
         estado: 'Verificado',
         comentario: comentario.trim() || undefined,
@@ -128,35 +166,64 @@ export const SubirEvidenciaView: React.FC<SubirEvidenciaViewProps> = ({
           <div>
             <h3>Subir Evidencia de Licitación / Cotización</h3>
             <p>
-              Adjunta el sustento digital (captura del portal Perú Compras, constancia PDF u Orden de Compra) para respaldar la oportunidad.
+              Adjunta el sustento digital (captura del portal Perú Compras, constancia PDF u Orden de Compra) para respaldar tus requerimientos registrados.
             </p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="reg-evidencia-form">
-          <div className="reg-form-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
-            {/* Oportunidad asociada */}
-            <div className="reg-field">
-              <label>
-                Requerimiento / Oportunidad Vinculada <span className="required">*</span>
-              </label>
-              <select
-                className="reg-input"
-                value={selectedOpId}
-                onChange={(e) => setSelectedOpId(e.target.value)}
-                required
-              >
-                {oportunidades.length === 0 ? (
-                  <option value="">No hay oportunidades registradas</option>
-                ) : (
-                  oportunidades.map((op) => (
+        {misOportunidades.length === 0 ? (
+          <div
+            style={{
+              padding: '36px 20px',
+              textAlign: 'center',
+              background: '#f8fafc',
+              borderRadius: '12px',
+              border: '1.5px dashed #cbd5e1',
+              margin: '10px 0',
+            }}
+          >
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                background: 'rgba(239, 68, 68, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 12px',
+              }}
+            >
+              <GoogleIcon name="lock" size={24} color="#ef4444" />
+            </div>
+            <h4 style={{ margin: '0 0 6px', color: '#1e293b', fontSize: '15px', fontWeight: 700 }}>
+              Solo puedes subir evidencias para tus propios requerimientos
+            </h4>
+            <p style={{ margin: 0, color: '#64748b', fontSize: '13px', maxWidth: 480, marginInline: 'auto', lineHeight: 1.5 }}>
+              Actualmente no tienes requerimientos registrados a tu nombre en el sistema. Para cargar constancias o actas de Perú Compras, primero debes registrar una oportunidad comercial.
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="reg-evidencia-form">
+            <div className="reg-form-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+              {/* Oportunidad asociada */}
+              <div className="reg-field">
+                <label>
+                  Requerimiento / Oportunidad Vinculada <span className="required">*</span>
+                </label>
+                <select
+                  className="reg-input"
+                  value={selectedOpId}
+                  onChange={(e) => setSelectedOpId(e.target.value)}
+                  required
+                >
+                  {misOportunidades.map((op) => (
                     <option key={op.id} value={op.id}>
                       {op.numeroRequerimiento} &bull; {op.acuerdoMarco?.codigo ?? 'Acuerdo'} &bull; S/ {Number(op.limiteTotal).toLocaleString('es-PE')}
                     </option>
-                  ))
-                )}
-              </select>
-            </div>
+                  ))}
+                </select>
+              </div>
 
             {/* Tipo de Documento */}
             <div className="reg-field">
@@ -281,6 +348,7 @@ export const SubirEvidenciaView: React.FC<SubirEvidenciaViewProps> = ({
             </button>
           </div>
         </form>
+        )}
       </div>
 
       {/* ── Listado de Evidencias Subidas ── */}

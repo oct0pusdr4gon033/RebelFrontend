@@ -1,7 +1,7 @@
 import type { Marca } from '../Dtos/Marca';
 import { getAuthHeaders } from './oportunidades.service';
 
-const API_BASE = 'https://localhost:7010';
+import { API_BASE } from '../../env/envoviment';
 
 export const getMarcasApi = async (): Promise<Marca[]> => {
     const response = await fetch(`${API_BASE}/api/marcas`, {

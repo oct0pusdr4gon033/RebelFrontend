@@ -17,8 +17,10 @@ export interface Oportunidad {
     limiteTotal: number;
     estado: EstadoOportunidad;
     creadoPor: string;
+    creadoPorUsuarioId?: string;
     createdAt: string;
     updatedAt?: string;
+    fechaRegistro?: string;
     /** Hora exacta con segundos para desempate y prioridad por orden de llegada */
     horaRegistroExacta?: string;
     /** Indicador de prioridad 1° asignada por orden de llegada */

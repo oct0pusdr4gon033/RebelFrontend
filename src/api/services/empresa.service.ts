@@ -1,7 +1,7 @@
 import type { PaginatedEmpresas } from '../Dtos/Empresa';
 import { getAuthHeaders } from './oportunidades.service';
 
-const API_BASE = 'https://localhost:7010';
+import { API_BASE } from '../../env/envoviment';
 
 export const getEmpresasApi = async (q: string = '', page: number = 1, limit: number = 15): Promise<PaginatedEmpresas> => {
     const params = new URLSearchParams();

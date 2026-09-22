@@ -1,4 +1,4 @@
-const API_BASE = 'https://localhost:7010';
+import { API_BASE } from '../../env/envoviment';
 
 export function getAuthToken(): string | null {
   // 1. Verificar si hay token directo
@@ -158,8 +158,18 @@ export async function createOportunidadApi(data: CrearOportunidadApiRequest): Pr
         errMsg = err.mensaje;
       // ASP.NET Core ModelState: { errors: { field: ['msg'] } } or { title: '...', errors: {...} }
       } else if (err?.errors) {
-        const firstKey = Object.keys(err.errors)[0];
-        errMsg = err.errors[firstKey]?.[0] ?? err.title ?? 'Error de validación';
+        // Ignorar la clave genérica 'dto' si existen errores específicos de campos
+        const specificKeys = Object.keys(err.errors).filter((k) => k !== 'dto' && k !== '$');
+        if (specificKeys.length > 0) {
+          const key = specificKeys[0];
+          const cleanKey = key.replace(/^\$\./, '');
+          errMsg = `${cleanKey}: ${err.errors[key]?.[0] ?? 'Inválido'}`;
+        } else if (err.errors['$']?.[0]) {
+          errMsg = err.errors['$'][0];
+        } else {
+          const firstKey = Object.keys(err.errors)[0];
+          errMsg = err.errors[firstKey]?.[0] ?? err.title ?? 'Error de validación';
+        }
       } else if (err?.title) {
         errMsg = err.title;
       }

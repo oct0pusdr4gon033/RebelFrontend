@@ -61,6 +61,7 @@ export interface Oportunidad {
   limiteTotal: number;
   estado: EstadoOportunidad;
   creadoPor: string;
+  creadoPorUsuarioId?: string;
   createdAt: string;
   updatedAt?: string;
   /** ISO 8601 original para filtrado por período */

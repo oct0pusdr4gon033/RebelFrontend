@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { GoogleIcon } from '../../components/GoogleIcon';
+import { useAuth } from '../../context/AuthContext';
+import { isOportunidadOwner } from '../../utils/oportunidadUtils';
 import type { Oportunidad, ProductoItem } from '../../types/oportunidades';
 import { cambiarEstadoApi } from '../../api/services/oportunidades.service';
+import { formatFechaHoraPeru } from '../../utils/dateUtils';
 
 interface DetalleOportunidadViewProps {
   oportunidad: Oportunidad;
@@ -30,6 +33,8 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
   onEstadoCambiado,
   getVencimientoBadge,
 }) => {
+  const { empleado } = useAuth();
+  const isOwner = isOportunidadOwner(op, empleado);
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
   const [errorEstado, setErrorEstado] = useState<string | null>(null);
   const vBadge = getVencimientoBadge(op.fechaVencimiento);
@@ -144,6 +149,43 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
                       Prioridad 1°
                     </span>
                   )}
+                  {isOwner ? (
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        background: '#e0f2fe',
+                        color: '#0284c7',
+                        padding: '2px 8px',
+                        borderRadius: 20,
+                        border: '1px solid #bae6fd',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
+                    >
+                      <GoogleIcon name="person" size={11} color="#0284c7" />
+                      Tu Licitación
+                    </span>
+                  ) : (
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        background: '#f1f5f9',
+                        color: '#64748b',
+                        padding: '2px 8px',
+                        borderRadius: 20,
+                        border: '1px solid #e2e8f0',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
+                    >
+                      <GoogleIcon name="lock" size={11} color="#64748b" />
+                      Solo lectura
+                    </span>
+                  )}
                 </div>
                 <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: '#64748b' }}>
                   {op.acuerdoMarco.codigo} · {op.acuerdoMarco.descripcion}
@@ -237,7 +279,7 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
             <FieldRow label="Acuerdo Marco" value={`${op.acuerdoMarco.codigo} — ${op.acuerdoMarco.descripcion}`} />
             <FieldRow
               label="Fecha de Vencimiento"
-              value={op.fechaVencimiento ? new Date(op.fechaVencimiento).toLocaleString('es-PE', { dateStyle: 'full', timeStyle: 'short' }) : '—'}
+              value={op.fechaVencimiento ? formatFechaHoraPeru(op.fechaVencimiento, { dateStyle: 'full', timeStyle: 'short' }) : '—'}
             />
           </Section>
 
@@ -339,7 +381,26 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
           {errorEstado && (
             <span style={{ color: '#dc2626', fontSize: '12px', fontWeight: 600 }}>{errorEstado}</span>
           )}
-          {estadosSiguientes.length > 0 && (
+          {!isOwner ? (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                color: '#64748b',
+                padding: '7px 12px',
+                borderRadius: 8,
+                fontSize: '12px',
+                fontWeight: 600,
+                marginRight: 'auto',
+              }}
+            >
+              <GoogleIcon name="lock" size={14} color="#64748b" />
+              <span>Modo solo lectura &bull; Registrado por {op.creadoPor}</span>
+            </div>
+          ) : estadosSiguientes.length > 0 ? (
             <div style={{ display: 'flex', gap: 8, marginRight: 'auto' }}>
               {estadosSiguientes.map((estado) => {
                 const cfg = ESTADO_CONFIG[estado] ?? { color: '#64748b', bg: '#f1f5f9', icon: 'circle' };
@@ -370,26 +431,30 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
                 );
               })}
             </div>
-          )}
+          ) : null}
           <button type="button" onClick={onClose} style={{ padding: '10px 18px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#f8fafc', color: '#64748b', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
             Cerrar
           </button>
-          <button
-            type="button"
-            onClick={() => { onSubirEvidencia(op.id); onClose(); }}
-            style={{ padding: '10px 18px', borderRadius: 8, border: '1.5px solid rgba(16,185,129,0.3)', background: 'rgba(16,185,129,0.08)', color: '#059669', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-          >
-            <GoogleIcon name="upload_file" size={15} color="#059669" />
-            Subir Evidencia
-          </button>
-          <button
-            type="button"
-            onClick={() => { onEdit(op); onClose(); }}
-            style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: roleAccent, color: '#ffffff', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, boxShadow: `0 4px 14px ${roleAccent}40` }}
-          >
-            <GoogleIcon name="edit" size={15} color="#ffffff" />
-            Editar Oportunidad
-          </button>
+          {isOwner && (
+            <button
+              type="button"
+              onClick={() => { onSubirEvidencia(op.id); onClose(); }}
+              style={{ padding: '10px 18px', borderRadius: 8, border: '1.5px solid rgba(16,185,129,0.3)', background: 'rgba(16,185,129,0.08)', color: '#059669', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              <GoogleIcon name="upload_file" size={15} color="#059669" />
+              Subir Evidencia
+            </button>
+          )}
+          {isOwner && (
+            <button
+              type="button"
+              onClick={() => { onEdit(op); onClose(); }}
+              style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: roleAccent, color: '#ffffff', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, boxShadow: `0 4px 14px ${roleAccent}40` }}
+            >
+              <GoogleIcon name="edit" size={15} color="#ffffff" />
+              Editar Oportunidad
+            </button>
+          )}
           </div>
         </div>
       </div>
