@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { GoogleIcon } from '../../components/GoogleIcon';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -82,6 +82,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
   const [isEmpresaModalOpen, setIsEmpresaModalOpen] = useState(false);
   const [selectedEmpresa, setSelectedEmpresa] = useState<EmpresaOption | null>(null);
   const [entidadConvocante, setEntidadConvocante] = useState('');
+  const [mostrarEmpresa, setMostrarEmpresa] = useState(false);
 
   // 3. Marcas (Editable)
   const [marcasCatalogo, setMarcasCatalogo] = useState<Marca[]>([]);
@@ -281,7 +282,12 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
 
   // Manejo de Marcas
   const handleSelectMarca = (marca: Marca) => {
-    setSelectedMarcas((prev) => [...prev, marca]);
+    const siguiente = [...selectedMarcas, marca];
+    setSelectedMarcas(siguiente);
+    // Si queda una sola marca participante, autocompletar los ítems sin marca
+    if (siguiente.length === 1) {
+      setItems((prev) => prev.map((it) => (it.marcaProducto ? it : { ...it, marcaProducto: marca.nombre })));
+    }
     setMarcaSearch('');
     setIsMarcaOpen(false);
   };
@@ -292,7 +298,9 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
 
   // Manejo de Ítems
   const handleAddItem = () => {
-    setItems((prev) => [...prev, nuevoItem(0)]);
+    const item = nuevoItem(0);
+    if (selectedMarcas.length === 1) item.marcaProducto = selectedMarcas[0].nombre;
+    setItems((prev) => [...prev, item]);
   };
 
   const handleRemoveItem = (id: string | number) => {
@@ -312,6 +320,43 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
     (acc, it) => acc + (Number(it.cantidad) || 0) * (Number(it.limiteUnitario) || 0),
     0
   );
+
+  // ── Mensaje de reserva para la marca (formato WhatsApp) ──
+  const [copiadoWA, setCopiadoWA] = useState(false);
+  const mensajeWhatsApp = useMemo(() => {
+    const ruc = selectedEmpresa?.ruc?.trim() || '';
+    const entidad = entidadConvocante.trim() || selectedEmpresa?.razonSocial?.trim() || '';
+    const categoria = selectedAcuerdo?.descripcion?.trim() || selectedAcuerdo?.codigo?.trim() || '';
+    const cabecera = `Entidad: RUC - ${[ruc, entidad].filter(Boolean).join(' ')}`.trim();
+    const conDatos = items.filter((it) => it.fichaProducto || it.marcaProducto || it.numeroParte || Number(it.cantidad) > 0);
+    const lista = conDatos.length > 0 ? conDatos : items;
+    return lista
+      .map((it) => `${cabecera} [${it.fichaProducto?.trim() || ''}]/${categoria}/${it.marcaProducto?.trim() || ''}/ ${Number(it.cantidad) || 0} UND`)
+      .join('\n');
+  }, [selectedEmpresa, entidadConvocante, selectedAcuerdo, items]);
+
+  const copiarMensajeWhatsApp = async () => {
+    const texto = mensajeWhatsApp;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(texto);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = texto;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopiadoWA(true);
+      setTimeout(() => setCopiadoWA(false), 2000);
+    } catch {
+      // Clipboard no disponible
+    }
+  };
 
   // Cálculo de tiempo restante de vencimiento
   const getVencimientoBadge = (dateStr: string) => {
@@ -347,6 +392,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
       setSelectedEmpresa(null);
     }
     setEntidadConvocante(op.entidadConvocante || '');
+    setMostrarEmpresa(Boolean(op.empresaId || (op.entidadConvocante && op.entidadConvocante.trim())));
     setSelectedMarcas(op.marcas);
     setItems(op.items.map((it) => ({ ...it })));
     setSuccessMsg(null);
@@ -374,6 +420,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
     setFechaVencimiento('');
     setSelectedEmpresa(null);
     setEntidadConvocante('');
+    setMostrarEmpresa(false);
     setSelectedMarcas([]);
     setItems([nuevoItem(70)]);
   };
@@ -928,22 +975,31 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                 </div>
 
                 {/* 2. Empresa / Entidad Solicitante (⚡ 100% OPCIONAL - Registro Exprés) */}
-                <div className="reg-card reg-card--optional">
-                  <div className="reg-card__header">
+                <div className="reg-card reg-card--optional" id="reg-empresa-card">
+                  <div
+                    className="reg-card__header"
+                    onClick={() => setMostrarEmpresa((v) => !v)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <div className="reg-card__header-icon" style={{ background: '#fef3c7' }}>
                       <GoogleIcon name="domain" size={18} color="#d97706" />
                     </div>
-                    <div>
+                    <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <h3 style={{ margin: 0 }}>2. Empresa / Entidad Solicitante</h3>
-                        <span className="reg-badge-opcional">Opcional &bull; No obligatorio</span>
+                        <span className="reg-badge-opcional">Opcional · requerida para el mensaje</span>
                       </div>
-                      <span style={{ fontSize: '11.5px', color: '#10b981', fontWeight: 600 }}>
-                        (Editable — Se puede registrar o actualizar después para asegurar la cotización rápido)
+                      <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 600 }}>
+                        {selectedEmpresa
+                          ? `${selectedEmpresa.ruc} · ${selectedEmpresa.razonSocial}`
+                          : (entidadConvocante || 'Toca para agregar empresa o entidad')}
                       </span>
                     </div>
+                    <GoogleIcon name={mostrarEmpresa ? 'expand_less' : 'expand_more'} size={20} color="#94a3b8" />
                   </div>
 
+                  {mostrarEmpresa && (
+                    <>
                   {/* Aviso de Registro Veloz */}
                   <div className="reg-express-alert">
                     <GoogleIcon name="flash_on" size={18} color="#d97706" />
@@ -984,7 +1040,6 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                           Buscar y Seleccionar Empresa...
                         </button>
                       )}
-                      <span className="reg-field-hint">Si la empresa ya está en el sistema, selecciónala aquí</span>
                     </div>
 
                     {/* Nombre de Entidad Libre (Rápido) */}
@@ -1001,6 +1056,8 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                       <span className="reg-field-hint">Nombre rápido de la institución del requerimiento</span>
                     </div>
                   </div>
+                    </>
+                  )}
                 </div>
 
                 {/* 3. Productos / Ítems de la Licitación (Editable) */}
@@ -1012,11 +1069,8 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                       </div>
                       <div>
                         <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>
-                          3. Productos y Límites del Requerimiento Perú Compras
+                          3. Productos y Límites
                         </h3>
-                        <span style={{ fontSize: '12px', color: '#10b981', fontWeight: 600 }}>
-                          (Editable — Puedes agregar, modificar o quitar productos, números de parte y límites)
-                        </span>
                       </div>
                     </div>
 
@@ -1060,7 +1114,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
 
                           {/* Descripción del Producto */}
                           <div className="reg-field">
-                            <label>Descripción del Producto (Opcional si tiene N° Parte)</label>
+                            <label>Descripción</label>
                             <input
                               type="text"
                               placeholder="Ej. Laptop Lenovo Core i5 16GB 512GB SSD"
@@ -1074,7 +1128,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                           {/* Cantidad */}
                           <div className="reg-field">
                             <label>
-                              Cantidad Solicitada <span className="required">*</span>
+                              Cantidad <span className="required">*</span>
                             </label>
                             <input
                               type="number"
@@ -1089,7 +1143,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                           {/* Límite Unitario Perú Compras */}
                           <div className="reg-field">
                             <label>
-                              Límite de Cotización Unitario (S/) <span className="required">*</span>
+                              Límite unitario (S/) <span className="required">*</span>
                             </label>
                             <input
                               type="number"
@@ -1106,89 +1160,40 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                           </div>
                         </div>
 
-                        <details className="reg-item-proforma">
-                          <summary>Datos de proforma Perú Compras (opcional)</summary>
-                          <div className="reg-form-row" style={{ marginTop: 12 }}>
-                            <div className="reg-field">
-                              <label>Ficha del Producto</label>
-                              <input
-                                type="text"
-                                placeholder="Ej. 756"
-                                value={item.fichaProducto || ''}
-                                onChange={(e) => handleUpdateItem(item.id, 'fichaProducto', e.target.value)}
-                              />
-                            </div>
-                            <div className="reg-field">
-                              <label>Marca del producto</label>
-                              <input
-                                type="text"
-                                placeholder="Ej. NL NEGRN"
-                                value={item.marcaProducto || ''}
-                                onChange={(e) => handleUpdateItem(item.id, 'marcaProducto', e.target.value)}
-                              />
-                            </div>
+                        <div className="reg-form-row" style={{ marginBottom: 0 }}>
+                          {/* Ficha del Producto */}
+                          <div className="reg-field">
+                            <label>Ficha del Producto</label>
+                            <input
+                              type="text"
+                              placeholder="Ej. 756"
+                              value={item.fichaProducto || ''}
+                              onChange={(e) => handleUpdateItem(item.id, 'fichaProducto', e.target.value)}
+                            />
                           </div>
 
-                          <div className="reg-form-row" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
-                            <div className="reg-field">
-                              <label>Moneda base</label>
-                              <select
-                                value={item.moneda || 'PEN'}
-                                onChange={(e) => handleUpdateItem(item.id, 'moneda', e.target.value)}
-                              >
-                                <option value="PEN">S/ (PEN)</option>
-                                <option value="USD">US$ (USD)</option>
-                              </select>
-                            </div>
-                            <div className="reg-field">
-                              <label>Precio unitario base (sin IGV)</label>
-                              <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                placeholder="Ej. 65.00"
-                                value={item.precioUnitarioBase ?? ''}
-                                onChange={(e) =>
-                                  handleUpdateItem(item.id, 'precioUnitarioBase', e.target.value === '' ? null : parseFloat(e.target.value))
-                                }
-                              />
-                            </div>
-                            <div className="reg-field">
-                              <label>Precio unitario ofertado</label>
-                              <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                placeholder="Ej. 64.00"
-                                value={item.precioUnitarioOfertado ?? ''}
-                                onChange={(e) =>
-                                  handleUpdateItem(item.id, 'precioUnitarioOfertado', e.target.value === '' ? null : parseFloat(e.target.value))
-                                }
-                              />
-                            </div>
+                          {/* Marca del Producto (limitada a las marcas participantes) */}
+                          <div className="reg-field">
+                            <label>Marca del producto</label>
+                            <select
+                              value={item.marcaProducto || ''}
+                              onChange={(e) => handleUpdateItem(item.id, 'marcaProducto', e.target.value)}
+                              disabled={selectedMarcas.length === 0}
+                            >
+                              <option value="">
+                                {selectedMarcas.length === 0 ? 'Elige marcas participantes arriba…' : '— Sin marca —'}
+                              </option>
+                              {[...new Set([
+                                ...selectedMarcas.map((m) => m.nombre),
+                                ...(item.marcaProducto && !selectedMarcas.some((m) => m.nombre === item.marcaProducto)
+                                  ? [item.marcaProducto]
+                                  : []),
+                              ])].map((nombre) => (
+                                <option key={nombre} value={nombre}>{nombre}</option>
+                              ))}
+                            </select>
                           </div>
-
-                          <div className="reg-form-row" style={{ marginBottom: 0 }}>
-                            <div className="reg-field">
-                              <label>Condiciones adicionales</label>
-                              <input
-                                type="text"
-                                placeholder="Ej. SÍ / Previa solicitud"
-                                value={item.condicionesAdicionales || ''}
-                                onChange={(e) => handleUpdateItem(item.id, 'condicionesAdicionales', e.target.value)}
-                              />
-                            </div>
-                            <div className="reg-field">
-                              <label>Ficha técnica (enlace o referencia)</label>
-                              <input
-                                type="text"
-                                placeholder="https://… o N° de documento"
-                                value={item.fichaTecnica || ''}
-                                onChange={(e) => handleUpdateItem(item.id, 'fichaTecnica', e.target.value)}
-                              />
-                            </div>
-                          </div>
-                        </details>
+                        </div>
 
                         <div className="reg-item-subtotal-badge">
                           <span>Límite Subtotal del Ítem ({item.cantidad} unids &times; S/ {Number(item.limiteUnitario).toFixed(2)}):</span>
@@ -1265,6 +1270,42 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                     <div className="reg-summary-total-hint">
                       Tope máximo para cotizar en esta licitación
                     </div>
+                  </div>
+
+                  <div className="reg-wa-block">
+                    <div className="reg-wa-label">
+                      <GoogleIcon name="chat" size={15} color="#25D366" />
+                      <span>Mensaje de reserva para la marca</span>
+                    </div>
+                    {!selectedEmpresa ? (
+                      <div className="reg-wa-warning">
+                        <GoogleIcon name="info" size={15} color="#b45309" />
+                        <span>
+                          Para enviarlo a la marca necesitas la <strong>Empresa (RUC)</strong>.{' '}
+                          <button
+                            type="button"
+                            className="reg-wa-warning-link"
+                            onClick={() => {
+                              setMostrarEmpresa(true);
+                              setTimeout(() => document.getElementById('reg-empresa-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+                            }}
+                          >
+                            Completar empresa
+                          </button>
+                        </span>
+                      </div>
+                    ) : (
+                      <pre className="reg-wa-preview">{mensajeWhatsApp}</pre>
+                    )}
+                    <button
+                      type="button"
+                      className="reg-wa-copy"
+                      onClick={copiarMensajeWhatsApp}
+                      disabled={!selectedEmpresa}
+                    >
+                      <GoogleIcon name={copiadoWA ? 'check' : 'content_copy'} size={15} color="#ffffff" />
+                      <span>{copiadoWA ? '¡Copiado!' : 'Copiar mensaje de WhatsApp'}</span>
+                    </button>
                   </div>
 
                   <button

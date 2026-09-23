@@ -5,7 +5,7 @@ import { isOportunidadOwner } from '../../utils/oportunidadUtils';
 import type { Oportunidad } from '../../types/oportunidades';
 import { getOportunidadesApi } from '../../api/services/oportunidades.service';
 import { mapApiToOportunidad } from '../../hooks/useOportunidades';
-import { OCPanel, OC_ESTADO_CONFIG, OC_STATES } from './OCPanel';
+import { OCPanel, OC_ESTADO_CONFIG, OC_STATES, DetalleOCModal } from './OCPanel';
 import { formatFechaHoraPeru } from '../../utils/dateUtils';
 
 type FiltroOC = 'todas' | 'activas' | 'pendientes' | 'aceptadas' | 'rechazadas' | 'entregadas' | 'por-registrar';
@@ -31,6 +31,7 @@ export const SeguimientoOCView: React.FC<SeguimientoOCProps> = ({ roleAccent = '
   const [filtro, setFiltro] = useState<FiltroOC>('todas');
   const [busqueda, setBusqueda] = useState('');
   const [expandId, setExpandId] = useState<string | number | null>(null);
+  const [detalleOp, setDetalleOp] = useState<Oportunidad | null>(null);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -241,6 +242,16 @@ export const SeguimientoOCView: React.FC<SeguimientoOCProps> = ({ roleAccent = '
                       {op.ordenCompra?.fechaRegistro ? formatFechaHoraPeru(op.ordenCompra.fechaRegistro, { dateStyle: 'medium' }) : '—'}
                     </div>
                   </div>
+                  {op.ordenCompra && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setDetalleOp(op); }}
+                      title="Ver detalle de la OC"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '6px 11px', borderRadius: 8, border: `1.5px solid ${roleAccent}40`, background: '#ffffff', color: roleAccent, fontWeight: 700, fontSize: '12px', cursor: 'pointer', flexShrink: 0 }}
+                    >
+                      <GoogleIcon name="receipt_long" size={14} color={roleAccent} /> Detalle
+                    </button>
+                  )}
                   <GoogleIcon name={expandida ? 'expand_less' : 'expand_more'} size={20} color={expandida ? roleAccent : '#94a3b8'} />
                 </div>
 
@@ -255,6 +266,8 @@ export const SeguimientoOCView: React.FC<SeguimientoOCProps> = ({ roleAccent = '
           })}
         </div>
       )}
+
+      <DetalleOCModal open={!!detalleOp} onClose={() => setDetalleOp(null)} op={detalleOp ?? ({} as Oportunidad)} />
     </div>
   );
 };

@@ -322,8 +322,8 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
                 <thead>
                   <tr style={{ background: '#f8fafc' }}>
-                    {['#', 'N° Parte', 'Descripción', 'Cant.', 'P. Base', 'P. Ofertado', 'Límite Unit.', 'Subtotal'].map((h) => (
-                      <th key={h} style={{ padding: '8px 10px', textAlign: ['Cant.', 'P. Base', 'P. Ofertado', 'Límite Unit.', 'Subtotal'].includes(h) ? 'right' : 'left', color: '#64748b', fontWeight: 600, fontSize: '11.5px', borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap' }}>
+                    {['#', 'N° Parte', 'Descripción', 'Cant.', 'Límite Unit.', 'Subtotal'].map((h) => (
+                      <th key={h} style={{ padding: '8px 10px', textAlign: ['Cant.', 'Límite Unit.', 'Subtotal'].includes(h) ? 'right' : 'left', color: '#64748b', fontWeight: 600, fontSize: '11.5px', borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap' }}>
                         {h}
                       </th>
                     ))}
@@ -332,11 +332,9 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
                 <tbody>
                   {op.items.map((it: ProductoItem, idx: number) => {
                     const sub = (it.cantidad || 0) * (it.limiteUnitario || 0);
-                    const moneda = it.moneda === 'USD' ? 'US$' : 'S/';
                     const extras = [
                       it.fichaProducto && `Ficha ${it.fichaProducto}`,
                       it.marcaProducto && `Marca: ${it.marcaProducto}`,
-                      it.condicionesAdicionales && `Cond.: ${it.condicionesAdicionales}`,
                     ].filter(Boolean) as string[];
                     return (
                       <tr key={it.id} style={{ borderBottom: idx < op.items.length - 1 ? '1px solid #f8fafc' : 'none' }}>
@@ -346,27 +344,11 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
                         </td>
                         <td style={{ padding: '8px 10px', color: '#334155', maxWidth: 220, wordBreak: 'break-word' }}>
                           {it.descripcion || '—'}
-                          {(extras.length > 0 || it.fichaTecnica) && (
-                            <div style={{ marginTop: 3, fontSize: '11px', color: '#94a3b8' }}>
-                              {extras.join(' · ')}
-                              {it.fichaTecnica && (
-                                <> {extras.length > 0 ? '· ' : ''}
-                                  <a
-                                    href={/^https?:\/\//.test(it.fichaTecnica) ? it.fichaTecnica : undefined}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    style={{ color: '#0284c7' }}
-                                  >
-                                    Ficha técnica
-                                  </a>
-                                </>
-                              )}
-                            </div>
+                          {extras.length > 0 && (
+                            <div style={{ marginTop: 3, fontSize: '11px', color: '#94a3b8' }}>{extras.join(' · ')}</div>
                           )}
                         </td>
                         <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 600, color: '#334155' }}>{it.cantidad}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'right', color: '#64748b' }}>{it.precioUnitarioBase != null ? `${moneda} ${Number(it.precioUnitarioBase).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` : '—'}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'right', color: '#64748b' }}>{it.precioUnitarioOfertado != null ? `${moneda} ${Number(it.precioUnitarioOfertado).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` : '—'}</td>
                         <td style={{ padding: '8px 10px', textAlign: 'right', color: '#64748b' }}>S/ {Number(it.limiteUnitario).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
                         <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: '#0284c7' }}>S/ {sub.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
                       </tr>
@@ -375,7 +357,7 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
                 </tbody>
                 <tfoot>
                   <tr style={{ borderTop: '2px solid #e2e8f0', background: '#f8fafc' }}>
-                    <td colSpan={6} style={{ padding: '8px 10px' }} />
+                    <td colSpan={4} style={{ padding: '8px 10px' }} />
                     <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '11.5px', color: '#64748b', fontWeight: 600 }}>Total Límite:</td>
                     <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 800, fontSize: '14px', color: '#0f172a' }}>
                       S/ {totalLimite.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
