@@ -59,6 +59,7 @@ export const ejecutivaNavItems: NavItem[] = [
     ],
   },
   { icon: 'track_changes', label: 'Mis Metas', path: '/ejecutiva/metas', section: null },
+  { icon: 'local_shipping', label: 'Seguimiento OC', path: '/ejecutiva/seguimiento-oc', section: 'Ventas' },
   { icon: 'folder_shared', label: 'Mi Cartera', path: '/ejecutiva/cartera', section: null },
   { icon: 'add_shopping_cart', label: 'Nueva Venta', path: '/ejecutiva/nueva-venta', section: null },
   { icon: 'leaderboard', label: 'Mi Ranking', path: '/ejecutiva/ranking', section: 'Rendimiento' },

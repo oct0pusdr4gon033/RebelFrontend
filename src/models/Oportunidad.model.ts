@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // src/models/Oportunidad.model.ts
 // ─────────────────────────────────────────────────────────────────────────────
-import type { AcuerdoMarco, Marca, ProductoItem, EstadoOportunidad } from '../types/oportunidades';
+import type { AcuerdoMarco, Marca, ProductoItem, EstadoOportunidad, OrdenCompra } from '../types/oportunidades';
 
 export interface Oportunidad {
     id: string | number;
@@ -16,6 +16,7 @@ export interface Oportunidad {
     items: ProductoItem[];
     limiteTotal: number;
     estado: EstadoOportunidad;
+    ordenCompra?: OrdenCompra;
     creadoPor: string;
     creadoPorUsuarioId?: string;
     createdAt: string;

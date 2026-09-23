@@ -2,8 +2,30 @@ import React, { useState, useMemo } from 'react';
 import { GoogleIcon } from '../../components/GoogleIcon';
 import { useAuth } from '../../context/AuthContext';
 import { isOportunidadOwner } from '../../utils/oportunidadUtils';
-import type { Oportunidad } from '../../types/oportunidades';
-import { cambiarEstadoApi } from '../../api/services/oportunidades.service';
+import type { Oportunidad, OrdenCompra } from '../../types/oportunidades';
+import { cambiarEstadoApi, cambiarEstadoOCApi, type OrdenCompraApiResponse } from '../../api/services/oportunidades.service';
+
+function mapOC(oc: OrdenCompraApiResponse): OrdenCompra {
+  return {
+    id: oc.id,
+    oportunidadId: oc.oportunidadId,
+    numeroOC: oc.numeroOC,
+    fechaEmisionOC: oc.fechaEmisionOC,
+    estadoOC: oc.estadoOC as OrdenCompra['estadoOC'],
+    motivoRechazo: oc.motivoRechazo,
+    fechaDecisionOC: oc.fechaDecisionOC,
+    costoInicial: oc.costoInicial,
+    costoRenegociado: oc.costoRenegociado,
+    margenAdicional: oc.margenAdicional,
+    fechaRenegociacion: oc.fechaRenegociacion,
+    fechaDespacho: oc.fechaDespacho,
+    transportista: oc.transportista,
+    noGuiaRemision: oc.noGuiaRemision,
+    fechaEntrega: oc.fechaEntrega,
+    fechaRegistro: oc.fechaRegistro,
+    fechaActualizacion: oc.fechaActualizacion,
+  };
+}
 
 interface MisOportunidadesViewProps {
   oportunidades: Oportunidad[];
@@ -73,9 +95,16 @@ const ESTADO_CONFIG: Record<string, { color: string; bg: string; icon: string; n
   'Cotizada':      { color: '#0284c7', bg: '#e0f2fe', icon: 'description', next: 'Adjudicada' },
   'Adjudicada':    { color: '#059669', bg: '#d1fae5', icon: 'verified', next: null },
   'Desestimada':   { color: '#dc2626', bg: '#fee2e2', icon: 'cancel', next: null },
+  'OC_RECIBIDA':   { color: '#0284c7', bg: '#e0f2fe', icon: 'receipt_long', next: null },
+  'OC_ACEPTADA':   { color: '#059669', bg: '#d1fae5', icon: 'thumb_up', next: null },
+  'OC_RECHAZADA':  { color: '#dc2626', bg: '#fee2e2', icon: 'thumb_down', next: null },
+  'ENTREGADA':     { color: '#7c3aed', bg: '#ede9fe', icon: 'inventory', next: null },
 };
 
 const PIPELINE_ORDER = ['En Licitación', 'Cotizada', 'Adjudicada', 'Desestimada'];
+
+const OC_STATES = ['OC_RECIBIDA', 'OC_ACEPTADA', 'OC_RECHAZADA', 'ENTREGADA'] as const;
+const OC_ACTIVAS = ['OC_RECIBIDA', 'OC_ACEPTADA'] as const;
 
 export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
   oportunidades,
@@ -86,26 +115,40 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
 }) => {
   const { empleado } = useAuth();
   const [cambiandoId, setCambiandoId] = useState<number | string | null>(null);
-  const [filtro, setFiltro] = useState<'todos' | 'activas' | 'ganadas' | 'perdidas'>('activas');
-  const [vista, setVista] = useState<'pipeline' | 'lista'>('pipeline');
+  const [filtro, setFiltro] = useState<'todos' | 'activas' | 'ganadas' | 'perdidas' | 'oc'>('activas');
+  const [vista, setVista] = useState<'pipeline' | 'lista' | 'oc'>('pipeline');
   const [confirmDesestimar, setConfirmDesestimar] = useState<Oportunidad | null>(null);
+  const [ocDecisionId, setOcDecisionId] = useState<number | string | null>(null);
+  const [motivos, setMotivos] = useState<Record<string | number, string>>({});
 
   const misOportunidades = useMemo(() => {
     return oportunidades.filter((op) => isOportunidadOwner(op, empleado, userEmail));
   }, [oportunidades, userEmail, empleado]);
 
+  const conOC = useMemo(
+    () => misOportunidades.filter((op) => OC_STATES.includes((op.estado as string) as any) || op.ordenCompra),
+    [misOportunidades]
+  );
+
+  const ocPendientes = useMemo(
+    () => conOC.filter((op) => OC_ACTIVAS.includes((op.estado as string) as any)),
+    [conOC]
+  );
+
   const oportunidadesFiltradas = useMemo(() => {
     switch (filtro) {
       case 'activas':
-        return misOportunidades.filter((op) => op.estado !== 'Desestimada' && op.estado !== 'Adjudicada');
+        return misOportunidades.filter((op) => !(['Desestimada', 'Adjudicada', ...OC_STATES] as string[]).includes(op.estado));
       case 'ganadas':
-        return misOportunidades.filter((op) => op.estado === 'Adjudicada');
+        return misOportunidades.filter((op) => (['Adjudicada', ...OC_STATES] as string[]).includes(op.estado));
       case 'perdidas':
-        return misOportunidades.filter((op) => op.estado === 'Desestimada');
+        return misOportunidades.filter((op) => op.estado === 'Desestimada' || op.estado === 'OC_RECHAZADA');
+      case 'oc':
+        return conOC;
       default:
         return misOportunidades;
     }
-  }, [misOportunidades, filtro]);
+  }, [misOportunidades, conOC, filtro]);
 
   const pipeline = useMemo(() => {
     const cols: Record<string, Oportunidad[]> = {
@@ -125,8 +168,9 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
     activas: misOportunidades.filter((op) => op.estado === 'En Licitación').length,
     cotizadas: misOportunidades.filter((op) => op.estado === 'Cotizada').length,
     adjudicadas: misOportunidades.filter((op) => op.estado === 'Adjudicada').length,
+    ocPendientes: ocPendientes.length,
     montoTotal: misOportunidades.reduce((sum, op) => sum + (Number(op.limiteTotal) || 0), 0),
-  }), [misOportunidades]);
+  }), [misOportunidades, ocPendientes]);
 
   const handleCambiarEstado = async (op: Oportunidad, nuevoEstado: string) => {
     setCambiandoId(op.id);
@@ -137,6 +181,30 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
       alert(err.message || 'Error al cambiar estado');
     } finally {
       setCambiandoId(null);
+    }
+  };
+
+  const handleDecisionOC = async (op: Oportunidad, estadoOC: 'OC_ACEPTADA' | 'OC_RECHAZADA') => {
+    if (estadoOC === 'OC_RECHAZADA' && !(motivos[op.id] ?? '').trim()) {
+      alert('Debe indicar el motivo al rechazar la Orden de Compra.');
+      return;
+    }
+    setOcDecisionId(op.id);
+    try {
+      const actualizada = await cambiarEstadoOCApi(op.id, {
+        estadoOC,
+        motivoRechazo: estadoOC === 'OC_RECHAZADA' ? (motivos[op.id] ?? '').trim() : null,
+      });
+      onEstadoCambiado({
+        ...op,
+        estado: actualizada.estado as Oportunidad['estado'],
+        ordenCompra: actualizada.ordenCompra ? mapOC(actualizada.ordenCompra) : op.ordenCompra,
+      });
+      setMotivos((prev) => ({ ...prev, [op.id]: '' }));
+    } catch (err: any) {
+      alert(err.message || 'Error al actualizar la OC');
+    } finally {
+      setOcDecisionId(null);
     }
   };
 
@@ -162,12 +230,13 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
       </div>
 
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12, marginBottom: 24 }}>
         {[
           { label: 'Total', value: kpis.total, color: '#0f172a', bg: '#f8fafc' },
           { label: 'Activas', value: kpis.activas, color: '#d97706', bg: '#fef3c7' },
           { label: 'Cotizadas', value: kpis.cotizadas, color: '#0284c7', bg: '#e0f2fe' },
           { label: 'Adjudicadas', value: kpis.adjudicadas, color: '#059669', bg: '#d1fae5' },
+          { label: 'OC/Seguimiento', value: kpis.ocPendientes, color: '#7c3aed', bg: '#ede9fe' },
           { label: 'Monto Total', value: `S/ ${kpis.montoTotal.toLocaleString('es-PE')}`, color: '#0f172a', bg: '#f8fafc', wide: true },
         ].map((kpi) => (
           <div
@@ -192,12 +261,13 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
       {/* Toolbar: Filtros (solo en modo lista) + Vista */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 20, gap: 12 }}>
         {vista === 'lista' && (
-          <div style={{ display: 'flex', gap: 6, marginRight: 'auto' }}>
+          <div style={{ display: 'flex', gap: 6, marginRight: 'auto', flexWrap: 'wrap' }}>
             {[
               { id: 'activas', label: 'Activas', count: kpis.activas + kpis.cotizadas },
               { id: 'todos', label: 'Todas', count: kpis.total },
-              { id: 'ganadas', label: 'Ganadas', count: kpis.adjudicadas },
-              { id: 'perdidas', label: 'Perdidas', count: misOportunidades.filter(op => op.estado === 'Desestimada').length },
+              { id: 'ganadas', label: 'Ganadas', count: kpis.adjudicadas + ocPendientes.length },
+              { id: 'oc', label: 'OC', count: conOC.length },
+              { id: 'perdidas', label: 'Perdidas', count: misOportunidades.filter(op => op.estado === 'Desestimada' || op.estado === 'OC_RECHAZADA').length },
           ].map((f) => (
             <button
               key={f.id}
@@ -236,6 +306,7 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
           {[
             { id: 'pipeline', icon: 'view_kanban' },
             { id: 'lista', icon: 'view_list' },
+            { id: 'oc', icon: 'local_shipping' },
           ].map((v) => (
             <button
               key={v.id}
@@ -442,6 +513,130 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
                             Editar
                           </button>
                         </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Vista OC / Operaciones */}
+      {vista === 'oc' && (
+        <div style={{
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: 12,
+          overflow: 'hidden',
+        }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f8fafc' }}>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Requerimiento</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 700, color: '#64748b' }}>N° OC</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Estado OC</th>
+                <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Monto</th>
+                <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Margen</th>
+                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {conOC.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: 32, textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
+                    Aún no hay Órdenes de Compra en seguimiento.
+                  </td>
+                </tr>
+              ) : (
+                conOC.map((op) => {
+                  const oc = op.ordenCompra;
+                  const cfg = ESTADO_CONFIG[op.estado] ?? { color: '#64748b', bg: '#f1f5f9', icon: 'circle', next: null };
+                  const esPendiente = oc?.estadoOC === 'OC_RECIBIDA';
+                  const esOperacion = oc?.estadoOC === 'OC_ACEPTADA';
+                  const motivo = motivos[op.id] ?? '';
+                  return (
+                    <tr key={op.id} style={{ borderTop: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span style={{ fontWeight: 700, fontSize: '13px', color: '#0f172a' }}>{op.numeroRequerimiento}</span>
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span style={{ fontSize: '13px', color: '#334155', fontWeight: 600, fontFamily: 'monospace' }}>
+                          {oc?.numeroOC || '—'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 20,
+                          background: cfg.bg, color: cfg.color, fontSize: '12px', fontWeight: 700,
+                        }}>
+                          <GoogleIcon name={cfg.icon} size={12} color={cfg.color} />
+                          {op.estado}
+                        </span>
+                        {oc?.estadoOC === 'OC_RECHAZADA' && oc.motivoRechazo && (
+                          <div style={{ fontSize: '11px', color: '#dc2626', marginTop: 4, maxWidth: 180 }}>
+                            {oc.motivoRechazo}
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, fontSize: '13px', color: '#0f172a' }}>
+                        S/ {(Number(op.limiteTotal) || 0).toLocaleString('es-PE')}
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, fontSize: '13px', color: '#059669' }}>
+                        {oc?.margenAdicional != null ? `S/ ${oc.margenAdicional.toLocaleString('es-PE', { minimumFractionDigits: 2 })}` : '—'}
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                        {esPendiente ? (
+                          <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              disabled={ocDecisionId === op.id}
+                              onClick={() => handleDecisionOC(op, 'OC_ACEPTADA')}
+                              style={{
+                                padding: '5px 10px', borderRadius: 6, border: 'none', background: '#059669', color: '#fff',
+                                fontSize: '11px', fontWeight: 700, cursor: ocDecisionId === op.id ? 'not-allowed' : 'pointer',
+                              }}
+                            >
+                              Aceptar
+                            </button>
+                            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                              <input
+                                value={motivo}
+                                onChange={(e) => setMotivos((prev) => ({ ...prev, [op.id]: e.target.value }))}
+                                placeholder="Motivo (si rechaza)"
+                                style={{
+                                  width: 130, padding: '5px 8px', borderRadius: 6, border: '1.5px solid #e2e8f0',
+                                  fontSize: '11px',
+                                }}
+                              />
+                              <button
+                                type="button"
+                                disabled={ocDecisionId === op.id}
+                                onClick={() => handleDecisionOC(op, 'OC_RECHAZADA')}
+                                style={{
+                                  padding: '5px 10px', borderRadius: 6, border: '1px solid #fecaca', background: '#fee2e2', color: '#dc2626',
+                                  fontSize: '11px', fontWeight: 700, cursor: ocDecisionId === op.id ? 'not-allowed' : 'pointer',
+                                }}
+                              >
+                                Rechazar
+                              </button>
+                            </div>
+                          </div>
+                        ) : esOperacion ? (
+                          <button
+                            type="button"
+                            onClick={() => onEdit(op)}
+                            style={{
+                              padding: '5px 10px', borderRadius: 6, border: '1px solid #c4b5fd', background: '#ede9fe', color: '#6d28d9',
+                              fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+                            }}
+                          >
+                            Ver operación
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>{oc?.estadoOC === 'ENTREGADA' ? 'Completada' : '—'}</span>
+                        )}
                       </td>
                     </tr>
                   );

@@ -8,6 +8,7 @@ import MasterLayout, { MasterDashboard } from './pages/Master';
 import EjecutivaLayout, { EjecutivaDashboard } from './pages/Ejecutiva';
 import MiCuentaPage from './pages/MiCuenta';
 import RegistroOportunidadPage from './pages/Oportunidades';
+import { SeguimientoOCView } from './pages/Oportunidades/SeguimientoOCView';
 import { EmpresaLayout, SedesPage, EmpleadosPage, UsuariosPage } from './pages/Admin/Empresa';
 import RolesPage from './pages/SysAdmin/RolesPage';
 import GlobalSessionGuard from './components/SessionModal/GlobalSessionGuard';
@@ -114,6 +115,10 @@ function App() {
               element={<RegistroOportunidadPage roleAccent="#0ea5e9" />}
             />
             <Route
+              path="seguimiento-oc"
+              element={<SeguimientoOCView roleAccent="#0ea5e9" />}
+            />
+            <Route
               path="mi-cuenta"
               element={
                 <MiCuentaPage
@@ -139,6 +144,10 @@ function App() {
             <Route
               path="registro-oportunidad"
               element={<RegistroOportunidadPage roleAccent="#06b6d4" />}
+            />
+            <Route
+              path="seguimiento-oc"
+              element={<SeguimientoOCView roleAccent="#06b6d4" />}
             />
             <Route
               path="mi-cuenta"

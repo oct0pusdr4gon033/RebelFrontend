@@ -14,6 +14,7 @@ import type { ProductoItem } from '../../api/Dtos/ProductoItem';
 import type { EmpresaOption } from '../../api/Dtos/Empresa';
 import type { RegistroOportunidadPageProps } from '../../props/RegistroOportunidad';
 import type { Oportunidad } from '../../models/Oportunidad.model';
+import type { OrdenCompra } from '../../types/oportunidades';
 import { formatFechaHoraPeru, formatHoraPeru } from '../../utils/dateUtils';
 import './RegistroOportunidad.css';
 import { BuscadorEmpresaModal } from '../../components/BuscadorEmpresaModal/BuscadorEmpresaModal';
@@ -24,6 +25,21 @@ import { PodioComercialView } from './PodioComercialView';
 import { SubirEvidenciaView } from './SubirEvidenciaView';
 import { MisOportunidadesView } from './MisOportunidadesView';
 import { isOportunidadOwner } from '../../utils/oportunidadUtils';
+
+const nuevoItem = (limiteUnitario = 0): ProductoItem => ({
+  id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  numeroParte: '',
+  descripcion: '',
+  cantidad: 1,
+  limiteUnitario,
+  fichaProducto: '',
+  marcaProducto: '',
+  moneda: 'PEN',
+  precioUnitarioBase: null,
+  precioUnitarioOfertado: null,
+  condicionesAdicionales: '',
+  fichaTecnica: '',
+});
 
 export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = ({
   roleAccent = '#06b6d4',
@@ -75,15 +91,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
   const marcaRef = useRef<HTMLDivElement>(null);
 
   // 4. Ítems de productos (Editable)
-  const [items, setItems] = useState<ProductoItem[]>([
-    {
-      id: 'item-1',
-      numeroParte: '',
-      descripcion: '',
-      cantidad: 1,
-      limiteUnitario: 70, // Ejemplo: req con límite de 70 soles
-    },
-  ]);
+  const [items, setItems] = useState<ProductoItem[]>([nuevoItem(70)]);
 
   // Mensaje de éxito o feedback
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -136,9 +144,37 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
             descripcion: p.descripcion || '',
             cantidad: p.cantidad,
             limiteUnitario: p.limiteUnitario,
+            fichaProducto: p.fichaProducto ?? '',
+            marcaProducto: p.marcaProducto ?? '',
+            moneda: p.moneda ?? 'PEN',
+            precioUnitarioBase: p.precioUnitarioBase ?? null,
+            precioUnitarioOfertado: p.precioUnitarioOfertado ?? null,
+            condicionesAdicionales: p.condicionesAdicionales ?? '',
+            fichaTecnica: p.fichaTecnica ?? '',
           })),
           limiteTotal: op.limiteTotal,
           estado: (op.estado as any) || 'En Licitación',
+          ordenCompra: op.ordenCompra
+            ? {
+                id: op.ordenCompra.id,
+                oportunidadId: op.ordenCompra.oportunidadId,
+                numeroOC: op.ordenCompra.numeroOC,
+                fechaEmisionOC: op.ordenCompra.fechaEmisionOC,
+                estadoOC: op.ordenCompra.estadoOC as OrdenCompra['estadoOC'],
+                motivoRechazo: op.ordenCompra.motivoRechazo,
+                fechaDecisionOC: op.ordenCompra.fechaDecisionOC,
+                costoInicial: op.ordenCompra.costoInicial,
+                costoRenegociado: op.ordenCompra.costoRenegociado,
+                margenAdicional: op.ordenCompra.margenAdicional,
+                fechaRenegociacion: op.ordenCompra.fechaRenegociacion,
+                fechaDespacho: op.ordenCompra.fechaDespacho,
+                transportista: op.ordenCompra.transportista,
+                noGuiaRemision: op.ordenCompra.noGuiaRemision,
+                fechaEntrega: op.ordenCompra.fechaEntrega,
+                fechaRegistro: op.ordenCompra.fechaRegistro,
+                fechaActualizacion: op.ordenCompra.fechaActualizacion,
+              }
+            : undefined,
           creadoPor: op.creadoPorNombre || 'Ejecutiva',
           creadoPorUsuarioId: op.creadoPorUsuarioId,
           createdAt: formatFechaHoraPeru(op.fechaRegistro),
@@ -256,16 +292,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
 
   // Manejo de Ítems
   const handleAddItem = () => {
-    setItems((prev) => [
-      ...prev,
-      {
-        id: `item-${Date.now()}`,
-        numeroParte: '',
-        descripcion: '',
-        cantidad: 1,
-        limiteUnitario: 0,
-      },
-    ]);
+    setItems((prev) => [...prev, nuevoItem(0)]);
   };
 
   const handleRemoveItem = (id: string | number) => {
@@ -348,15 +375,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
     setSelectedEmpresa(null);
     setEntidadConvocante('');
     setSelectedMarcas([]);
-    setItems([
-      {
-        id: `item-${Date.now()}`,
-        numeroParte: '',
-        descripcion: '',
-        cantidad: 1,
-        limiteUnitario: 70,
-      },
-    ]);
+    setItems([nuevoItem(70)]);
   };
 
   // Prevenir envíos dobles o clicks concurrentes en 0ms
@@ -416,6 +435,13 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
               descripcion: it.descripcion?.trim() || undefined,
               cantidad: Number(it.cantidad),
               limiteUnitario: Number(it.limiteUnitario),
+              fichaProducto: it.fichaProducto?.trim() || null,
+              marcaProducto: it.marcaProducto?.trim() || null,
+              moneda: it.moneda || 'PEN',
+              precioUnitarioBase: it.precioUnitarioBase != null ? Number(it.precioUnitarioBase) : null,
+              precioUnitarioOfertado: it.precioUnitarioOfertado != null ? Number(it.precioUnitarioOfertado) : null,
+              condicionesAdicionales: it.condicionesAdicionales?.trim() || null,
+              fichaTecnica: it.fichaTecnica?.trim() || null,
             })),
           });
         } catch {
@@ -469,6 +495,13 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
               descripcion: it.descripcion?.trim() || undefined,
               cantidad: Number(it.cantidad),
               limiteUnitario: Number(it.limiteUnitario),
+              fichaProducto: it.fichaProducto?.trim() || null,
+              marcaProducto: it.marcaProducto?.trim() || null,
+              moneda: it.moneda || 'PEN',
+              precioUnitarioBase: it.precioUnitarioBase != null ? Number(it.precioUnitarioBase) : null,
+              precioUnitarioOfertado: it.precioUnitarioOfertado != null ? Number(it.precioUnitarioOfertado) : null,
+              condicionesAdicionales: it.condicionesAdicionales?.trim() || null,
+              fichaTecnica: it.fichaTecnica?.trim() || null,
             })),
           });
           if (res?.id) backendId = res.id;
@@ -1072,6 +1105,90 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                             <span className="reg-field-hint">Monto tope por producto fijado por Perú Compras</span>
                           </div>
                         </div>
+
+                        <details className="reg-item-proforma">
+                          <summary>Datos de proforma Perú Compras (opcional)</summary>
+                          <div className="reg-form-row" style={{ marginTop: 12 }}>
+                            <div className="reg-field">
+                              <label>Ficha del Producto</label>
+                              <input
+                                type="text"
+                                placeholder="Ej. 756"
+                                value={item.fichaProducto || ''}
+                                onChange={(e) => handleUpdateItem(item.id, 'fichaProducto', e.target.value)}
+                              />
+                            </div>
+                            <div className="reg-field">
+                              <label>Marca del producto</label>
+                              <input
+                                type="text"
+                                placeholder="Ej. NL NEGRN"
+                                value={item.marcaProducto || ''}
+                                onChange={(e) => handleUpdateItem(item.id, 'marcaProducto', e.target.value)}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="reg-form-row" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+                            <div className="reg-field">
+                              <label>Moneda base</label>
+                              <select
+                                value={item.moneda || 'PEN'}
+                                onChange={(e) => handleUpdateItem(item.id, 'moneda', e.target.value)}
+                              >
+                                <option value="PEN">S/ (PEN)</option>
+                                <option value="USD">US$ (USD)</option>
+                              </select>
+                            </div>
+                            <div className="reg-field">
+                              <label>Precio unitario base (sin IGV)</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                placeholder="Ej. 65.00"
+                                value={item.precioUnitarioBase ?? ''}
+                                onChange={(e) =>
+                                  handleUpdateItem(item.id, 'precioUnitarioBase', e.target.value === '' ? null : parseFloat(e.target.value))
+                                }
+                              />
+                            </div>
+                            <div className="reg-field">
+                              <label>Precio unitario ofertado</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                placeholder="Ej. 64.00"
+                                value={item.precioUnitarioOfertado ?? ''}
+                                onChange={(e) =>
+                                  handleUpdateItem(item.id, 'precioUnitarioOfertado', e.target.value === '' ? null : parseFloat(e.target.value))
+                                }
+                              />
+                            </div>
+                          </div>
+
+                          <div className="reg-form-row" style={{ marginBottom: 0 }}>
+                            <div className="reg-field">
+                              <label>Condiciones adicionales</label>
+                              <input
+                                type="text"
+                                placeholder="Ej. SÍ / Previa solicitud"
+                                value={item.condicionesAdicionales || ''}
+                                onChange={(e) => handleUpdateItem(item.id, 'condicionesAdicionales', e.target.value)}
+                              />
+                            </div>
+                            <div className="reg-field">
+                              <label>Ficha técnica (enlace o referencia)</label>
+                              <input
+                                type="text"
+                                placeholder="https://… o N° de documento"
+                                value={item.fichaTecnica || ''}
+                                onChange={(e) => handleUpdateItem(item.id, 'fichaTecnica', e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        </details>
 
                         <div className="reg-item-subtotal-badge">
                           <span>Límite Subtotal del Ítem ({item.cantidad} unids &times; S/ {Number(item.limiteUnitario).toFixed(2)}):</span>

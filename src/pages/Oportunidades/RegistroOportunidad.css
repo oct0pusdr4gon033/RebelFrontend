@@ -433,6 +433,45 @@
   font-weight: 800;
 }
 
+/* ── Datos de proforma Perú Compras (plegable dentro del ítem) ── */
+.reg-item-proforma {
+  margin-top: 12px;
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 10px;
+}
+
+.reg-item-proforma > summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+
+.reg-item-proforma > summary::-webkit-details-marker {
+  display: none;
+}
+
+.reg-item-proforma > summary::before {
+  content: 'chevron_right';
+  font-family: 'Material Symbols Rounded';
+  font-size: 18px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.reg-item-proforma[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.reg-item-proforma > summary:hover {
+  color: #334155;
+}
+
 /* ── Columna Derecha: Tarjeta de Resumen ──────────── */
 .reg-summary-card {
   background: #ffffff;

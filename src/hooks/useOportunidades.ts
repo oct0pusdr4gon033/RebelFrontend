@@ -26,7 +26,7 @@ const LS_KEY = 'sales_rebel_oportunidades';
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Mapea la respuesta de la API al modelo local de Oportunidad */
-function mapApiToOportunidad(op: any): Oportunidad {
+export function mapApiToOportunidad(op: any): Oportunidad {
   return {
     id: op.id,
     numeroRequerimiento: op.numeroRequerimiento,
@@ -48,9 +48,37 @@ function mapApiToOportunidad(op: any): Oportunidad {
       descripcion: p.descripcion || '',
       cantidad: p.cantidad,
       limiteUnitario: p.limiteUnitario,
+      fichaProducto: p.fichaProducto ?? '',
+      marcaProducto: p.marcaProducto ?? '',
+      moneda: p.moneda ?? 'PEN',
+      precioUnitarioBase: p.precioUnitarioBase ?? null,
+      precioUnitarioOfertado: p.precioUnitarioOfertado ?? null,
+      condicionesAdicionales: p.condicionesAdicionales ?? '',
+      fichaTecnica: p.fichaTecnica ?? '',
     })),
     limiteTotal: op.limiteTotal,
     estado: (op.estado as Oportunidad['estado']) || 'En Licitación',
+    ordenCompra: op.ordenCompra
+      ? {
+          id: op.ordenCompra.id,
+          oportunidadId: op.ordenCompra.oportunidadId,
+          numeroOC: op.ordenCompra.numeroOC,
+          fechaEmisionOC: op.ordenCompra.fechaEmisionOC,
+          estadoOC: op.ordenCompra.estadoOC,
+          motivoRechazo: op.ordenCompra.motivoRechazo,
+          fechaDecisionOC: op.ordenCompra.fechaDecisionOC,
+          costoInicial: op.ordenCompra.costoInicial,
+          costoRenegociado: op.ordenCompra.costoRenegociado,
+          margenAdicional: op.ordenCompra.margenAdicional,
+          fechaRenegociacion: op.ordenCompra.fechaRenegociacion,
+          fechaDespacho: op.ordenCompra.fechaDespacho,
+          transportista: op.ordenCompra.transportista,
+          noGuiaRemision: op.ordenCompra.noGuiaRemision,
+          fechaEntrega: op.ordenCompra.fechaEntrega,
+          fechaRegistro: op.ordenCompra.fechaRegistro,
+          fechaActualizacion: op.ordenCompra.fechaActualizacion,
+        }
+      : undefined,
     creadoPor: op.creadoPorNombre || 'Ejecutiva',
     creadoPorUsuarioId: op.creadoPorUsuarioId,
     createdAt: formatFechaHoraPeru(op.fechaRegistro),
@@ -186,7 +214,6 @@ export function useOportunidades(creadoPorLabel: string) {
       // Backend no disponible: usa estado local
     }
   }, []);
-
   // ── Inicialización ───────────────────────────────────────────────────────
   useEffect(() => {
     loadAcuerdosMarco();
@@ -194,6 +221,23 @@ export function useOportunidades(creadoPorLabel: string) {
     loadEmpresas();
     loadOportunidades();
   }, [loadAcuerdosMarco, loadMarcas, loadEmpresas, loadOportunidades]);
+
+  // ── Recarga manual tras operaciones (cambio de estado u OC) ──────────────
+  const recargarOportunidades = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getOportunidadesApi();
+      if (Array.isArray(data)) {
+        setOportunidades(data.map(mapApiToOportunidad));
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // ── Helpers de Formulario ────────────────────────────────────────────────
   const resetForm = useCallback(() => {
@@ -396,6 +440,7 @@ export function useOportunidades(creadoPorLabel: string) {
 
     // Lista de oportunidades
     oportunidades,
+    recargarOportunidades,
 
     // Estado del formulario
     editingId,

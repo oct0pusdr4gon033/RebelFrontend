@@ -59,6 +59,7 @@ export const masterNavItems: NavItem[] = [
     ],
   },
   { icon: 'track_changes', label: 'Mis Metas', path: '/master/metas', section: null },
+  { icon: 'local_shipping', label: 'Seguimiento OC', path: '/master/seguimiento-oc', section: 'Ventas' },
   { icon: 'folder_shared', label: 'Mi Cartera', path: '/master/cartera', section: null },
   { icon: 'group', label: 'Mi Equipo', path: '/master/equipo', section: 'Equipo' },
   { icon: 'leaderboard', label: 'Ranking Equipo', path: '/master/ranking', section: null },

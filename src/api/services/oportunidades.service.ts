@@ -48,6 +48,13 @@ export interface ProductoItemPayload {
   cantidad: number;
   limiteUnitario: number;
   limiteSubtotal?: number;
+  fichaProducto?: string | null;
+  marcaProducto?: string | null;
+  moneda?: string | null;
+  precioUnitarioBase?: number | null;
+  precioUnitarioOfertado?: number | null;
+  condicionesAdicionales?: string | null;
+  fichaTecnica?: string | null;
 }
 
 export interface CrearOportunidadApiRequest {
@@ -86,13 +93,41 @@ export interface OportunidadApiResponse {
     cantidad: number;
     limiteUnitario: number;
     limiteSubtotal: number;
+    fichaProducto?: string | null;
+    marcaProducto?: string | null;
+    moneda?: string | null;
+    precioUnitarioBase?: number | null;
+    precioUnitarioOfertado?: number | null;
+    condicionesAdicionales?: string | null;
+    fichaTecnica?: string | null;
   }[];
   limiteTotal: number;
   estado: string;
+  ordenCompra?: OrdenCompraApiResponse | null;
   creadoPorUsuarioId?: string;
   creadoPorNombre?: string;
   fechaRegistro: string;
   fechaActualizacion?: string;
+}
+
+export interface OrdenCompraApiResponse {
+  id: number;
+  oportunidadId: number;
+  numeroOC: string;
+  fechaEmisionOC?: string | null;
+  estadoOC: string;
+  motivoRechazo?: string | null;
+  fechaDecisionOC?: string | null;
+  costoInicial?: number | null;
+  costoRenegociado?: number | null;
+  margenAdicional?: number | null;
+  fechaRenegociacion?: string | null;
+  fechaDespacho?: string | null;
+  transportista?: string | null;
+  noGuiaRemision?: string | null;
+  fechaEntrega?: string | null;
+  fechaRegistro: string;
+  fechaActualizacion?: string | null;
 }
 
 /**
@@ -219,5 +254,102 @@ export async function cambiarEstadoApi(
     const err = await response.json().catch(() => ({ mensaje: 'Error al cambiar estado' }));
     throw new Error(err.mensaje ?? 'Error en el cambio de estado');
   }
+  return response.json();
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// BLOQUE 2: ÓRDENES DE COMPRA Y OPERACIONES (OC & Logística)
+// ═════════════════════════════════════════════════════════════════════════════
+
+export interface RegistrarOCRequest {
+  numeroOC: string;
+  fechaEmisionOC?: string | null;
+}
+
+export interface CambiarEstadoOCRequest {
+  estadoOC: 'OC_ACEPTADA' | 'OC_RECHAZADA';
+  motivoRechazo?: string | null;
+}
+
+export interface RenegociarCostoRequest {
+  costoInicial: number;
+  costoRenegociado: number;
+}
+
+export interface RegistrarEntregaRequest {
+  fechaDespacho?: string | null;
+  transportista?: string | null;
+  noGuiaRemision?: string | null;
+  fechaEntrega?: string | null;
+}
+
+async function erroresApi(response: Response, fallback: string): Promise<string> {
+  let errMsg = `Error ${response.status}`;
+  try {
+    const err = await response.json();
+    if (err?.mensaje) errMsg = err.mensaje;
+    else if (err?.errors) {
+      const specificKeys = Object.keys(err.errors).filter((k) => k !== 'dto' && k !== '$');
+      if (specificKeys.length > 0) {
+        const key = specificKeys[0];
+        errMsg = `${key.replace(/^\$\./, '')}: ${err.errors[key]?.[0] ?? 'Inválido'}`;
+      } else if (err.errors['$']?.[0]) errMsg = err.errors['$'][0];
+      else errMsg = err.title ?? fallback;
+    } else if (err?.title) errMsg = err.title;
+  } catch {
+    // no-op
+  }
+  return errMsg || fallback;
+}
+
+export async function registrarOCApi(
+  id: number | string,
+  data: RegistrarOCRequest
+): Promise<OportunidadApiResponse> {
+  const response = await fetch(`${API_BASE}/api/oportunidades/${id}/oc`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error(await erroresApi(response, 'Error al registrar la Orden de Compra'));
+  return response.json();
+}
+
+export async function cambiarEstadoOCApi(
+  id: number | string,
+  data: CambiarEstadoOCRequest
+): Promise<OportunidadApiResponse> {
+  const response = await fetch(`${API_BASE}/api/oportunidades/${id}/oc/estado`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error(await erroresApi(response, 'Error al actualizar la Orden de Compra'));
+  return response.json();
+}
+
+export async function renegociarCostoApi(
+  id: number | string,
+  data: RenegociarCostoRequest
+): Promise<OportunidadApiResponse> {
+  const response = await fetch(`${API_BASE}/api/oportunidades/${id}/oc/costo`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error(await erroresApi(response, 'Error al renegociar el costo'));
+  return response.json();
+}
+
+export async function registrarEntregaApi(
+  id: number | string,
+  data: RegistrarEntregaRequest
+): Promise<OportunidadApiResponse> {
+  const response = await fetch(`${API_BASE}/api/oportunidades/${id}/entregas`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error(await erroresApi(response, 'Error al registrar la entrega'));
   return response.json();
 }
