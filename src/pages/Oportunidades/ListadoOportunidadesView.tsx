@@ -324,7 +324,9 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
                       </td>
                       <td>
                         <div className="reg-cell-acuerdo">
-                          <span className="acuerdo-code" style={{ fontWeight: 700, color: '#334155' }}>{op.acuerdoMarco.codigo}</span>
+                          <span className="acuerdo-code" style={{ fontWeight: 700, color: '#334155' }}>
+                            {op.acuerdoMarco?.codigo || '—'}
+                          </span>
                         </div>
                       </td>
                       <td>
@@ -563,6 +565,7 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
       {detalleDrawerOp && (
         <DetalleOportunidadView
           oportunidad={detalleDrawerOp}
+          todasOportunidades={oportunidades}
           roleAccent={roleAccent}
           onClose={() => setDetalleDrawerOp(null)}
           onEdit={(op) => { setDetalleDrawerOp(null); onEdit(op); }}
@@ -612,7 +615,7 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
                   Detalle de Requerimiento: {selectedOpDetail.numeroRequerimiento}
                 </h3>
                 <p style={{ margin: '3px 0 0', fontSize: '13px', color: '#64748b' }}>
-                  {selectedOpDetail.acuerdoMarco.codigo} &bull; {selectedOpDetail.acuerdoMarco.descripcion}
+                  {selectedOpDetail.acuerdoMarco ? `${selectedOpDetail.acuerdoMarco.codigo} • ${selectedOpDetail.acuerdoMarco.descripcion}` : 'Sin Acuerdo Marco asignado'}
                 </p>
               </div>
               <button

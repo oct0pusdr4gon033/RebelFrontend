@@ -255,7 +255,7 @@ export function useOportunidades(creadoPorLabel: string) {
     (op: Oportunidad, empresasCatalogo: EmpresaOption[]) => {
       setEditingId(op.id);
       setNumeroRequerimiento(op.numeroRequerimiento);
-      setSelectedAcuerdo(op.acuerdoMarco);
+      setSelectedAcuerdo(op.acuerdoMarco || null);
       setFechaVencimiento(op.fechaVencimiento);
       if (op.empresaId) {
         setSelectedEmpresa(

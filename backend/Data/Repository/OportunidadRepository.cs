@@ -26,6 +26,8 @@ namespace Data.Repository
                 .Include(o => o.OportunidadMarcas)
                     .ThenInclude(om => om.Marca)
                 .Include(o => o.Productos)
+                .Include(o => o.OrdenCompra)
+                .Include(o => o.Imagenes)
                 .OrderByDescending(o => o.FechaRegistro)
                 .ToListAsync();
         }
@@ -39,7 +41,17 @@ namespace Data.Repository
                 .Include(o => o.OportunidadMarcas)
                     .ThenInclude(om => om.Marca)
                 .Include(o => o.Productos)
+                .Include(o => o.OrdenCompra)
+                .Include(o => o.Imagenes)
                 .FirstOrDefaultAsync(o => o.Id == id);
+        }
+
+        public async Task<Oportunidad?> ObtenerPorRequerimientoAsync(string numeroRequerimiento)
+        {
+            return await _context.Oportunidades
+                .Include(o => o.CreadoPorUsuario)
+                    .ThenInclude(u => u!.Empleado)
+                .FirstOrDefaultAsync(o => o.NumeroRequerimiento.ToLower() == numeroRequerimiento.Trim().ToLower());
         }
 
         public async Task<Oportunidad> CrearAsync(Oportunidad oportunidad)
@@ -70,6 +82,61 @@ namespace Data.Repository
         {
             return await _context.Oportunidades
                 .AnyAsync(o => o.NumeroRequerimiento.ToLower() == numeroRequerimiento.Trim().ToLower());
+        }
+
+        public async Task<bool> ExisteParaUsuarioAsync(string numeroRequerimiento, string usuarioId)
+        {
+            return await _context.Oportunidades
+                .AnyAsync(o => o.NumeroRequerimiento.ToUpper() == numeroRequerimiento.Trim().ToUpper() && o.CreadoPorUsuarioId == usuarioId);
+        }
+
+        public async Task<bool> ExisteBuenaProAsync(string numeroRequerimiento, int? excluirId = null)
+        {
+            var reqNorm = (numeroRequerimiento ?? string.Empty).Trim().ToUpper();
+            var estadosBuenaPro = new[] { "Adjudicada", "OC_RECIBIDA", "OC_ACEPTADA", "ENTREGADA" };
+            
+            var query = _context.Oportunidades
+                .Where(o => o.NumeroRequerimiento.ToUpper() == reqNorm && estadosBuenaPro.Contains(o.Estado));
+
+            if (excluirId.HasValue && excluirId.Value > 0)
+            {
+                query = query.Where(o => o.Id != excluirId.Value);
+            }
+
+            return await query.AnyAsync();
+        }
+
+        // ── STORAGE DE IMÁGENES / EVIDENCIAS (PostgreSQL BYTEA) ──
+        public async Task<IEnumerable<OportunidadImagen>> ObtenerImagenesAsync(int oportunidadId)
+        {
+            return await _context.OportunidadImagenes
+                .Where(i => i.OportunidadId == oportunidadId)
+                .OrderByDescending(i => i.FechaSubida)
+                .ToListAsync();
+        }
+
+        public async Task<OportunidadImagen?> ObtenerImagenPorIdAsync(int imagenId)
+        {
+            return await _context.OportunidadImagenes
+                .Include(i => i.Oportunidad)
+                .FirstOrDefaultAsync(i => i.Id == imagenId);
+        }
+
+        public async Task<OportunidadImagen> AgregarImagenAsync(OportunidadImagen imagen)
+        {
+            _context.OportunidadImagenes.Add(imagen);
+            await _context.SaveChangesAsync();
+            return imagen;
+        }
+
+        public async Task<bool> EliminarImagenAsync(int imagenId)
+        {
+            var imagen = await _context.OportunidadImagenes.FindAsync(imagenId);
+            if (imagen == null) return false;
+
+            _context.OportunidadImagenes.Remove(imagen);
+            await _context.SaveChangesAsync();
+            return true;
         }
     }
 }

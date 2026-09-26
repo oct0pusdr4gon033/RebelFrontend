@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import Swal from 'sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
 import { GoogleIcon } from '../../components/GoogleIcon';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -13,8 +15,7 @@ import type { Marca } from '../../api/Dtos/Marca';
 import type { ProductoItem } from '../../api/Dtos/ProductoItem';
 import type { EmpresaOption } from '../../api/Dtos/Empresa';
 import type { RegistroOportunidadPageProps } from '../../props/RegistroOportunidad';
-import type { Oportunidad } from '../../models/Oportunidad.model';
-import type { OrdenCompra } from '../../types/oportunidades';
+import type { Oportunidad, OrdenCompra } from '../../types/oportunidades';
 import { formatFechaHoraPeru, formatHoraPeru } from '../../utils/dateUtils';
 import './RegistroOportunidad.css';
 import { BuscadorEmpresaModal } from '../../components/BuscadorEmpresaModal/BuscadorEmpresaModal';
@@ -42,7 +43,7 @@ const nuevoItem = (limiteUnitario = 0): ProductoItem => ({
 });
 
 export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = ({
-  roleAccent = '#06b6d4',
+  roleAccent = '#2563eb',
 }) => {
   const { empleado } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -82,7 +83,6 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
   const [isEmpresaModalOpen, setIsEmpresaModalOpen] = useState(false);
   const [selectedEmpresa, setSelectedEmpresa] = useState<EmpresaOption | null>(null);
   const [entidadConvocante, setEntidadConvocante] = useState('');
-  const [mostrarEmpresa, setMostrarEmpresa] = useState(false);
 
   // 3. Marcas (Editable)
   const [marcasCatalogo, setMarcasCatalogo] = useState<Marca[]>([]);
@@ -94,8 +94,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
   // 4. Ítems de productos (Editable)
   const [items, setItems] = useState<ProductoItem[]>([nuevoItem(70)]);
 
-  // Mensaje de éxito o feedback
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  // Estado de envío
   const [loading, setLoading] = useState(false);
 
   // Clave de almacenamiento aislada por usuario para evitar contaminación de datos entre cuentas
@@ -109,7 +108,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
         try {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed)) {
-            return parsed.filter((op: any) => op && op.acuerdoMarco);
+            return parsed.filter((op: any) => op && op.numeroRequerimiento);
           }
         } catch {
           return [];
@@ -127,12 +126,14 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
         const mapped: Oportunidad[] = data.map((op) => ({
           id: op.id,
           numeroRequerimiento: op.numeroRequerimiento,
-          acuerdoMarco: {
-            id: op.acuerdoMarcoId,
-            codigo: op.acuerdoMarcoCodigo || 'N/A',
-            descripcion: op.acuerdoMarcoDescripcion || '',
-            activo: true,
-          },
+          acuerdoMarco: op.acuerdoMarcoId
+            ? {
+                id: op.acuerdoMarcoId,
+                codigo: op.acuerdoMarcoCodigo || 'N/A',
+                descripcion: op.acuerdoMarcoDescripcion || '',
+                activo: true,
+              }
+            : null,
           empresaId: op.empresaId,
           empresaRazonSocial: op.empresaRazonSocial,
           empresaRuc: op.empresaRuc,
@@ -321,43 +322,6 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
     0
   );
 
-  // ── Mensaje de reserva para la marca (formato WhatsApp) ──
-  const [copiadoWA, setCopiadoWA] = useState(false);
-  const mensajeWhatsApp = useMemo(() => {
-    const ruc = selectedEmpresa?.ruc?.trim() || '';
-    const entidad = entidadConvocante.trim() || selectedEmpresa?.razonSocial?.trim() || '';
-    const categoria = selectedAcuerdo?.descripcion?.trim() || selectedAcuerdo?.codigo?.trim() || '';
-    const cabecera = `Entidad: RUC - ${[ruc, entidad].filter(Boolean).join(' ')}`.trim();
-    const conDatos = items.filter((it) => it.fichaProducto || it.marcaProducto || it.numeroParte || Number(it.cantidad) > 0);
-    const lista = conDatos.length > 0 ? conDatos : items;
-    return lista
-      .map((it) => `${cabecera} [${it.fichaProducto?.trim() || ''}]/${categoria}/${it.marcaProducto?.trim() || ''}/ ${Number(it.cantidad) || 0} UND`)
-      .join('\n');
-  }, [selectedEmpresa, entidadConvocante, selectedAcuerdo, items]);
-
-  const copiarMensajeWhatsApp = async () => {
-    const texto = mensajeWhatsApp;
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(texto);
-      } else {
-        const ta = document.createElement('textarea');
-        ta.value = texto;
-        ta.style.position = 'fixed';
-        ta.style.opacity = '0';
-        document.body.appendChild(ta);
-        ta.focus();
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-      }
-      setCopiadoWA(true);
-      setTimeout(() => setCopiadoWA(false), 2000);
-    } catch {
-      // Clipboard no disponible
-    }
-  };
-
   // Cálculo de tiempo restante de vencimiento
   const getVencimientoBadge = (dateStr: string) => {
     if (!dateStr) return null;
@@ -380,8 +344,22 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
     setActiveTab('registrar');
     setEditingId(op.id);
     setNumeroRequerimiento(op.numeroRequerimiento);
-    setSelectedAcuerdo(op.acuerdoMarco);
-    setFechaVencimiento(op.fechaVencimiento);
+    setSelectedAcuerdo(op.acuerdoMarco || null);
+    if (op.fechaVencimiento) {
+      try {
+        const d = new Date(op.fechaVencimiento);
+        if (!isNaN(d.getTime())) {
+          const pad = (n: number) => String(n).padStart(2, '0');
+          setFechaVencimiento(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+        } else {
+          setFechaVencimiento(op.fechaVencimiento.slice(0, 16));
+        }
+      } catch {
+        setFechaVencimiento(op.fechaVencimiento.slice(0, 16));
+      }
+    } else {
+      setFechaVencimiento('');
+    }
     if (op.empresaId && op.empresaRazonSocial) {
       setSelectedEmpresa({
         id: op.empresaId,
@@ -392,10 +370,8 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
       setSelectedEmpresa(null);
     }
     setEntidadConvocante(op.entidadConvocante || '');
-    setMostrarEmpresa(Boolean(op.empresaId || (op.entidadConvocante && op.entidadConvocante.trim())));
     setSelectedMarcas(op.marcas);
     setItems(op.items.map((it) => ({ ...it })));
-    setSuccessMsg(null);
     window.scrollTo({ top: 120, behavior: 'smooth' });
   };
 
@@ -420,7 +396,6 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
     setFechaVencimiento('');
     setSelectedEmpresa(null);
     setEntidadConvocante('');
-    setMostrarEmpresa(false);
     setSelectedMarcas([]);
     setItems([nuevoItem(70)]);
   };
@@ -429,16 +404,16 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
   const isSubmittingRef = useRef(false);
 
   // Validaciones para habilitar botón:
-  // IMPORTANTE: Empresa e Ítems son 100% opcionales (Registro Exprés), no bloquean el botón
+  // Validaciones para habilitar botón:
+  // Sección 1: Número de Requerimiento y al menos una Marca son obligatorios
   const isFormValid =
     numeroRequerimiento.trim().length > 0 &&
-    selectedAcuerdo !== null &&
     selectedMarcas.length > 0;
 
   // Guardar (Crear o Actualizar)
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isFormValid || !selectedAcuerdo || loading || isSubmittingRef.current) return;
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!isFormValid || loading || isSubmittingRef.current) return;
 
     const reqUpper = numeroRequerimiento.toUpperCase().trim();
 
@@ -450,9 +425,14 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
           (op.creadoPorUsuarioId === empleado?.userId || !op.creadoPorUsuarioId)
       );
       if (yaRegistrado) {
-        setSuccessMsg(
-          `❌ Ya has registrado previamente el requerimiento "${reqUpper}". Cada ejecutiva puede registrar solo una oportunidad por requerimiento.`
-        );
+        Swal.fire({
+          icon: 'warning',
+          title: 'Requerimiento ya registrado',
+          text: `Ya has registrado previamente el requerimiento "${reqUpper}". Cada ejecutiva puede registrar solo una oportunidad por requerimiento.`,
+          confirmButtonColor: roleAccent || '#0284c7',
+          confirmButtonText: 'Entendido',
+          customClass: { popup: 'reg-swal-modal' },
+        });
         return;
       }
     }
@@ -466,14 +446,11 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
 
     try {
       if (editingId) {
-        // ── MODO ACTUALIZACIÓN (REGLA DE NEGOCIO ESTRICTA) ──
-        // 1. Convocatoria Perú Compras -> NO SE EDITA
-        // 2. Empresa / Entidad -> SE EDITA
-        // 3. Marcas y Productos/Límites -> SE EDITAN
-
-        // Intento de actualización en backend
+        // ── MODO ACTUALIZACIÓN ──
         try {
           await updateOportunidadApi(editingId, {
+            acuerdoMarcoId: selectedAcuerdo ? Number(selectedAcuerdo.id) : null,
+            fechaVencimientoLicitacion: fechaVencimiento ? new Date(fechaVencimiento).toISOString() : null,
             empresaId: selectedEmpresa ? selectedEmpresa.id : null,
             entidadConvocante: entidadConvocante.trim() || undefined,
             marcaIds: selectedMarcas.map((m) => Number(m.id)),  // Backend: List<int>
@@ -500,11 +477,9 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
             if (op.id !== editingId) return op;
             return {
               ...op,
-              // Datos de convocatoria protegidos:
               numeroRequerimiento: op.numeroRequerimiento,
-              acuerdoMarco: op.acuerdoMarco,
-              fechaVencimiento: op.fechaVencimiento,
-              // Datos editables:
+              acuerdoMarco: selectedAcuerdo,
+              fechaVencimiento: fechaVencimiento,
               empresaId: selectedEmpresa ? selectedEmpresa.id : undefined,
               empresaRazonSocial: selectedEmpresa?.razonSocial,
               empresaRuc: selectedEmpresa?.ruc,
@@ -517,22 +492,24 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
           })
         );
 
-        setSuccessMsg(
-          `¡Oportunidad "${numeroRequerimiento}" actualizada con éxito! Se guardaron Empresa, Marcas y Productos. (Datos de Convocatoria Perú Compras blindados).`
-        );
         handleCancelEdit();
+        Swal.fire({
+          icon: 'success',
+          title: '¡Oportunidad Actualizada!',
+          text: `La oportunidad "${numeroRequerimiento}" se ha actualizado con éxito.`,
+          confirmButtonColor: roleAccent || '#0284c7',
+          confirmButtonText: 'Aceptar',
+          customClass: { popup: 'reg-swal-modal' },
+        });
       } else {
         // ── MODO CREACIÓN ──
-        // Múltiples ejecutivas pueden registrar el mismo requerimiento.
-        // La prioridad real se determinará luego por fecha, hora y evidencias subidas.
-
         let backendId: number | string | null = null;
         let apiError: string | null = null;
 
         try {
           const res = await createOportunidadApi({
             numeroRequerimiento: numeroRequerimiento.toUpperCase().trim(),
-            acuerdoMarcoId: Number(selectedAcuerdo.id),  // Backend: int
+            acuerdoMarcoId: selectedAcuerdo ? Number(selectedAcuerdo.id) : null,
             fechaVencimientoLicitacion: fechaVencimiento ? new Date(fechaVencimiento).toISOString() : null,
             empresaId: selectedEmpresa ? selectedEmpresa.id : null,
             entidadConvocante: entidadConvocante.trim() || undefined,
@@ -557,9 +534,16 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
           apiError = err?.message ?? 'Error al conectar con el servidor.';
         }
 
-        // Si el backend falló, mostrar error y NO guardar localmente
+        // Si el backend falló, mostrar alerta y NO guardar localmente
         if (apiError || backendId === null) {
-          setSuccessMsg(`❌ ${apiError ?? 'No se pudo registrar en el servidor. Verifica que el backend esté activo e intenta nuevamente.'}`);
+          Swal.fire({
+            icon: 'error',
+            title: 'No se pudo registrar',
+            text: apiError ?? 'No se pudo registrar en el servidor. Verifica que el backend esté activo e intenta nuevamente.',
+            confirmButtonColor: '#dc2626',
+            confirmButtonText: 'Cerrar',
+            customClass: { popup: 'reg-swal-modal' },
+          });
           return;
         }
 
@@ -587,17 +571,44 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
         };
 
         setOportunidades((prev) => [nuevaOportunidad, ...prev]);
-        setSuccessMsg(
-          `✅ Requerimiento "${nuevaOportunidad.numeroRequerimiento}" registrado a las ${horaExacta}. Asegúrate de subir tus evidencias en la pestaña correspondiente.`
-        );
         handleCancelEdit();
+
+        Swal.fire({
+          icon: 'success',
+          title: '¡Oportunidad Registrada!',
+          html: `
+            <div style="text-align: left; font-size: 13.5px; line-height: 1.6; color: #334155; margin-top: 6px;">
+              <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 6px; padding: 12px 14px; margin-bottom: 12px;">
+                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 700;">Requerimiento</div>
+                <div style="font-size: 18px; font-weight: 800; color: #0f172a; font-family: monospace; margin-top: 2px;">
+                  ${nuevaOportunidad.numeroRequerimiento}
+                </div>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+                <span style="color: #64748b;">Hora oficial de registro:</span>
+                <strong style="color: #0f172a;">${horaExacta}</strong>
+              </div>
+              <div style="font-size: 12.5px; color: #065f46; margin-top: 12px; padding: 10px 12px; background: #ecfdf5; border-radius: 6px; border: 1px solid #a7f3d0;">
+                Prioridad de llegada asegurada. Recuerda adjuntar tus evidencias en la pestaña <strong>Subir Evidencia</strong>.
+              </div>
+            </div>
+          `,
+          showCancelButton: true,
+          confirmButtonText: 'Subir Evidencia',
+          cancelButtonText: 'Aceptar',
+          confirmButtonColor: roleAccent || '#0284c7',
+          cancelButtonColor: '#64748b',
+          reverseButtons: true,
+          customClass: { popup: 'reg-swal-modal' },
+        }).then((result) => {
+          if (result.isConfirmed && backendId) {
+            handleIrASubirEvidencia(backendId);
+          }
+        });
       }
     } finally {
       isSubmittingRef.current = false;
       setLoading(false);
-      setTimeout(() => {
-        setSuccessMsg(null);
-      }, 5500);
     }
   };
 
@@ -612,65 +623,67 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
         } as React.CSSProperties
       }
     >
-      {/* ── Banner Superior Dinámico según la vista activa ── */}
-      <div className="reg-hero">
-        <div className="reg-hero__left">
-          <div className="reg-hero__badge-icon" style={{ background: `${roleAccent}15` }}>
-            <GoogleIcon
-              name={
-                activeTab === 'listar'
-                  ? 'table_chart'
-                  : activeTab === 'podio'
-                    ? 'emoji_events'
-                    : activeTab === 'subir-evidencia'
-                      ? 'upload_file'
-                      : 'bolt'
-              }
-              size={28}
-              color={roleAccent}
-            />
-          </div>
-          <div className="reg-hero__title">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h1>
-                {activeTab === 'listar'
-                  ? 'Listado de Oportunidades'
-                  : activeTab === 'podio'
-                    ? 'Podio Comercial de Ventas'
-                    : activeTab === 'subir-evidencia'
-                      ? 'Subir Evidencia de Licitación'
-                      : 'Registro de Oportunidad de Licitación'}
-              </h1>
-              <span className="reg-pill-express">
-                {activeTab === 'listar'
-                  ? `${oportunidades.length} Licitaciones`
-                  : activeTab === 'podio'
-                    ? 'Top Ranking'
-                    : activeTab === 'subir-evidencia'
-                      ? 'Constancias'
-                      : 'Registro Exprés'}
-              </span>
+      {/* ── Banner Superior Dinámico según la vista activa (oculto en Mis Oportunidades) ── */}
+      {activeTab !== 'mis-oportunidades' && (
+        <div className="reg-hero">
+          <div className="reg-hero__left">
+            <div className="reg-hero__badge-icon" style={{ background: `${roleAccent}15` }}>
+              <GoogleIcon
+                name={
+                  activeTab === 'listar'
+                    ? 'table_chart'
+                    : activeTab === 'podio'
+                      ? 'emoji_events'
+                      : activeTab === 'subir-evidencia'
+                        ? 'upload_file'
+                        : 'bolt'
+                }
+                size={28}
+                color={roleAccent}
+              />
             </div>
-            <p>
-              {activeTab === 'listar'
-                ? 'Monitoreo en vivo de licitaciones, límites Perú Compras y estados comerciales'
-                : activeTab === 'podio'
-                  ? 'Gamificación y ranking de rendimiento comercial del equipo de ventas'
-                  : activeTab === 'subir-evidencia'
-                    ? 'Certificación de constancias de cotización y actas de adjudicación Perú Compras'
-                    : 'Plataforma de Acuerdos Marco • Catálogo Perú Compras • Registro Rápido para Ejecutivas'}
-            </p>
+            <div className="reg-hero__title">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h1>
+                  {activeTab === 'listar'
+                    ? 'Listado de Oportunidades'
+                    : activeTab === 'podio'
+                      ? 'Podio Comercial de Ventas'
+                      : activeTab === 'subir-evidencia'
+                        ? 'Subir Evidencia de Licitación'
+                        : 'Registro de Oportunidad de Licitación'}
+                </h1>
+                <span className="reg-pill-express">
+                  {activeTab === 'listar'
+                    ? `${oportunidades.length} Licitaciones`
+                    : activeTab === 'podio'
+                      ? 'Top Ranking'
+                      : activeTab === 'subir-evidencia'
+                        ? 'Constancias'
+                        : 'Registro Exprés'}
+                </span>
+              </div>
+              <p>
+                {activeTab === 'listar'
+                  ? 'Monitoreo en vivo de licitaciones, límites Perú Compras y estados comerciales'
+                  : activeTab === 'podio'
+                    ? 'Gamificación y ranking de rendimiento comercial del equipo de ventas'
+                    : activeTab === 'subir-evidencia'
+                      ? 'Certificación de constancias de cotización y actas de adjudicación Perú Compras'
+                      : 'Plataforma de Acuerdos Marco • Catálogo Perú Compras • Registro Rápido para Ejecutivas'}
+              </p>
+            </div>
+          </div>
+
+          <div
+            className="reg-hero__tag"
+            style={{ background: `${roleAccent}12`, color: roleAccent, border: `1.5px solid ${roleAccent}30` }}
+          >
+            <GoogleIcon name="verified_user" size={15} color={roleAccent} />
+            <span>Ventas &bull; Perú Compras</span>
           </div>
         </div>
-
-        <div
-          className="reg-hero__tag"
-          style={{ background: `${roleAccent}12`, color: roleAccent, border: `1.5px solid ${roleAccent}30` }}
-        >
-          <GoogleIcon name="verified_user" size={15} color={roleAccent} />
-          <span>Ventas &bull; Perú Compras</span>
-        </div>
-      </div>
+      )}
 
       {/* ── VISTA 1: REGISTRAR (Formulario Exprés / Modo Edición) ── */}
       {activeTab === 'registrar' && (
@@ -683,7 +696,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                 <div>
                   <strong>Modo Actualización de Oportunidad ({numeroRequerimiento})</strong>
                   <div style={{ fontSize: '12px', marginTop: '2px' }}>
-                    Regla de integridad: <strong>1. Convocatoria Perú Compras</strong> está <strong>BLOQUEADA</strong>. Puedes actualizar <strong>2. Empresa Solicitante</strong>, <strong>3. Marcas</strong> y <strong>4. Productos/Límites</strong>.
+                    Puedes actualizar la <strong>Convocatoria Perú Compras</strong> (Acuerdo Marco y Vencimiento), la <strong>Empresa Solicitante</strong>, <strong>Marcas</strong> y <strong>Productos/Límites</strong>.
                   </div>
                 </div>
               </div>
@@ -693,652 +706,567 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
             </div>
           )}
 
-          {/* ── Notificación de Éxito ── */}
-          {successMsg && (
-            <div className="reg-toast-success">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <GoogleIcon name="check_circle" size={20} color="#059669" />
-                <strong>{successMsg}</strong>
-              </div>
-              <button
-                onClick={() => setSuccessMsg(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#065f46' }}
-              >
-                <GoogleIcon name="close" size={16} color="#065f46" />
-              </button>
-            </div>
-          )}
+
 
           {/* ── Formulario de Registro en 2 Columnas ── */}
-          <form onSubmit={handleSubmit}>
-            <div className="reg-grid">
-              {/* Columna Izquierda: Formulario Principal */}
-              <div className="reg-col-main">
-                {/* 1. Datos de la Convocatoria Perú Compras (Inmutables en Edición) */}
-                <div className="reg-card">
-                  <div className="reg-card__header">
-                    <div className="reg-card__header-icon" style={{ background: `${roleAccent}15` }}>
-                      <GoogleIcon name="feed" size={18} color={roleAccent} />
-                    </div>
-                    <div>
-                      <h3>1. Datos de la Convocatoria Perú Compras</h3>
-                      {editingId && (
-                        <span style={{ color: '#b45309', fontWeight: 700, fontSize: '11.5px', marginLeft: 0 }}>
-                          (Bloqueado por convocatoria oficial — No editable)
-                        </span>
-                      )}
-                    </div>
-                    {!editingId && <span className="reg-badge-obligatorio">Paso obligatorio</span>}
-                  </div>
-
-                  <div className="reg-form-row">
-                    {/* N° Requerimiento */}
-                    <div className="reg-field">
-                      <label htmlFor="req-number">
-                        Número de Requerimiento <span className="required">*</span>
-                        {editingId && (
-                          <span className="reg-lock-badge">
-                            <GoogleIcon name="lock" size={12} color="#b45309" /> Bloqueado
-                          </span>
-                        )}
-                      </label>
-                      <input
-                        id="req-number"
-                        type="text"
-                        placeholder="Ej. REQ-001 o REQ-2026-0042"
-                        value={numeroRequerimiento}
-                        onChange={(e) => setNumeroRequerimiento(e.target.value)}
-                        disabled={!!editingId}
-                        required
-                      />
-
-                      <span className="reg-field-hint">Código oficial en la plataforma Perú Compras</span>
-                    </div>
-
-                    {/* Fecha Vencimiento */}
-                    <div className="reg-field">
-                      <label htmlFor="req-date">
-                        Fecha y Hora de Vencimiento <span style={{ color: '#94a3b8', fontWeight: 400 }}>(Opcional)</span>
-                        {editingId && (
-                          <span className="reg-lock-badge">
-                            <GoogleIcon name="lock" size={12} color="#b45309" /> Bloqueado
-                          </span>
-                        )}
-                      </label>
-                      <input
-                        id="req-date"
-                        type="datetime-local"
-                        value={fechaVencimiento}
-                        onChange={(e) => setFechaVencimiento(e.target.value)}
-                        disabled={!!editingId}
-                      />
-                      {vencimientoStatus && (
-                        <span
-                          style={{
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            color: vencimientoStatus.color,
-                            marginTop: '4px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                          }}
-                        >
-                          <GoogleIcon name="alarm" size={14} color={vencimientoStatus.color} />
-                          {vencimientoStatus.label}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Acuerdo Marco (Combobox con búsqueda por letras conectado a la BD) */}
-                  <div className="reg-field" ref={acuerdoRef} style={{ marginBottom: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <label style={{ margin: 0 }}>
-                        Acuerdo Marco (Buscar por Código o Nombre) <span className="required">*</span>
-                        {editingId && (
-                          <span className="reg-lock-badge">
-                            <GoogleIcon name="lock" size={12} color="#b45309" /> Bloqueado
-                          </span>
-                        )}
-                      </label>
-                    </div>
-                    <div className="reg-combobox">
-                      <div className="reg-combobox__input-wrapper">
-                        <span className="reg-combobox__icon">
-                          <GoogleIcon name="manage_search" size={18} color="#94a3b8" />
-                        </span>
-                        <input
-                          type="text"
-                          className="reg-combobox__input"
-                          placeholder={
-                            loadingAcuerdos
-                              ? 'Cargando acuerdos marco de la base de datos...'
-                              : 'Escribe letras para buscar... Ej: EXT, Computadoras, Laptops'
-                          }
-                          value={selectedAcuerdo ? `${selectedAcuerdo.codigo} — ${selectedAcuerdo.descripcion}` : acuerdoSearch}
-                          onChange={(e) => {
-                            if (editingId) return;
-                            setSelectedAcuerdo(null);
-                            setAcuerdoSearch(e.target.value);
-                            setIsAcuerdoOpen(true);
-                          }}
-                          onFocus={() => {
-                            if (!editingId) setIsAcuerdoOpen(true);
-                          }}
-                          disabled={!!editingId || loadingAcuerdos}
-                        />
-                        {(selectedAcuerdo || acuerdoSearch) && !editingId && (
-                          <button
-                            type="button"
-                            className="reg-combobox__clear"
-                            onClick={() => {
-                              setSelectedAcuerdo(null);
-                              setAcuerdoSearch('');
-                              setIsAcuerdoOpen(true);
-                            }}
-                          >
-                            <GoogleIcon name="close" size={14} color="#94a3b8" />
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Dropdown de Acuerdos Marco */}
-                      {isAcuerdoOpen && !editingId && (
-                        <div className="reg-combobox__dropdown">
-                          {loadingAcuerdos ? (
-                            <div className="reg-combobox__empty" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px' }}>
-                              <GoogleIcon name="sync" size={16} color="#0284c7" />
-                              <span>Cargando acuerdos marco desde la base de datos...</span>
-                            </div>
-                          ) : errorAcuerdos && acuerdosMarco.length === 0 ? (
-                            <div className="reg-combobox__empty" style={{ color: '#dc2626', padding: '14px' }}>
-                              <div style={{ marginBottom: '6px' }}>{errorAcuerdos}</div>
-                              <button
-                                type="button"
-                                onClick={() => loadAcuerdosMarco()}
-                                style={{
-                                  padding: '4px 10px',
-                                  background: '#ef4444',
-                                  color: '#fff',
-                                  borderRadius: '6px',
-                                  border: 'none',
-                                  fontSize: '11px',
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                Reintentar
-                              </button>
-                            </div>
-                          ) : filteredAcuerdos.length === 0 ? (
-                            <div className="reg-combobox__empty">
-                              {acuerdosMarco.length === 0
-                                ? 'No hay acuerdos marco registrados en la base de datos.'
-                                : 'No se encontraron acuerdos marco con esa búsqueda'}
-                            </div>
-                          ) : (
-                            filteredAcuerdos.map((acuerdo) => (
-                              <button
-                                key={acuerdo.id}
-                                type="button"
-                                className={`reg-combobox__item ${selectedAcuerdo?.id === acuerdo.id ? 'active' : ''}`}
-                                onClick={() => {
-                                  setSelectedAcuerdo(acuerdo);
-                                  setAcuerdoSearch('');
-                                  setIsAcuerdoOpen(false);
-                                }}
-                              >
-                                <span className="reg-combobox__item-code">{acuerdo.codigo}</span>
-                                <span className="reg-combobox__item-desc">{acuerdo.descripcion}</span>
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <span className="reg-field-hint">
-                      Catálogo oficial desde la BD {acuerdosMarco.length > 0 ? `(${acuerdosMarco.length} acuerdos cargados)` : ''}
+          {/* ── Formulario Unificado (Sin bordes redondeados en divs) ── */}
+          <form onSubmit={handleSubmit} className="reg-unified-form">
+            {/* ── 1. SECCIÓN 1: REQUERIMIENTO Y MARCA (OBLIGATORIO) ── */}
+            <div className="reg-flat-section reg-flat-section--required">
+              <div className="reg-flat-section__header">
+                <div className="reg-flat-section__title">
+                  <span className="reg-flat-section__badge-num">1</span>
+                  <div>
+                    <h3>Requerimiento y Marca</h3>
+                    <span className="reg-flat-section__desc">
+                      Datos obligatorios para registrar la oportunidad de licitación.
                     </span>
-                  </div>
-
-                  <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '20px 0' }} />
-
-                  {/* Marcas Participantes (Movido a Sección 1) */}
-                  <div className="reg-field" ref={marcaRef} style={{ marginBottom: 0 }}>
-                    <label>
-                      Buscar y Agregar Marca <span className="required">*</span>
-                    </label>
-                    <div className="reg-combobox">
-                      <div className="reg-combobox__input-wrapper">
-                        <span className="reg-combobox__icon">
-                          <GoogleIcon name="search" size={18} color="#94a3b8" />
-                        </span>
-                        <input
-                          type="text"
-                          className="reg-combobox__input"
-                          placeholder="Escribe para buscar y añadir marcas... Ej: HP, Lenovo, Dell, Cisco"
-                          value={marcaSearch}
-                          onChange={(e) => {
-                            setMarcaSearch(e.target.value);
-                            setIsMarcaOpen(true);
-                          }}
-                          onFocus={() => setIsMarcaOpen(true)}
-                        />
-                      </div>
-
-                      {/* Dropdown de Marcas */}
-                      {isMarcaOpen && (
-                        <div className="reg-combobox__dropdown">
-                          {filteredMarcas.length === 0 ? (
-                            <div className="reg-combobox__empty">No hay marcas disponibles con ese nombre</div>
-                          ) : (
-                            filteredMarcas.map((marca) => (
-                              <button
-                                key={marca.id}
-                                type="button"
-                                className="reg-combobox__item"
-                                onClick={() => handleSelectMarca(marca)}
-                              >
-                                <span className="reg-combobox__item-desc" style={{ fontWeight: 700 }}>
-                                  + {marca.nombre}
-                                </span>
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Chips de Marcas Seleccionadas */}
-                    <div className="reg-brand-chips">
-                      {selectedMarcas.length === 0 ? (
-                        <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>
-                          Ninguna marca seleccionada aún (agrega al menos una marca para cotizar).
-                        </span>
-                      ) : (
-                        selectedMarcas.map((m) => (
-                          <span key={m.id} className="reg-brand-chip">
-                            <span>{m.nombre}</span>
-                            <button
-                              type="button"
-                              className="reg-brand-chip__remove"
-                              onClick={() => handleRemoveMarca(m.id)}
-                              title="Quitar marca"
-                            >
-                              <GoogleIcon name="close" size={13} color="#64748b" />
-                            </button>
-                          </span>
-                        ))
-                      )}
-                    </div>
                   </div>
                 </div>
+                <span className="reg-flat-badge-obligatorio">Paso Obligatorio</span>
+              </div>
 
-                {/* 2. Empresa / Entidad Solicitante (⚡ 100% OPCIONAL - Registro Exprés) */}
-                <div className="reg-card reg-card--optional" id="reg-empresa-card">
-                  <div
-                    className="reg-card__header"
-                    onClick={() => setMostrarEmpresa((v) => !v)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <div className="reg-card__header-icon" style={{ background: '#fef3c7' }}>
-                      <GoogleIcon name="domain" size={18} color="#d97706" />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <h3 style={{ margin: 0 }}>2. Empresa / Entidad Solicitante</h3>
-                        <span className="reg-badge-opcional">Opcional · requerida para el mensaje</span>
-                      </div>
-                      <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 600 }}>
-                        {selectedEmpresa
-                          ? `${selectedEmpresa.ruc} · ${selectedEmpresa.razonSocial}`
-                          : (entidadConvocante || 'Toca para agregar empresa o entidad')}
+              <div className="reg-form-row">
+                {/* N° Requerimiento */}
+                <div className="reg-field">
+                  <label htmlFor="req-number">
+                    Número de Requerimiento <span className="required">*</span>
+                    {editingId && (
+                      <span className="reg-lock-badge">
+                        <GoogleIcon name="lock" size={12} color="#b45309" /> Bloqueado
                       </span>
+                    )}
+                  </label>
+                  <input
+                    id="req-number"
+                    type="text"
+                    placeholder="Ej. REQ-001 o REQ-2026-0042"
+                    value={numeroRequerimiento}
+                    onChange={(e) => setNumeroRequerimiento(e.target.value)}
+                    disabled={!!editingId}
+                    required
+                  />
+                  <span className="reg-field-hint">Código oficial en la plataforma Perú Compras</span>
+                </div>
+
+                {/* Buscar y Agregar Marca */}
+                <div className="reg-field" ref={marcaRef}>
+                  <label>
+                    Buscar y Agregar Marca <span className="required">*</span>
+                  </label>
+                  <div className="reg-combobox">
+                    <div className="reg-combobox__input-wrapper">
+                      <span className="reg-combobox__icon">
+                        <GoogleIcon name="search" size={18} color="#94a3b8" />
+                      </span>
+                      <input
+                        type="text"
+                        className="reg-combobox__input"
+                        placeholder="Escribe para buscar y añadir marcas... Ej: HP, Lenovo, Dell, Cisco"
+                        value={marcaSearch}
+                        onChange={(e) => {
+                          setMarcaSearch(e.target.value);
+                          setIsMarcaOpen(true);
+                        }}
+                        onFocus={() => setIsMarcaOpen(true)}
+                      />
                     </div>
-                    <GoogleIcon name={mostrarEmpresa ? 'expand_less' : 'expand_more'} size={20} color="#94a3b8" />
+
+                    {/* Dropdown de Marcas */}
+                    {isMarcaOpen && (
+                      <div className="reg-combobox__dropdown">
+                        {filteredMarcas.length === 0 ? (
+                          <div className="reg-combobox__empty">No hay marcas disponibles con ese nombre</div>
+                        ) : (
+                          filteredMarcas.map((marca) => (
+                            <button
+                              key={marca.id}
+                              type="button"
+                              className="reg-combobox__item"
+                              onClick={() => handleSelectMarca(marca)}
+                            >
+                              <span className="reg-combobox__item-desc" style={{ fontWeight: 700 }}>
+                                + {marca.nombre}
+                              </span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
                   </div>
 
-                  {mostrarEmpresa && (
-                    <>
-                  {/* Aviso de Registro Veloz */}
-                  <div className="reg-express-alert">
-                    <GoogleIcon name="flash_on" size={18} color="#d97706" />
-                    <span>
-                      <strong>⚡ Prioridad de Cotización:</strong> Si estás compitiendo por tiempo para asegurar la licitación, puedes omitir la empresa y registrar la oportunidad de inmediato. Podrás asociar la empresa o editarla más tarde.
-                    </span>
+                  {/* Chips de Marcas Seleccionadas */}
+                  <div className="reg-brand-chips">
+                    {selectedMarcas.length === 0 ? (
+                      <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>
+                        Ninguna marca seleccionada aún (agrega al menos una marca para cotizar).
+                      </span>
+                    ) : (
+                      selectedMarcas.map((m) => (
+                        <span key={m.id} className="reg-brand-chip">
+                          <span>{m.nombre}</span>
+                          <button
+                            type="button"
+                            className="reg-brand-chip__remove"
+                            onClick={() => handleRemoveMarca(m.id)}
+                            title="Quitar marca"
+                          >
+                            <GoogleIcon name="close" size={13} color="#64748b" />
+                          </button>
+                        </span>
+                      ))
+                    )}
                   </div>
+                </div>
+              </div>
 
-                  <div className="reg-form-row">
-                    {/* Selector / Buscador de Empresa Registrada */}
-                    <div className="reg-field">
-                      <label>
-                        Buscar Empresa en Base de Datos <span style={{ color: '#94a3b8', fontWeight: 400 }}>(Opcional)</span>
-                      </label>
+              {/* Botón en Sección 1 para Registro Rápido */}
+              <div className="reg-quick-action-strip">
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={!isFormValid || loading}
+                  className="reg-btn-quick-action"
+                  style={{
+                    background: isFormValid ? roleAccent : '#cbd5e1',
+                    cursor: isFormValid ? 'pointer' : 'not-allowed',
+                  }}
+                >
+                  <GoogleIcon name="bolt" size={18} color="#ffffff" />
+                  <span>
+                    {loading
+                      ? 'Procesando...'
+                      : editingId
+                        ? 'Guardar Cambios Rápidos'
+                        : 'Registrar Oportunidad (Rápido)'}
+                  </span>
+                </button>
+                <span className="reg-quick-action-text">
+                  <GoogleIcon name="schedule" size={15} color="#0284c7" />
+                  Gana prioridad de llegada inmediatamente con estos 2 datos obligatorios. Puedes completar los demás datos abajo cuando gustes.
+                </span>
+              </div>
+            </div>
 
-                      {selectedEmpresa ? (
-                        <div className="reg-empresa-selected-card">
-                          <div className="reg-empresa-selected-info">
-                            <span className="reg-empresa-selected-ruc">{selectedEmpresa.ruc}</span>
-                            <span className="reg-empresa-selected-name">{selectedEmpresa.razonSocial}</span>
-                          </div>
-                          <div className="reg-empresa-selected-actions">
-                            <button type="button" onClick={() => setIsEmpresaModalOpen(true)} className="reg-empresa-btn-change">
-                              Cambiar
-                            </button>
-                            <button type="button" onClick={() => setSelectedEmpresa(null)} className="reg-empresa-btn-remove" title="Quitar empresa">
-                              <GoogleIcon name="close" size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
+            {/* ── 2. SECCIÓN 2: DATOS DE LA CONVOCATORIA (OPCIONAL) ── */}
+            <div className="reg-flat-section">
+              <div className="reg-flat-section__header">
+                <div className="reg-flat-section__title">
+                  <span className="reg-flat-section__badge-num">2</span>
+                  <div>
+                    <h3>Datos de la Convocatoria Perú Compras</h3>
+                    <span className="reg-flat-section__desc">Acuerdo Marco y fecha/hora de vencimiento oficial</span>
+                  </div>
+                </div>
+                <span className="reg-flat-badge-opcional">Opcional</span>
+              </div>
+
+              <div className="reg-form-row">
+                {/* Acuerdo Marco */}
+                <div className="reg-field" ref={acuerdoRef}>
+                  <label>
+                    Acuerdo Marco (Buscar por Código o Nombre)
+                  </label>
+                  <div className="reg-combobox">
+                    <div className="reg-combobox__input-wrapper">
+                      <span className="reg-combobox__icon">
+                        <GoogleIcon name="manage_search" size={18} color="#94a3b8" />
+                      </span>
+                      <input
+                        type="text"
+                        className="reg-combobox__input"
+                        placeholder={
+                          loadingAcuerdos
+                            ? 'Cargando acuerdos marco de la base de datos...'
+                            : 'Escribe letras para buscar... Ej: EXT, Computadoras, Laptops'
+                        }
+                        value={selectedAcuerdo ? `${selectedAcuerdo.codigo} — ${selectedAcuerdo.descripcion}` : acuerdoSearch}
+                        onChange={(e) => {
+                          setSelectedAcuerdo(null);
+                          setAcuerdoSearch(e.target.value);
+                          setIsAcuerdoOpen(true);
+                        }}
+                        onFocus={() => {
+                          setIsAcuerdoOpen(true);
+                        }}
+                        disabled={loadingAcuerdos}
+                      />
+                      {(selectedAcuerdo || acuerdoSearch) && (
                         <button
                           type="button"
-                          className="reg-btn-open-modal"
-                          onClick={() => setIsEmpresaModalOpen(true)}
+                          className="reg-combobox__clear"
+                          onClick={() => {
+                            setSelectedAcuerdo(null);
+                            setAcuerdoSearch('');
+                            setIsAcuerdoOpen(true);
+                          }}
                         >
-                          <GoogleIcon name="search" size={18} />
-                          Buscar y Seleccionar Empresa...
+                          <GoogleIcon name="close" size={14} color="#94a3b8" />
                         </button>
                       )}
                     </div>
 
-                    {/* Nombre de Entidad Libre (Rápido) */}
-                    <div className="reg-field">
-                      <label>
-                        O escribe la Entidad Solicitante <span style={{ color: '#94a3b8', fontWeight: 400 }}>(Opcional)</span>
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Ej. UGEL 03, Hospital Regional, Pronis..."
-                        value={entidadConvocante}
-                        onChange={(e) => setEntidadConvocante(e.target.value)}
-                      />
-                      <span className="reg-field-hint">Nombre rápido de la institución del requerimiento</span>
-                    </div>
+                    {/* Dropdown de Acuerdos Marco */}
+                    {isAcuerdoOpen && (
+                      <div className="reg-combobox__dropdown">
+                        {loadingAcuerdos ? (
+                          <div className="reg-combobox__empty" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px' }}>
+                            <GoogleIcon name="sync" size={16} color="#0284c7" />
+                            <span>Cargando acuerdos marco desde la base de datos...</span>
+                          </div>
+                        ) : errorAcuerdos && acuerdosMarco.length === 0 ? (
+                          <div className="reg-combobox__empty" style={{ color: '#dc2626', padding: '14px' }}>
+                            <div style={{ marginBottom: '6px' }}>{errorAcuerdos}</div>
+                            <button
+                              type="button"
+                              onClick={() => loadAcuerdosMarco()}
+                              style={{
+                                padding: '4px 10px',
+                                background: '#ef4444',
+                                color: '#fff',
+                                borderRadius: '4px',
+                                border: 'none',
+                                fontSize: '11px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Reintentar
+                            </button>
+                          </div>
+                        ) : filteredAcuerdos.length === 0 ? (
+                          <div className="reg-combobox__empty">
+                            {acuerdosMarco.length === 0
+                              ? 'No hay acuerdos marco registrados en la base de datos.'
+                              : 'No se encontraron acuerdos marco con esa búsqueda'}
+                          </div>
+                        ) : (
+                          filteredAcuerdos.map((acuerdo) => (
+                            <button
+                              key={acuerdo.id}
+                              type="button"
+                              className={`reg-combobox__item ${selectedAcuerdo?.id === acuerdo.id ? 'active' : ''}`}
+                              onClick={() => {
+                                setSelectedAcuerdo(acuerdo);
+                                setAcuerdoSearch('');
+                                setIsAcuerdoOpen(false);
+                              }}
+                            >
+                              <span className="reg-combobox__item-code">{acuerdo.codigo}</span>
+                              <span className="reg-combobox__item-desc">{acuerdo.descripcion}</span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
                   </div>
-                    </>
+                </div>
+
+                {/* Fecha Vencimiento */}
+                <div className="reg-field">
+                  <label htmlFor="req-date">
+                    Fecha y Hora de Vencimiento <span style={{ color: '#94a3b8', fontWeight: 400 }}>(Opcional)</span>
+                  </label>
+                  <input
+                    id="req-date"
+                    type="datetime-local"
+                    value={fechaVencimiento}
+                    onChange={(e) => setFechaVencimiento(e.target.value)}
+                  />
+                  {vencimientoStatus && (
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        color: vencimientoStatus.color,
+                        marginTop: '4px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <GoogleIcon name="alarm" size={14} color={vencimientoStatus.color} />
+                      {vencimientoStatus.label}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ── 3. SECCIÓN 3: EMPRESA O ENTIDAD SOLICITANTE (OPCIONAL) ── */}
+            <div className="reg-flat-section" id="reg-empresa-card">
+              <div className="reg-flat-section__header">
+                <div className="reg-flat-section__title">
+                  <span className="reg-flat-section__badge-num">3</span>
+                  <div>
+                    <h3>Empresa / Entidad Solicitante</h3>
+                    <span className="reg-flat-section__desc">
+                      Asocia la empresa registrada o escribe el nombre rápido de la entidad
+                    </span>
+                  </div>
+                </div>
+                <span className="reg-flat-badge-opcional">Opcional</span>
+              </div>
+
+              <div className="reg-form-row">
+                {/* Selector / Buscador de Empresa Registrada */}
+                <div className="reg-field">
+                  <label>
+                    Buscar Empresa en Base de Datos <span style={{ color: '#94a3b8', fontWeight: 400 }}>(Opcional)</span>
+                  </label>
+
+                  {selectedEmpresa ? (
+                    <div className="reg-empresa-selected-card">
+                      <div className="reg-empresa-selected-info">
+                        <span className="reg-empresa-selected-ruc">{selectedEmpresa.ruc}</span>
+                        <span className="reg-empresa-selected-name">{selectedEmpresa.razonSocial}</span>
+                      </div>
+                      <div className="reg-empresa-selected-actions">
+                        <button type="button" onClick={() => setIsEmpresaModalOpen(true)} className="reg-empresa-btn-change">
+                          Cambiar
+                        </button>
+                        <button type="button" onClick={() => setSelectedEmpresa(null)} className="reg-empresa-btn-remove" title="Quitar empresa">
+                          <GoogleIcon name="close" size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="reg-btn-open-modal"
+                      onClick={() => setIsEmpresaModalOpen(true)}
+                    >
+                      <GoogleIcon name="search" size={18} />
+                      Buscar y Seleccionar Empresa en BD...
+                    </button>
                   )}
                 </div>
 
-                {/* 3. Productos / Ítems de la Licitación (Editable) */}
-                <div className="reg-card">
-                  <div className="reg-items-header">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div className="reg-card__header-icon" style={{ background: `${roleAccent}15` }}>
-                        <GoogleIcon name="inventory_2" size={18} color={roleAccent} />
+                {/* Nombre de Entidad Libre (Rápido) */}
+                <div className="reg-field">
+                  <label>
+                    O escribe la Entidad Solicitante <span style={{ color: '#94a3b8', fontWeight: 400 }}>(Opcional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej. UGEL 03, Hospital Regional, Pronis..."
+                    value={entidadConvocante}
+                    onChange={(e) => setEntidadConvocante(e.target.value)}
+                  />
+                  <span className="reg-field-hint">Nombre de la institución si no está en la base de empresas</span>
+                </div>
+              </div>
+            </div>
+
+            {/* ── 4. SECCIÓN 4: PRODUCTOS Y LÍMITES (OPCIONAL) ── */}
+            <div className="reg-flat-section">
+              <div className="reg-flat-section__header">
+                <div className="reg-flat-section__title">
+                  <span className="reg-flat-section__badge-num">4</span>
+                  <div>
+                    <h3>Productos y Límites de Cotización</h3>
+                    <span className="reg-flat-section__desc">
+                      Ítems, cantidades y límites fijados por Perú Compras
+                    </span>
+                  </div>
+                </div>
+                <button type="button" onClick={handleAddItem} className="reg-btn-add-item-flat">
+                  <GoogleIcon name="add" size={16} color={roleAccent} />
+                  <span>Agregar Producto</span>
+                </button>
+              </div>
+
+              {items.map((item, index) => {
+                const subtotal = (Number(item.cantidad) || 0) * (Number(item.limiteUnitario) || 0);
+                return (
+                  <div key={item.id} className="reg-item-flat-box">
+                    <div className="reg-item-flat-top">
+                      <span className="reg-item-flat-number">Ítem #{index + 1} del Requerimiento</span>
+                      {items.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItem(item.id)}
+                          className="reg-item-flat-delete"
+                          title="Eliminar este ítem"
+                        >
+                          <GoogleIcon name="close" size={15} color="#ef4444" />
+                          <span>Eliminar</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="reg-form-row">
+                      <div className="reg-field">
+                        <label>Número de Parte <span className="required">*</span></label>
+                        <input
+                          type="text"
+                          placeholder="Ej. 82XF004CLM / 15-fa1093dx"
+                          value={item.numeroParte}
+                          onChange={(e) => handleUpdateItem(item.id, 'numeroParte', e.target.value)}
+                        />
                       </div>
-                      <div>
-                        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>
-                          3. Productos y Límites
-                        </h3>
+
+                      <div className="reg-field">
+                        <label>Descripción</label>
+                        <input
+                          type="text"
+                          placeholder="Ej. Laptop Lenovo Core i5 16GB 512GB SSD"
+                          value={item.descripcion}
+                          onChange={(e) => handleUpdateItem(item.id, 'descripcion', e.target.value)}
+                        />
                       </div>
                     </div>
 
-                    <button type="button" onClick={handleAddItem} className="reg-btn-add-item">
-                      <GoogleIcon name="add" size={16} color={roleAccent} />
-                      <span>+ Agregar Producto</span>
-                    </button>
-                  </div>
-
-                  {items.map((item, index) => {
-                    const subtotal = (Number(item.cantidad) || 0) * (Number(item.limiteUnitario) || 0);
-                    return (
-                      <div key={item.id} className="reg-item-box">
-                        <div className="reg-item-top">
-                          <span className="reg-item-number">Ítem #{index + 1} del Requerimiento</span>
-                          {items.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveItem(item.id)}
-                              className="reg-item-delete"
-                              title="Eliminar este ítem"
-                            >
-                              <GoogleIcon name="close" size={16} color="#ef4444" />
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="reg-form-row">
-                          {/* Número de Parte */}
-                          <div className="reg-field">
-                            <label>
-                              Número de Parte <span className="required">*</span>
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="Ej. 82XF004CLM / 15-fa1093dx"
-                              value={item.numeroParte}
-                              onChange={(e) => handleUpdateItem(item.id, 'numeroParte', e.target.value)}
-                            />
-                          </div>
-
-                          {/* Descripción del Producto */}
-                          <div className="reg-field">
-                            <label>Descripción</label>
-                            <input
-                              type="text"
-                              placeholder="Ej. Laptop Lenovo Core i5 16GB 512GB SSD"
-                              value={item.descripcion}
-                              onChange={(e) => handleUpdateItem(item.id, 'descripcion', e.target.value)}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="reg-form-row" style={{ marginBottom: 0 }}>
-                          {/* Cantidad */}
-                          <div className="reg-field">
-                            <label>
-                              Cantidad <span className="required">*</span>
-                            </label>
-                            <input
-                              type="number"
-                              min="1"
-                              placeholder="Ej. 10"
-                              value={item.cantidad}
-                              onChange={(e) => handleUpdateItem(item.id, 'cantidad', Math.max(1, parseInt(e.target.value) || 0))}
-                              required
-                            />
-                          </div>
-
-                          {/* Límite Unitario Perú Compras */}
-                          <div className="reg-field">
-                            <label>
-                              Límite unitario (S/) <span className="required">*</span>
-                            </label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0.01"
-                              placeholder="Ej. 70.00"
-                              value={item.limiteUnitario}
-                              onChange={(e) =>
-                                handleUpdateItem(item.id, 'limiteUnitario', parseFloat(e.target.value) || 0)
-                              }
-                              required
-                            />
-                            <span className="reg-field-hint">Monto tope por producto fijado por Perú Compras</span>
-                          </div>
-                        </div>
-
-                        <div className="reg-form-row" style={{ marginBottom: 0 }}>
-                          {/* Ficha del Producto */}
-                          <div className="reg-field">
-                            <label>Ficha del Producto</label>
-                            <input
-                              type="text"
-                              placeholder="Ej. 756"
-                              value={item.fichaProducto || ''}
-                              onChange={(e) => handleUpdateItem(item.id, 'fichaProducto', e.target.value)}
-                            />
-                          </div>
-
-                          {/* Marca del Producto (limitada a las marcas participantes) */}
-                          <div className="reg-field">
-                            <label>Marca del producto</label>
-                            <select
-                              value={item.marcaProducto || ''}
-                              onChange={(e) => handleUpdateItem(item.id, 'marcaProducto', e.target.value)}
-                              disabled={selectedMarcas.length === 0}
-                            >
-                              <option value="">
-                                {selectedMarcas.length === 0 ? 'Elige marcas participantes arriba…' : '— Sin marca —'}
-                              </option>
-                              {[...new Set([
-                                ...selectedMarcas.map((m) => m.nombre),
-                                ...(item.marcaProducto && !selectedMarcas.some((m) => m.nombre === item.marcaProducto)
-                                  ? [item.marcaProducto]
-                                  : []),
-                              ])].map((nombre) => (
-                                <option key={nombre} value={nombre}>{nombre}</option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-
-                        <div className="reg-item-subtotal-badge">
-                          <span>Límite Subtotal del Ítem ({item.cantidad} unids &times; S/ {Number(item.limiteUnitario).toFixed(2)}):</span>
-                          <strong>S/ {subtotal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
-                        </div>
+                    <div className="reg-form-row">
+                      <div className="reg-field">
+                        <label>Cantidad <span className="required">*</span></label>
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder="Ej. 10"
+                          value={item.cantidad}
+                          onChange={(e) => handleUpdateItem(item.id, 'cantidad', Math.max(1, parseInt(e.target.value) || 0))}
+                        />
                       </div>
-                    );
-                  })}
+
+                      <div className="reg-field">
+                        <label>Límite unitario (S/) <span className="required">*</span></label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          placeholder="Ej. 70.00"
+                          value={item.limiteUnitario}
+                          onChange={(e) =>
+                            handleUpdateItem(item.id, 'limiteUnitario', parseFloat(e.target.value) || 0)
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="reg-form-row" style={{ marginBottom: 0 }}>
+                      <div className="reg-field">
+                        <label>Ficha del Producto</label>
+                        <input
+                          type="text"
+                          placeholder="Ej. 756"
+                          value={item.fichaProducto || ''}
+                          onChange={(e) => handleUpdateItem(item.id, 'fichaProducto', e.target.value)}
+                        />
+                      </div>
+
+                      <div className="reg-field">
+                        <label>Marca del producto</label>
+                        <select
+                          value={item.marcaProducto || ''}
+                          onChange={(e) => handleUpdateItem(item.id, 'marcaProducto', e.target.value)}
+                          disabled={selectedMarcas.length === 0}
+                        >
+                          <option value="">
+                            {selectedMarcas.length === 0 ? 'Elige marcas participantes en sección 1…' : '— Sin marca —'}
+                          </option>
+                          {[...new Set([
+                            ...selectedMarcas.map((m) => m.nombre),
+                            ...(item.marcaProducto && !selectedMarcas.some((m) => m.nombre === item.marcaProducto)
+                              ? [item.marcaProducto]
+                              : []),
+                          ])].map((nombre) => (
+                            <option key={nombre} value={nombre}>{nombre}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="reg-item-flat-subtotal">
+                      <span>Límite Subtotal del Ítem ({item.cantidad} unids &times; S/ {Number(item.limiteUnitario).toFixed(2)}):</span>
+                      <strong>S/ {subtotal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* ── 5. SECCIÓN 5: RESUMEN Y GUARDADO COMPLETO ── */}
+            <div className="reg-flat-section reg-flat-section--summary">
+              <div className="reg-flat-section__header">
+                <div className="reg-flat-section__title">
+                  <span className="reg-flat-section__badge-num">5</span>
+                  <div>
+                    <h3>Resumen y Guardado Completo</h3>
+                    <span className="reg-flat-section__desc">Revisa el estado comercial y confirma todos los datos</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Columna Derecha: Tarjeta de Resumen y Envío */}
-              <div className="reg-col-side">
-                <div className="reg-summary-card">
-                  <div className="reg-summary-title">
-                    <GoogleIcon name="receipt_long" size={20} color={roleAccent} />
-                    <span>{editingId ? 'Actualizar Oportunidad' : 'Resumen de la Oportunidad'}</span>
-                  </div>
-
-                  <div className="reg-summary-row">
-                    <span className="reg-summary-label">Requerimiento:</span>
-                    <span className="reg-summary-val" style={{ color: roleAccent, fontWeight: 700 }}>
-                      {numeroRequerimiento || 'Por ingresar'}
-                    </span>
-                  </div>
-
-                  <div className="reg-summary-row">
-                    <span className="reg-summary-label">Acuerdo Marco:</span>
-                    <span className="reg-summary-val">
-                      {selectedAcuerdo ? selectedAcuerdo.codigo : 'No seleccionado'}
-                    </span>
-                  </div>
-
-                  <div className="reg-summary-row">
-                    <span className="reg-summary-label">Empresa / Cliente:</span>
-                    <span className="reg-summary-val">
-                      {selectedEmpresa ? (
-                        selectedEmpresa.razonSocial
-                      ) : entidadConvocante ? (
-                        entidadConvocante
-                      ) : (
-                        <span style={{ color: '#d97706', fontSize: '11px' }}>⚡ Exprés (Sin asignar)</span>
-                      )}
-                    </span>
-                  </div>
-
-                  <div className="reg-summary-row">
-                    <span className="reg-summary-label">Marcas participantes:</span>
-                    <span className="reg-summary-val">
-                      {selectedMarcas.length > 0 ? selectedMarcas.map((m) => m.nombre).join(', ') : 'Sin marcas'}
-                    </span>
-                  </div>
-
-                  <div className="reg-summary-row">
-                    <span className="reg-summary-label">Vencimiento:</span>
-                    <span className="reg-summary-val">
-                      {fechaVencimiento ? formatFechaHoraPeru(fechaVencimiento) : 'No definido'}
-                    </span>
-                  </div>
-
-                  <div className="reg-summary-row">
-                    <span className="reg-summary-label">Total Ítems:</span>
-                    <span className="reg-summary-val">
-                      {items.length} {items.length === 1 ? 'producto' : 'productos'} ({totalCantidad} unids)
-                    </span>
-                  </div>
-
-                  {/* Límite Total de Perú Compras */}
-                  <div className="reg-summary-total-box">
-                    <div className="reg-summary-total-label">Límite Total Perú Compras</div>
-                    <div className="reg-summary-total-amount">
-                      S/ {totalLimite.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </div>
-                    <div className="reg-summary-total-hint">
-                      Tope máximo para cotizar en esta licitación
-                    </div>
-                  </div>
-
-                  <div className="reg-wa-block">
-                    <div className="reg-wa-label">
-                      <GoogleIcon name="chat" size={15} color="#25D366" />
-                      <span>Mensaje de reserva para la marca</span>
-                    </div>
-                    {!selectedEmpresa ? (
-                      <div className="reg-wa-warning">
-                        <GoogleIcon name="info" size={15} color="#b45309" />
-                        <span>
-                          Para enviarlo a la marca necesitas la <strong>Empresa (RUC)</strong>.{' '}
-                          <button
-                            type="button"
-                            className="reg-wa-warning-link"
-                            onClick={() => {
-                              setMostrarEmpresa(true);
-                              setTimeout(() => document.getElementById('reg-empresa-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
-                            }}
-                          >
-                            Completar empresa
-                          </button>
-                        </span>
-                      </div>
-                    ) : (
-                      <pre className="reg-wa-preview">{mensajeWhatsApp}</pre>
-                    )}
-                    <button
-                      type="button"
-                      className="reg-wa-copy"
-                      onClick={copiarMensajeWhatsApp}
-                      disabled={!selectedEmpresa}
-                    >
-                      <GoogleIcon name={copiadoWA ? 'check' : 'content_copy'} size={15} color="#ffffff" />
-                      <span>{copiadoWA ? '¡Copiado!' : 'Copiar mensaje de WhatsApp'}</span>
-                    </button>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={!isFormValid || loading}
-                    className="reg-btn-submit"
-                    style={{
-                      background: isFormValid ? roleAccent : '#cbd5e1',
-                      cursor: isFormValid ? 'pointer' : 'not-allowed',
-                    }}
-                  >
-                    <GoogleIcon name={editingId ? 'save' : 'flash_on'} size={20} color="#ffffff" />
-                    <span>
-                      {loading
-                        ? 'Guardando...'
-                        : editingId
-                          ? 'Guardar Cambios en Oportunidad'
-                          : '⚡ Registrar Oportunidad al Instante'}
-                    </span>
-                  </button>
-
-                  {editingId && (
-                    <button type="button" onClick={handleCancelEdit} className="reg-btn-cancel-sidebar">
-                      Cancelar Edición
-                    </button>
-                  )}
-
-                  {!isFormValid && (
-                    <div className="reg-validation-hint">
-                      Completa el N° de Requerimiento, Acuerdo Marco, Fecha, al menos 1 Marca y 1 Producto. (La Empresa es opcional).
-                    </div>
-                  )}
+              <div className="reg-summary-flat-grid">
+                <div className="reg-summary-flat-item">
+                  <span className="reg-summary-flat-label">Requerimiento</span>
+                  <strong className="reg-summary-flat-val" style={{ color: roleAccent }}>
+                    {numeroRequerimiento || 'Por ingresar'}
+                  </strong>
                 </div>
+
+                <div className="reg-summary-flat-item">
+                  <span className="reg-summary-flat-label">Marcas</span>
+                  <strong className="reg-summary-flat-val">
+                    {selectedMarcas.length > 0 ? selectedMarcas.map((m) => m.nombre).join(', ') : 'Ninguna'}
+                  </strong>
+                </div>
+
+                <div className="reg-summary-flat-item">
+                  <span className="reg-summary-flat-label">Acuerdo Marco</span>
+                  <strong className="reg-summary-flat-val">
+                    {selectedAcuerdo ? selectedAcuerdo.codigo : 'No asignado'}
+                  </strong>
+                </div>
+
+                <div className="reg-summary-flat-item">
+                  <span className="reg-summary-flat-label">Empresa / Entidad</span>
+                  <strong className="reg-summary-flat-val">
+                    {selectedEmpresa ? selectedEmpresa.razonSocial : entidadConvocante || 'No asignada'}
+                  </strong>
+                </div>
+
+                <div className="reg-summary-flat-item">
+                  <span className="reg-summary-flat-label">Total Ítems</span>
+                  <strong className="reg-summary-flat-val">
+                    {items.length} productos ({totalCantidad} unids)
+                  </strong>
+                </div>
+
+                <div className="reg-summary-flat-item reg-summary-flat-item--highlight">
+                  <span className="reg-summary-flat-label">Límite Total Perú Compras</span>
+                  <strong className="reg-summary-flat-amount">
+                    S/ {totalLimite.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </strong>
+                </div>
+              </div>
+
+              {/* Botones de acción final */}
+              <div className="reg-final-actions-bar">
+                <button
+                  type="submit"
+                  disabled={!isFormValid || loading}
+                  className="reg-btn-submit-complete"
+                  style={{
+                    background: isFormValid ? roleAccent : '#cbd5e1',
+                    cursor: isFormValid ? 'pointer' : 'not-allowed',
+                  }}
+                >
+                  <GoogleIcon name={editingId ? 'save' : 'done_all'} size={20} color="#ffffff" />
+                  <span>
+                    {loading
+                      ? 'Guardando...'
+                      : editingId
+                        ? 'Guardar Cambios en Oportunidad'
+                        : 'Guardar Oportunidad Completa'}
+                  </span>
+                </button>
+
+                {editingId && (
+                  <button type="button" onClick={handleCancelEdit} className="reg-btn-cancel-flat">
+                    Cancelar Edición
+                  </button>
+                )}
               </div>
             </div>
           </form>

@@ -1,19 +1,22 @@
 /* ════════════════════════════════════════════════════
    MiCuentaPage.css — Pantalla de Mi Cuenta
-   Paleta: Blanco + Azul #4F9AFF con acentos corporativos
+   Diseño Corporativo Unificado: Blanco + Azul #2563eb
+   Alineado con el Design System de Sales Rebel
    ════════════════════════════════════════════════════ */
 
 .account-page {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  animation: pageFadeIn 0.25s ease-out;
+  gap: 20px;
+  max-width: 1300px;
+  margin: 0 auto;
+  animation: accountFadeIn 0.2s ease-out;
 }
 
-@keyframes pageFadeIn {
+@keyframes accountFadeIn {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -21,16 +24,8 @@
   }
 }
 
-/* ── Breadcrumb & Encabezado ──────────────────────── */
-.account-page__top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.account-page__breadcrumb {
+/* ── Migas de Pan ─────────────────────────────────── */
+.account-breadcrumb {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -39,139 +34,84 @@
   font-weight: 500;
 }
 
-.account-page__breadcrumb span.active {
-  color: #0a2540;
+.account-breadcrumb span.active {
+  color: #0f172a;
   font-weight: 700;
 }
 
-.account-page__header-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.account-btn {
-  padding: 9px 18px;
+/* ── Header Principal / Tarjeta de Perfil ─────────── */
+.account-hero-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s ease;
-  font-family: inherit;
-  border: none;
-}
-
-.account-btn--outline {
-  background: #ffffff;
-  color: #0a2540;
-  border: 1.5px solid #dbeafe;
-}
-
-.account-btn--outline:hover {
-  background: #f0f6ff;
-  border-color: #93c5fd;
-}
-
-.account-btn--danger {
-  background: #fff1f2;
-  color: #e11d48;
-  border: 1.5px solid #fecdd3;
-}
-
-.account-btn--danger:hover {
-  background: #e11d48;
-  color: #ffffff;
-  box-shadow: 0 4px 14px rgba(225, 29, 72, 0.25);
-}
-
-/* ── Hero Profile Card ────────────────────────────── */
-.account-hero {
-  background: #ffffff;
-  border: 1.5px solid #e0ecff;
-  border-radius: 24px;
-  overflow: hidden;
-  box-shadow: 0 4px 20px rgba(79, 154, 255, 0.08);
-}
-
-.account-hero__cover {
-  height: 140px;
-  background: linear-gradient(135deg, #0a2540 0%, #1e40af 50%, #4F9AFF 100%);
-  position: relative;
-  overflow: hidden;
-}
-
-.account-hero__cover-pattern {
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px);
-  background-size: 16px 16px;
-  opacity: 0.7;
-}
-
-.account-hero__body {
-  padding: 0 32px 28px;
-  position: relative;
+  padding: 24px 28px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 20px;
 }
 
-.account-hero__user {
+.account-hero-left {
   display: flex;
-  align-items: flex-end;
-  gap: 24px;
-  margin-top: -50px;
+  align-items: center;
+  gap: 20px;
+  min-width: 0;
 }
 
-.account-hero__avatar-wrap {
+.account-avatar-wrap {
   position: relative;
   flex-shrink: 0;
 }
 
-.account-hero__avatar {
-  width: 104px;
-  height: 104px;
-  border-radius: 28px;
+.account-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 36px;
+  font-size: 22px;
   font-weight: 800;
   color: #ffffff;
-  border: 4px solid #ffffff;
-  box-shadow: 0 8px 24px rgba(10, 37, 64, 0.25);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
 }
 
-.account-hero__online-badge {
+.account-online-dot {
   position: absolute;
-  bottom: 2px;
-  right: 2px;
-  width: 20px;
-  height: 20px;
+  bottom: -2px;
+  right: -2px;
+  width: 14px;
+  height: 14px;
   background: #10b981;
-  border: 3.5px solid #ffffff;
+  border: 2.5px solid #ffffff;
   border-radius: 50%;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
 }
 
-.account-hero__meta {
-  padding-bottom: 4px;
+.account-hero-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
 }
 
-.account-hero__name {
-  font-size: 24px;
+.account-hero-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.account-hero-name {
+  font-size: 20px;
   font-weight: 800;
-  color: #0a2540;
-  letter-spacing: -0.5px;
-  margin: 0 0 6px;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.4px;
 }
 
-.account-hero__pills {
+.account-hero-pills {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -182,16 +122,17 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
-  padding: 4px 12px;
-  border-radius: 20px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  line-height: 1;
 }
 
 .account-pill--role {
-  background: rgba(79, 154, 255, 0.12);
-  color: #1a73e8;
-  border: 1px solid rgba(79, 154, 255, 0.3);
+  background: rgba(37, 99, 235, 0.08);
+  color: #2563eb;
+  border: 1px solid rgba(37, 99, 235, 0.2);
 }
 
 .account-pill--sede {
@@ -206,14 +147,125 @@
   border: 1px solid #a7f3d0;
 }
 
+.account-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ── Botones del Módulo ───────────────────────────── */
+.account-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  outline: none !important;
+}
+
+.account-btn--outline {
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+.account-btn--outline:hover {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+.account-btn--danger {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  font-weight: 700;
+}
+
+.account-btn--danger:hover {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+}
+
+/* ── Grid de Métricas / KPIs de la Cuenta ─────────── */
+.account-stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.account-stat-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.account-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.account-stat-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.account-stat-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.account-stat-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.account-stat-value {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.account-stat-sub {
+  font-size: 11.5px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
 /* ── Grilla Principal ─────────────────────────────── */
 .account-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
+  gap: 20px;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 960px) {
   .account-grid {
     grid-template-columns: 1fr;
   }
@@ -222,30 +274,50 @@
 /* ── Tarjetas de Información ──────────────────────── */
 .account-card {
   background: #ffffff;
-  border: 1.5px solid #e0ecff;
-  border-radius: 20px;
-  padding: 24px;
-  box-shadow: 0 2px 12px rgba(79, 154, 255, 0.05);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  overflow: hidden;
 }
 
 .account-card__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 16px 20px;
   border-bottom: 1px solid #f1f5f9;
-  padding-bottom: 12px;
+  background: #ffffff;
 }
 
-.account-card__title {
+.account-card__title-wrap {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+}
+
+.account-card__header-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.account-card__title-text h3 {
   font-size: 15px;
-  font-weight: 800;
-  color: #0a2540;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.account-card__title-text p {
+  font-size: 12px;
+  color: #64748b;
+  margin: 2px 0 0;
 }
 
 .account-card__tag {
@@ -253,39 +325,49 @@
   font-weight: 700;
   color: #64748b;
   background: #f1f5f9;
-  padding: 2px 8px;
+  padding: 3px 8px;
   border-radius: 6px;
+  border: 1px solid #e2e8f0;
 }
 
-.account-fields-list {
+.account-card__body {
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
+/* ── Filas de Datos de Cuenta ─────────────────────── */
 .account-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 8px 12px;
-  border-radius: 12px;
-  background: #f8faff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  transition: background 0.15s ease;
+}
+
+.account-row:hover {
+  background: #f1f5f9;
 }
 
 .account-row__label-group {
   display: flex;
   align-items: center;
   gap: 10px;
+  color: #64748b;
 }
 
 .account-row__icon {
   font-size: 16px;
-  color: #64748b;
+  flex-shrink: 0;
 }
 
 .account-row__label {
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
   color: #64748b;
 }
@@ -299,7 +381,7 @@
 .account-row__value {
   font-size: 13.5px;
   font-weight: 700;
-  color: #0a2540;
+  color: #0f172a;
   text-align: right;
 }
 
@@ -313,11 +395,12 @@
   display: inline-flex;
   align-items: center;
   transition: all 0.15s ease;
+  outline: none !important;
 }
 
 .account-copy-btn:hover {
   background: #e2e8f0;
-  color: #0a2540;
+  color: #0f172a;
 }
 
 .account-copy-btn--copied {
@@ -326,116 +409,187 @@
   border-color: #a7f3d0 !important;
 }
 
-/* ── Credencial Digital Card ──────────────────────── */
-.account-digital-badge {
-  background: linear-gradient(135deg, #0a2540 0%, #173b67 50%, #1e40af 100%);
-  border-radius: 20px;
-  padding: 24px;
+/* ── Tarjeta Credencial Ejecutiva ─────────────────── */
+.account-cred-card {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #1e3a8a 100%);
+  border-radius: 12px;
+  padding: 22px;
   color: #ffffff;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 12px 30px rgba(10, 37, 64, 0.25);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.15);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 220px;
+  gap: 20px;
+  border: 1px solid #334155;
 }
 
-.account-digital-badge::before {
+.account-cred-card::after {
   content: '';
   position: absolute;
   top: -40px;
   right: -40px;
-  width: 180px;
-  height: 180px;
+  width: 140px;
+  height: 140px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(79, 154, 255, 0.3) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.25) 0%, transparent 70%);
+  pointer-events: none;
 }
 
-.account-digital-badge__top {
+.account-cred-card__top {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.account-digital-badge__brand {
+.account-cred-card__brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 14px;
+}
+
+.account-cred-card__logo-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.account-cred-card__logo-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.account-cred-card__brand strong {
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
 
-.account-digital-badge__brand img {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
+.account-cred-card__brand span {
+  display: block;
+  font-size: 9.5px;
+  color: #94a3b8;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
 }
 
-.account-digital-badge__chip {
-  width: 38px;
-  height: 28px;
+.account-cred-card__badge-tag {
+  background: rgba(37, 99, 235, 0.3);
+  border: 1px solid rgba(96, 165, 250, 0.4);
+  color: #93c5fd;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 8px;
   border-radius: 6px;
-  background: linear-gradient(135deg, #fcd34d 0%, #d97706 100%);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.account-digital-badge__middle {
-  margin: 16px 0;
+.account-cred-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.account-digital-badge__name {
-  font-size: 20px;
+.account-cred-card__name {
+  font-size: 18px;
   font-weight: 800;
+  color: #ffffff;
   letter-spacing: -0.3px;
 }
 
-.account-digital-badge__role {
-  font-size: 13px;
+.account-cred-card__role {
+  font-size: 12.5px;
   color: #93c5fd;
   font-weight: 600;
-  margin-top: 2px;
 }
 
-.account-digital-badge__bottom {
+.account-cred-card__bottom {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding-top: 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
-  font-size: 12px;
-  color: #cbd5e1;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-.account-digital-badge__code {
-  font-family: 'Courier New', Courier, monospace;
+.account-cred-card__meta-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.account-cred-card__meta-label {
+  font-size: 9.5px;
   font-weight: 700;
-  letter-spacing: 1px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-/* ── Permisos y Seguridad ─────────────────────────── */
-.account-perms-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+.account-cred-card__meta-val {
+  font-size: 13px;
+  font-weight: 800;
+  color: #f8fafc;
+  font-family: 'Courier New', Courier, monospace;
 }
 
-.account-perm-item {
+/* ── Lista de Permisos del Rol ────────────────────── */
+.account-privs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.account-priv-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: #f8faff;
-  border: 1px solid #e0ecff;
-  border-radius: 10px;
-  font-size: 12px;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 8px;
+  font-size: 13px;
   font-weight: 600;
-  color: #334155;
+  color: #1e293b;
+  transition: all 0.15s ease;
 }
 
-.account-perm-item span.check {
-  color: #10b981;
-  font-weight: 800;
+.account-priv-item:hover {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+.account-priv-check {
+  color: #059669;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.account-security-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  color: #1e40af;
+  font-size: 12.5px;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.account-security-notice strong {
+  font-weight: 700;
 }

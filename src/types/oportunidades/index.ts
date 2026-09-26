@@ -90,7 +90,7 @@ export type TipoPodio = 'licitaciones' | 'ventas';
 export interface Oportunidad {
   id: string | number;
   numeroRequerimiento: string;
-  acuerdoMarco: AcuerdoMarco;
+  acuerdoMarco?: AcuerdoMarco | null;
   empresaId?: number | null;
   empresaRazonSocial?: string;
   empresaRuc?: string;

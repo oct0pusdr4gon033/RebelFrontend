@@ -59,7 +59,7 @@ export interface ProductoItemPayload {
 
 export interface CrearOportunidadApiRequest {
   numeroRequerimiento: string;
-  acuerdoMarcoId: number;  // Backend: int
+  acuerdoMarcoId?: number | null;  // Opcional para permitir registro rápido solo con requerimiento y marca
   fechaVencimientoLicitacion?: string | null;  // Backend: DateTime? (nullable)
   empresaId?: number | null;
   entidadConvocante?: string;
@@ -68,6 +68,8 @@ export interface CrearOportunidadApiRequest {
 }
 
 export interface ActualizarOportunidadApiRequest {
+  acuerdoMarcoId?: number | null;
+  fechaVencimientoLicitacion?: string | null;
   empresaId?: number | null;
   entidadConvocante?: string;
   marcaIds: number[];  // Backend: List<int>
@@ -77,7 +79,7 @@ export interface ActualizarOportunidadApiRequest {
 export interface OportunidadApiResponse {
   id: number;
   numeroRequerimiento: string;
-  acuerdoMarcoId: number;
+  acuerdoMarcoId?: number | null;
   acuerdoMarcoCodigo?: string;
   acuerdoMarcoDescripcion?: string;
   fechaVencimientoLicitacion: string;
@@ -251,8 +253,19 @@ export async function cambiarEstadoApi(
     body: JSON.stringify({ estado }),
   });
   if (!response.ok) {
-    const err = await response.json().catch(() => ({ mensaje: 'Error al cambiar estado' }));
-    throw new Error(err.mensaje ?? 'Error en el cambio de estado');
+    let errMsg = 'Error al cambiar estado';
+    try {
+      const err = await response.json();
+      errMsg = err.mensaje || err.message || err.title || err.detail || (typeof err === 'string' ? err : 'Error al cambiar estado');
+    } catch {
+      try {
+        const text = await response.text();
+        if (text) errMsg = text;
+      } catch {
+        // no-op
+      }
+    }
+    throw new Error(errMsg);
   }
   return response.json();
 }
@@ -353,3 +366,78 @@ export async function registrarEntregaApi(
   if (!response.ok) throw new Error(await erroresApi(response, 'Error al registrar la entrega'));
   return response.json();
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// BLOQUE 3: STORAGE EN BD DE EVIDENCIAS / IMÁGENES (PostgreSQL BYTEA)
+// ══════════════════════════════════════════════════════════════════════
+
+export interface OportunidadImagenItem {
+  id: number;
+  oportunidadId: number;
+  numeroRequerimiento: string;
+  tipoEvidencia: string;
+  nombreArchivo: string;
+  contentType: string;
+  tamanoBytes: number;
+  tamanoArchivo: string;
+  comentario?: string;
+  subidoPor: string;
+  subidoPorUsuarioId?: string;
+  fechaSubida: string;
+  url: string;
+}
+
+export function getImagenArchivoUrl(oportunidadId: number | string, imagenId: number | string): string {
+  return `${API_BASE}/api/oportunidades/${oportunidadId}/imagenes/${imagenId}/archivo`;
+}
+
+export async function obtenerImagenesOportunidadApi(
+  oportunidadId: number | string
+): Promise<OportunidadImagenItem[]> {
+  const response = await fetch(`${API_BASE}/api/oportunidades/${oportunidadId}/imagenes`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error(await erroresApi(response, 'Error al obtener evidencias de la oportunidad'));
+  return response.json();
+}
+
+export async function subirImagenOportunidadApi(
+  oportunidadId: number | string,
+  archivo: File,
+  tipoEvidencia: string,
+  comentario?: string
+): Promise<OportunidadImagenItem> {
+  const formData = new FormData();
+  formData.append('archivo', archivo);
+  formData.append('tipoEvidencia', tipoEvidencia);
+  if (comentario && comentario.trim()) {
+    formData.append('comentario', comentario.trim());
+  }
+
+  const token = getAuthToken();
+  const headers: HeadersInit = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
+  const response = await fetch(`${API_BASE}/api/oportunidades/${oportunidadId}/imagenes`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  if (!response.ok) throw new Error(await erroresApi(response, 'Error al subir imagen de evidencia'));
+  return response.json();
+}
+
+export async function eliminarImagenOportunidadApi(
+  oportunidadId: number | string,
+  imagenId: number | string
+): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/oportunidades/${oportunidadId}/imagenes/${imagenId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error(await erroresApi(response, 'Error al eliminar evidencia'));
+}
+

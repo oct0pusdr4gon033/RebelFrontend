@@ -5,10 +5,10 @@ import { Sidebar, type NavItem } from '../../components/Sidebar';
 import { GoogleIcon } from '../../components/GoogleIcon';
 import '../DashboardLayout.css';
 
-const ACCENT = '#0ea5e9';
-const ACCENT_BG = 'rgba(14,165,233,0.1)';
-const ACCENT_BORDER = 'rgba(14,165,233,0.28)';
-const AVATAR_GRAD = 'linear-gradient(135deg, #0ea5e9, #0284c7)';
+const ACCENT = '#2563eb';
+const ACCENT_BG = 'rgba(37, 99, 235, 0.1)';
+const ACCENT_BORDER = 'rgba(37, 99, 235, 0.28)';
+const AVATAR_GRAD = 'linear-gradient(135deg, #2563eb, #1d4ed8)';
 
 export const masterNavItems: NavItem[] = [
   { icon: 'dashboard', label: 'Dashboard', path: '/master', section: null },

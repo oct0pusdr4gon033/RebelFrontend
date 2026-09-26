@@ -31,7 +31,7 @@
 .login-orb--1 {
   width: 520px;
   height: 520px;
-  background: radial-gradient(circle, #4F9AFF 0%, transparent 70%);
+  background: radial-gradient(circle, #2563eb 0%, transparent 70%);
   top: -160px;
   left: -120px;
   animation-delay: 0s;
@@ -225,9 +225,9 @@
 }
 
 .login-field__input:focus {
-  border-color: #4F9AFF;
+  border-color: #2563eb;
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(79, 154, 255, 0.18);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
 }
 
 .login-field__input--password {
@@ -249,7 +249,7 @@
 }
 
 .login-field__eye:hover {
-  color: #4F9AFF;
+  color: #2563eb;
 }
 
 /* ── Botón submit ────────────────────────────────── */
@@ -260,7 +260,7 @@
   gap: 8px;
   width: 100%;
   padding: 16px 24px;
-  background: linear-gradient(135deg, #4F9AFF 0%, #1a73e8 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   border: none;
   border-radius: 14px;
   color: #fff;

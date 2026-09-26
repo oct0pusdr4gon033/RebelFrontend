@@ -1,29 +1,4 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // src/models/Oportunidad.model.ts
 // ─────────────────────────────────────────────────────────────────────────────
-import type { AcuerdoMarco, Marca, ProductoItem, EstadoOportunidad, OrdenCompra } from '../types/oportunidades';
-
-export interface Oportunidad {
-    id: string | number;
-    numeroRequerimiento: string;
-    acuerdoMarco: AcuerdoMarco;
-    empresaId?: number | null;
-    empresaRazonSocial?: string;
-    empresaRuc?: string;
-    entidadConvocante?: string;
-    marcas: Marca[];
-    fechaVencimiento: string;
-    items: ProductoItem[];
-    limiteTotal: number;
-    estado: EstadoOportunidad;
-    ordenCompra?: OrdenCompra;
-    creadoPor: string;
-    creadoPorUsuarioId?: string;
-    createdAt: string;
-    updatedAt?: string;
-    fechaRegistro?: string;
-    /** Hora exacta con segundos para desempate y prioridad por orden de llegada */
-    horaRegistroExacta?: string;
-    /** Indicador de prioridad 1° asignada por orden de llegada */
-    prioridadGanada?: boolean;
-}
+export type { Oportunidad } from '../types/oportunidades';

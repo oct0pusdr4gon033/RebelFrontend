@@ -1,6 +1,6 @@
 /* ════════════════════════════════════════════════════
    Sidebar.css — Componente Reutilizable de Barra Lateral
-   Paleta: Blanco + Azul #4F9AFF y acentos por rol
+   Paleta: Blanco + Azul #2563eb y acentos por rol
    Totalmente Responsive con Drawer Móvil y Colapso Desktop
    ════════════════════════════════════════════════════ */
 
@@ -36,10 +36,26 @@
   position: sticky;
   top: 0;
   height: 100vh;
-  box-shadow: 2px 0 16px rgba(79, 154, 255, 0.08);
+  box-shadow: 2px 0 16px rgba(37, 99, 235, 0.08);
   z-index: 20;
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-sizing: border-box;
+}
+
+/* ── Quitar contorno/borde negro por defecto del navegador en botones del sidebar ── */
+.sb-container button,
+.sb-container a {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sb-container button:focus,
+.sb-container button:focus-visible,
+.sb-container button:active,
+.sb-container a:focus,
+.sb-container a:focus-visible,
+.sb-container a:active {
+  outline: none !important;
 }
 
 /* ── Marca / Header del Sidebar ──────────────────── */
@@ -60,6 +76,13 @@
   color: inherit;
   flex: 1;
   min-width: 0;
+  outline: none;
+}
+
+.sb-brand:focus,
+.sb-brand:focus-visible,
+.sb-brand:active {
+  outline: none !important;
 }
 
 .sb-brand__logo-wrap {
@@ -71,8 +94,8 @@
   justify-content: center;
   overflow: hidden;
   flex-shrink: 0;
-  border: 2px solid rgba(79, 154, 255, 0.2);
-  box-shadow: 0 2px 8px rgba(79, 154, 255, 0.15);
+  border: 2px solid rgba(37, 99, 235, 0.2);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
   background: #f8faff;
 }
 
@@ -113,6 +136,7 @@
   display: none; /* Oculto en desktop */
   background: #f1f5f9;
   border: none;
+  outline: none;
   width: 34px;
   height: 34px;
   border-radius: 8px;
@@ -122,6 +146,12 @@
   transition: all 0.15s ease;
   flex-shrink: 0;
   color: #475569;
+}
+
+.sb-mobile-close-btn:focus,
+.sb-mobile-close-btn:focus-visible,
+.sb-mobile-close-btn:active {
+  outline: none !important;
 }
 
 .sb-mobile-close-btn:hover {
@@ -174,22 +204,48 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.18s ease;
-  border: 1px solid transparent;
+  border: none;
   background: none;
   width: 100%;
   text-align: left;
   font-family: inherit;
   box-sizing: border-box;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
-.sb-nav__item:hover {
+.sb-nav__item:focus,
+.sb-nav__item:focus-visible,
+.sb-nav__item:active {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.sb-nav__item:hover:not(.sb-nav__item--active) {
   background: #f0f6ff;
   color: #0a2540;
   transform: translateX(3px);
+  border: none !important;
 }
 
 .sb-nav__item--active {
+  background: #2563eb !important;
+  color: #ffffff !important;
   font-weight: 700 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.sb-nav__item--active:hover {
+  background: #1d4ed8 !important;
+  color: #ffffff !important;
+}
+
+.sb-nav__item--active .sb-nav__item-icon,
+.sb-nav__item--active .sb-nav__item-label {
+  color: #ffffff !important;
 }
 
 .sb-nav__item-main {
@@ -228,15 +284,15 @@
 .sb-sub-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  margin: 3px 0 6px 18px;
+  gap: 3px;
+  margin: 10px 0 8px 18px;
   padding-left: 10px;
   border-left: 2px solid #e2e8f0;
   transition: all 0.2s ease;
 }
 
 .sb-sub-list--collapsed {
-  margin: 3px 0 6px;
+  margin: 10px 0 8px;
   padding-left: 0;
   border-left: none;
   align-items: center;
@@ -260,16 +316,47 @@
   text-align: left;
   box-sizing: border-box;
   transition: all 0.18s ease;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
-.sb-sub-item:hover {
+.sb-sub-item:focus,
+.sb-sub-item:focus-visible,
+.sb-sub-item:active {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.sb-sub-item:hover:not(.sb-sub-item--active) {
   background: #f1f5f9;
   color: #0f172a;
   transform: translateX(4px);
+  border: none !important;
 }
 
 .sb-sub-item--active {
+  background: #eff6ff !important;
+  color: #2563eb !important;
   font-weight: 700 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.sb-sub-item--active:hover {
+  background: #dbeafe !important;
+  color: #1d4ed8 !important;
+}
+
+.sb-sub-item--active .sb-sub-item__label,
+.sb-sub-item--active .sb-sub-item__icon {
+  color: #2563eb !important;
+}
+
+.sb-sub-item--active .sb-sub-item__badge {
+  background: rgba(37, 99, 235, 0.15) !important;
+  color: #2563eb !important;
 }
 
 .sb-sub-item__left {
@@ -327,6 +414,15 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.sb-collapse-toggle-btn:focus,
+.sb-collapse-toggle-btn:focus-visible,
+.sb-collapse-toggle-btn:active {
+  outline: none !important;
 }
 
 .sb-collapse-toggle-btn:hover {
@@ -351,7 +447,7 @@
 
 .sb-user-card:hover {
   border-color: #93c5fd;
-  box-shadow: 0 4px 14px rgba(79, 154, 255, 0.12);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.12);
 }
 
 .sb-user-card__main {
@@ -366,6 +462,14 @@
   padding: 0;
   text-align: left;
   font-family: inherit;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sb-user-card__main:focus,
+.sb-user-card__main:focus-visible,
+.sb-user-card__main:active {
+  outline: none !important;
 }
 
 .sb-user-card__avatar-wrap {
@@ -383,7 +487,7 @@
   font-size: 13.5px;
   font-weight: 800;
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(79, 154, 255, 0.25);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
 }
 
 .sb-user-card__online-dot {
@@ -433,6 +537,14 @@
   justify-content: center;
   transition: all 0.15s ease;
   flex-shrink: 0;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sb-user-card__logout-btn:focus,
+.sb-user-card__logout-btn:focus-visible,
+.sb-user-card__logout-btn:active {
+  outline: none !important;
 }
 
 .sb-user-card__logout-btn:hover {

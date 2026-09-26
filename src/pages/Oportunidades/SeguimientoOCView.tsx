@@ -24,7 +24,7 @@ interface SeguimientoOCProps {
   roleAccent?: string;
 }
 
-export const SeguimientoOCView: React.FC<SeguimientoOCProps> = ({ roleAccent = '#06b6d4' }) => {
+export const SeguimientoOCView: React.FC<SeguimientoOCProps> = ({ roleAccent = '#2563eb' }) => {
   const { empleado } = useAuth();
   const [oportunidades, setOportunidades] = useState<Oportunidad[]>([]);
   const [loading, setLoading] = useState(true);
