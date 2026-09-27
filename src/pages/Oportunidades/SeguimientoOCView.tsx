@@ -26,6 +26,10 @@ interface SeguimientoOCProps {
 
 export const SeguimientoOCView: React.FC<SeguimientoOCProps> = ({ roleAccent = '#2563eb' }) => {
   const { empleado } = useAuth();
+  const esAdminOC =
+    empleado?.rolNombre === 'Administrador' ||
+    empleado?.rolNombre === 'SysAdmin' ||
+    empleado?.rolNombre === 'Ejecutivo(a) Master Ventas';
   const [oportunidades, setOportunidades] = useState<Oportunidad[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState<FiltroOC>('todas');
@@ -258,7 +262,7 @@ export const SeguimientoOCView: React.FC<SeguimientoOCProps> = ({ roleAccent = '
                 {/* Panel de operaciones expandible */}
                 {expandida && (
                   <div style={{ padding: '14px 16px', borderTop: '1px solid #f1f5f9' }}>
-                    <OCPanel op={op} isOwner={isOwner} accent={roleAccent} onEstadoCambiado={handleEstadoCambiado} />
+                    <OCPanel op={op} isOwner={isOwner} esAdmin={esAdminOC} accent={roleAccent} onEstadoCambiado={handleEstadoCambiado} />
                   </div>
                 )}
               </div>

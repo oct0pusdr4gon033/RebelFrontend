@@ -79,6 +79,12 @@ export interface OrdenCompra {
   transportista?: string | null;
   noGuiaRemision?: string | null;
   fechaEntrega?: string | null;
+  // ── Buena Pro / Adjudicación (Perú Compras) ──
+  nroOCAM?: string | null;
+  nroExpediente?: string | null;
+  unidad?: string | null;
+  codigoCIAF?: string | null;
+  montoOCAM?: number | null;
   fechaRegistro: string;
   fechaActualizacion?: string | null;
 }

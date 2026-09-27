@@ -173,6 +173,11 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                 transportista: op.ordenCompra.transportista,
                 noGuiaRemision: op.ordenCompra.noGuiaRemision,
                 fechaEntrega: op.ordenCompra.fechaEntrega,
+                nroOCAM: op.ordenCompra.nroOCAM,
+                nroExpediente: op.ordenCompra.nroExpediente,
+                unidad: op.ordenCompra.unidad,
+                codigoCIAF: op.ordenCompra.codigoCIAF,
+                montoOCAM: op.ordenCompra.montoOCAM,
                 fechaRegistro: op.ordenCompra.fechaRegistro,
                 fechaActualizacion: op.ordenCompra.fechaActualizacion,
               }
@@ -435,6 +440,35 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
         });
         return;
       }
+
+      // ── REGLA DE PRIORIDAD DEL PODIO (VENTANA DE 5 MINUTOS) ──
+      // Si el requerimiento ya fue registrado (por cualquier ejecutiva) hace menos
+      // de 5 minutos, se bloquea el registro: el primero conserva la prioridad.
+      const registrosDelReq = oportunidades
+        .filter((op) => op.numeroRequerimiento.trim().toUpperCase() === reqUpper)
+        .map((op) => op.fechaRegistro)
+        .filter((f): f is string => !!f)
+        .map((f) => new Date(f).getTime())
+        .filter((t) => !Number.isNaN(t));
+
+      if (registrosDelReq.length > 0) {
+        const primerRegistro = Math.min(...registrosDelReq);
+        const antiguedadMs = Date.now() - primerRegistro;
+        const ventanaMs = 5 * 60 * 1000;
+        if (antiguedadMs < ventanaMs) {
+          const restanteSeg = Math.ceil((ventanaMs - antiguedadMs) / 1000);
+          const mine = formatFechaHoraPeru(new Date(primerRegistro));
+          Swal.fire({
+            icon: 'info',
+            title: 'Prioridad del Podio',
+            text: `El requerimiento "${reqUpper}" ya fue registrado por otra ejecutiva hace menos de 5 minutos y conserva la prioridad del podio (primero registrado: ${mine}). Puedes volver a intentarlo en ${restanteSeg} segundos.`,
+            confirmButtonColor: roleAccent || '#0284c7',
+            confirmButtonText: 'Entendido',
+            customClass: { popup: 'reg-swal-modal' },
+          });
+          return;
+        }
+      }
     }
 
     isSubmittingRef.current = true;
@@ -561,7 +595,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
           fechaVencimiento,
           items: validItems,
           limiteTotal: validTotalLimite,
-          estado: 'En Licitación',
+          estado: 'Cotizada',
           creadoPor: empleado?.nombreCompleto || (empleado?.nombres ? `${empleado.nombres} ${empleado.apellidos}` : 'Ejecutiva'),
           creadoPorUsuarioId: empleado?.userId,
           createdAt: formatFechaHoraPeru(new Date()),
@@ -589,7 +623,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                 <strong style="color: #0f172a;">${horaExacta}</strong>
               </div>
               <div style="font-size: 12.5px; color: #065f46; margin-top: 12px; padding: 10px 12px; background: #ecfdf5; border-radius: 6px; border: 1px solid #a7f3d0;">
-                Prioridad de llegada asegurada. Recuerda adjuntar tus evidencias en la pestaña <strong>Subir Evidencia</strong>.
+                Prioridad de llegada asegurada. La oportunidad se registró en estado <strong>Cotizada</strong>. Recuerda adjuntar la cotización de la marca o tus evidencias en la pestaña <strong>Subir Evidencia</strong>.
               </div>
             </div>
           `,

@@ -128,6 +128,11 @@ export interface OrdenCompraApiResponse {
   transportista?: string | null;
   noGuiaRemision?: string | null;
   fechaEntrega?: string | null;
+  nroOCAM?: string | null;
+  nroExpediente?: string | null;
+  unidad?: string | null;
+  codigoCIAF?: string | null;
+  montoOCAM?: number | null;
   fechaRegistro: string;
   fechaActualizacion?: string | null;
 }
@@ -277,6 +282,11 @@ export async function cambiarEstadoApi(
 export interface RegistrarOCRequest {
   numeroOC: string;
   fechaEmisionOC?: string | null;
+  nroOCAM?: string | null;
+  nroExpediente?: string | null;
+  unidad?: string | null;
+  codigoCIAF?: string | null;
+  montoOCAM?: number | null;
 }
 
 export interface CambiarEstadoOCRequest {
@@ -376,6 +386,8 @@ export interface OportunidadImagenItem {
   oportunidadId: number;
   numeroRequerimiento: string;
   tipoEvidencia: string;
+  tipoEvidenciaId?: number | null;
+  nombreTipo?: string | null;
   nombreArchivo: string;
   contentType: string;
   tamanoBytes: number;
@@ -410,7 +422,9 @@ export async function subirImagenOportunidadApi(
 ): Promise<OportunidadImagenItem> {
   const formData = new FormData();
   formData.append('archivo', archivo);
-  formData.append('tipoEvidencia', tipoEvidencia);
+  if (tipoEvidencia && tipoEvidencia.trim()) {
+    formData.append('tipoEvidencia', tipoEvidencia);
+  }
   if (comentario && comentario.trim()) {
     formData.append('comentario', comentario.trim());
   }

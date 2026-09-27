@@ -103,10 +103,10 @@ export const DetalleOCModal: React.FC<{ open: boolean; onClose: () => void; op: 
   if (!open || !oc) return null;
   const cfg = OC_ESTADO_CONFIG[oc.estadoOC];
 
-  const Row: React.FC<{ label: string; value: React.ReactNode; accent?: string }> = ({ label, value, accent }) => (
+  const Row: React.FC<{ label: string; value: React.ReactNode; accent?: string; mono?: boolean }> = ({ label, value, accent, mono }) => (
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, padding: '9px 0', borderBottom: '1px solid #f8fafc' }}>
       <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, whiteSpace: 'nowrap' }}>{label}</span>
-      <span style={{ fontSize: '13px', color: accent ?? '#0f172a', fontWeight: 600, textAlign: 'right', wordBreak: 'break-word' }}>{value}</span>
+      <span style={{ fontSize: '13px', color: accent ?? '#0f172a', fontWeight: 600, textAlign: 'right', wordBreak: 'break-word', fontFamily: mono ? 'monospace' : undefined }}>{value}</span>
     </div>
   );
 
@@ -204,6 +204,16 @@ export const DetalleOCModal: React.FC<{ open: boolean; onClose: () => void; op: 
               : <Row label="Fecha de decisión" value={oc.fechaDecisionOC ? formatFechaHoraPeru(oc.fechaDecisionOC) : '—'} />}
           </Seccion>
 
+          {(oc.nroOCAM || oc.nroExpediente || oc.unidad || oc.codigoCIAF || oc.montoOCAM != null) && (
+            <Seccion title="Buena Pro / Adjudicación (Perú Compras)">
+              {oc.nroOCAM && <Row label="N° OCAM" value={oc.nroOCAM} mono />}
+              {oc.nroExpediente && <Row label="N° Expediente" value={oc.nroExpediente} mono />}
+              {oc.unidad && <Row label="Unidad" value={oc.unidad} />}
+              {oc.codigoCIAF && <Row label="Código CIAF" value={oc.codigoCIAF} mono />}
+              {oc.montoOCAM != null && <Row label="Monto OCAM" value={money(oc.montoOCAM)} accent="#059669" />}
+            </Seccion>
+          )}
+
           {costos.length > 0 && (
             <Seccion title="Rentabilidad">
               {costos.map((f) => <Row key={f.label} label={f.label} value={f.value} accent={f.label === 'Margen adicional' ? '#059669' : undefined} />)}
@@ -216,10 +226,28 @@ export const DetalleOCModal: React.FC<{ open: boolean; onClose: () => void; op: 
             </Seccion>
           )}
 
-          <Seccion title="Auditoría">
-            <Row label="Registrado por" value={op.creadoPor || '—'} />
-            <Row label="Fecha de registro (OC)" value={oc.fechaRegistro ? formatFechaHoraPeru(oc.fechaRegistro) : '—'} />
-            <Row label="Última actualización" value={oc.fechaActualizacion ? formatFechaHoraPeru(oc.fechaActualizacion) : '—'} />
+          <Seccion title="Auditoría — Línea de tiempo (registro de oportunidad → OC)">
+            {[
+              { label: 'Registro de la oportunidad', fecha: op.fechaRegistro, icon: 'bolt', color: '#2563eb' },
+              { label: 'Adjudicación con Buena Pro', fecha: oc.fechaRegistro, icon: 'verified', color: '#059669' },
+              { label: 'Registro de la Orden de Compra', fecha: oc.fechaRegistro, icon: 'receipt_long', color: '#0284c7' },
+              { label: 'Decisión de la OC (Admin/Master)', fecha: oc.fechaDecisionOC ?? undefined, icon: oc.estadoOC === 'OC_RECHAZADA' ? 'thumb_down' : 'thumb_up', color: oc.estadoOC === 'OC_RECHAZADA' ? '#dc2626' : '#059669' },
+              { label: 'Renegociación del costo', fecha: oc.fechaRenegociacion ?? undefined, icon: 'savings', color: '#7c3aed' },
+              { label: 'Entrega', fecha: oc.fechaEntrega ?? undefined, icon: 'inventory', color: '#7c3aed' },
+            ].filter((h) => h.fecha).map((h, idx, arr) => (
+              <div key={h.label} style={{ display: 'flex', gap: 10, padding: '7px 0' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <span style={{ width: 22, height: 22, borderRadius: '50%', background: `${h.color}18`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <GoogleIcon name={h.icon} size={12} color={h.color} />
+                  </span>
+                  {idx < arr.length - 1 && <span style={{ width: 1, flex: 1, minHeight: 8, background: '#e2e8f0' }} />}
+                </div>
+                <div style={{ paddingBottom: idx < arr.length - 1 ? 6 : 0 }}>
+                  <div style={{ fontSize: '12.5px', fontWeight: 600, color: '#334155' }}>{h.label}</div>
+                  <div style={{ fontSize: '11.5px', color: '#94a3b8', marginTop: 1 }}>{h.fecha ? formatFechaHoraPeru(h.fecha) : '—'}</div>
+                </div>
+              </div>
+            ))}
           </Seccion>
         </div>
       </div>
@@ -234,9 +262,10 @@ export const DetalleOCModal: React.FC<{ open: boolean; onClose: () => void; op: 
 export const OCPanel: React.FC<{
   op: Oportunidad;
   isOwner: boolean;
+  esAdmin?: boolean;
   accent: string;
   onEstadoCambiado?: (op: Oportunidad) => void;
-}> = ({ op, isOwner, accent, onEstadoCambiado }) => {
+}> = ({ op, isOwner, esAdmin = false, accent, onEstadoCambiado }) => {
   const oc = op.ordenCompra;
   const ocCfg = oc ? OC_ESTADO_CONFIG[oc.estadoOC] : null;
 
@@ -251,7 +280,15 @@ export const OCPanel: React.FC<{
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
 
-  const [formOC, setFormOC] = useState({ numeroOC: '', fechaEmisionOC: '' });
+  const [formOC, setFormOC] = useState({
+    numeroOC: '',
+    fechaEmisionOC: '',
+    nroOCAM: '',
+    nroExpediente: '',
+    unidad: '',
+    codigoCIAF: '',
+    montoOCAM: '',
+  });
   const [motivoRechazo, setMotivoRechazo] = useState('');
   const [costoRenegociadoInput, setCostoRenegociadoInput] = useState('');
   const [formEntrega, setFormEntrega] = useState({
@@ -279,16 +316,28 @@ export const OCPanel: React.FC<{
   const handleRegistrarOC = async () => {
     setErrorMsg(null); setOkMsg(null);
     if (!formOC.numeroOC.trim()) { flash(true, 'El número de Orden de Compra es obligatorio.'); return; }
+    // ── Buena Pro: la OC se registra junto con los datos de adjudicación de Perú Compras ──
+    if (!formOC.nroOCAM.trim()) { flash(true, 'El N° OCAM de la buena pro (Perú Compras) es obligatorio para registrar la OC.'); return; }
+    if (!formOC.nroExpediente.trim()) { flash(true, 'El N° de Expediente de la buena pro es obligatorio.'); return; }
+    if (!formOC.unidad.trim()) { flash(true, 'Indique la Unidad (u.o.e.) de la buena pro.'); return; }
+    if (!formOC.codigoCIAF.trim()) { flash(true, 'El Código CIAF de la buena pro es obligatorio.'); return; }
+    const montoOCAM = Number(formOC.montoOCAM);
+    if (!montoOCAM || montoOCAM <= 0) { flash(true, 'El Monto de la OCAM debe ser mayor a S/ 0.00.'); return; }
     setRegistrarBusy(true);
     try {
       const res = await registrarOCApi(op.id, {
         numeroOC: formOC.numeroOC.trim(),
         fechaEmisionOC: formOC.fechaEmisionOC || null,
+        nroOCAM: formOC.nroOCAM.trim(),
+        nroExpediente: formOC.nroExpediente.trim(),
+        unidad: formOC.unidad.trim(),
+        codigoCIAF: formOC.codigoCIAF.trim(),
+        montoOCAM: montoOCAM,
       });
       aplicar(res);
       setMostrarRegistrar(false);
-      setFormOC({ numeroOC: '', fechaEmisionOC: '' });
-      flash(false, `OC ${res.ordenCompra?.numeroOC ?? ''} registrada correctamente.`);
+      setFormOC({ numeroOC: '', fechaEmisionOC: '', nroOCAM: '', nroExpediente: '', unidad: '', codigoCIAF: '', montoOCAM: '' });
+      flash(false, `OC ${res.ordenCompra?.numeroOC ?? ''} registrada con los datos de la buena pro.`);
     } catch (err: any) {
       flash(true, err.message || 'Error al registrar la OC');
     } finally {
@@ -368,7 +417,11 @@ export const OCPanel: React.FC<{
           </div>
           {isOwner && op.estado === 'Adjudicada' && (
             mostrarRegistrar ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 560 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 680, border: '1.5px solid #e2e8f0', borderRadius: 12, padding: 16, background: '#f8fafc' }}>
+                {/* OC emitida por la entidad */}
+                <div style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                  Orden de Compra emitida por la entidad
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   <Field label="N° de Orden de Compra *" value={
                     <input style={inputStyle} placeholder="OC-2026-0000001" value={formOC.numeroOC} onChange={(e) => setFormOC({ ...formOC, numeroOC: e.target.value })} />
@@ -377,9 +430,35 @@ export const OCPanel: React.FC<{
                     <input type="datetime-local" style={inputStyle} value={formOC.fechaEmisionOC} onChange={(e) => setFormOC({ ...formOC, fechaEmisionOC: e.target.value })} />
                   } />
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
+
+                {/* Buena Pro: adjudicación Perú Compras */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 6 }}>
+                  <GoogleIcon name="verified" size={16} color="#059669" />
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#059669', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                    Buena pro adjudicada (Perú Compras)
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <Field label="N° OCAM *" value={
+                    <input style={inputStyle} placeholder="OCAM-2026-000001234" value={formOC.nroOCAM} onChange={(e) => setFormOC({ ...formOC, nroOCAM: e.target.value })} />
+                  } />
+                  <Field label="N° Expediente *" value={
+                    <input style={inputStyle} placeholder="EE-2026-0000001" value={formOC.nroExpediente} onChange={(e) => setFormOC({ ...formOC, nroExpediente: e.target.value })} />
+                  } />
+                  <Field label="Unidad (u.o.e.) *" value={
+                    <input style={inputStyle} placeholder="Ej: Municipalidad de Lima" value={formOC.unidad} onChange={(e) => setFormOC({ ...formOC, unidad: e.target.value })} />
+                  } />
+                  <Field label="Código CIAF *" value={
+                    <input style={inputStyle} placeholder="CIAF-2026-000001" value={formOC.codigoCIAF} onChange={(e) => setFormOC({ ...formOC, codigoCIAF: e.target.value })} />
+                  } />
+                  <Field label="Monto OCAM (S/) *" value={
+                    <input type="number" step="0.01" min="0" style={inputStyle} placeholder="0.00" value={formOC.montoOCAM} onChange={(e) => setFormOC({ ...formOC, montoOCAM: e.target.value })} />
+                  } />
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, paddingTop: 4 }}>
                   <button type="button" disabled={registrarBusy} onClick={handleRegistrarOC} style={{ ...btn(accent), opacity: registrarBusy ? 0.6 : 1 }}>
-                    <GoogleIcon name="save" size={14} color="#ffffff" /> {registrarBusy ? 'Registrando…' : 'Registrar OC'}
+                    <GoogleIcon name="save" size={14} color="#ffffff" /> {registrarBusy ? 'Registrando…' : 'Registrar OC y Buena Pro'}
                   </button>
                   <button type="button" onClick={() => setMostrarRegistrar(false)} style={{ ...btn('#ffffff', '#64748b'), border: '1.5px solid #e2e8f0' }}>
                     Cancelar
@@ -388,7 +467,7 @@ export const OCPanel: React.FC<{
               </div>
             ) : (
               <button type="button" onClick={() => setMostrarRegistrar(true)} style={{ ...btn(accent), alignSelf: 'flex-start' }}>
-                <GoogleIcon name="receipt_long" size={14} color="#ffffff" /> Registrar Orden de Compra
+                <GoogleIcon name="receipt_long" size={14} color="#ffffff" /> Registrar Orden de Compra y Buena Pro
               </button>
             )
           )}
@@ -435,10 +514,12 @@ export const OCPanel: React.FC<{
             )}
           </div>
 
-          {/* Acción pendiente según estado */}
-          {oc.estadoOC === 'OC_RECIBIDA' && isOwner && (
+          {/* Decisión de la OC (solo Admin/Master: quien resuelve las licitaciones) */}
+          {oc.estadoOC === 'OC_RECIBIDA' && esAdmin && (
             <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#334155' }}>¿Aceptas la Orden de Compra?</span>
+              <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#334155' }}>
+                Decisión de la Orden de Compra <span style={{ fontWeight: 600, color: '#94a3b8' }}>(rol Admin/Master)</span>
+              </span>
               {!rechazando ? (
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button type="button" disabled={decisionBusy} onClick={() => setConfirmarDecision('OC_ACEPTADA')} style={{ ...btn('#059669'), opacity: decisionBusy ? 0.6 : 1 }}>
@@ -462,6 +543,16 @@ export const OCPanel: React.FC<{
                   </button>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Para no-admins: la decisión la toma Admin/Master */}
+          {oc.estadoOC === 'OC_RECIBIDA' && !esAdmin && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: 8, padding: '10px 12px', fontSize: '12.5px', color: '#1d4ed8' }}>
+              <GoogleIcon name="admin_panel_settings" size={16} color="#2563eb" />
+              <span>
+                La <strong>decisión de la OC</strong> (aceptar o rechazar) la realiza el rol <strong>Admin/Master</strong> tras la buena pro. La ejecutiva registró los datos de la adjudicación.
+              </span>
             </div>
           )}
 

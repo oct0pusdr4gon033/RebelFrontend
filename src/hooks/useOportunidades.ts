@@ -57,7 +57,7 @@ export function mapApiToOportunidad(op: any): Oportunidad {
       fichaTecnica: p.fichaTecnica ?? '',
     })),
     limiteTotal: op.limiteTotal,
-    estado: (op.estado as Oportunidad['estado']) || 'En Licitación',
+    estado: (op.estado as Oportunidad['estado']) || 'Cotizada',
     ordenCompra: op.ordenCompra
       ? {
           id: op.ordenCompra.id,
@@ -75,6 +75,11 @@ export function mapApiToOportunidad(op: any): Oportunidad {
           transportista: op.ordenCompra.transportista,
           noGuiaRemision: op.ordenCompra.noGuiaRemision,
           fechaEntrega: op.ordenCompra.fechaEntrega,
+          nroOCAM: op.ordenCompra.nroOCAM,
+          nroExpediente: op.ordenCompra.nroExpediente,
+          unidad: op.ordenCompra.unidad,
+          codigoCIAF: op.ordenCompra.codigoCIAF,
+          montoOCAM: op.ordenCompra.montoOCAM,
           fechaRegistro: op.ordenCompra.fechaRegistro,
           fechaActualizacion: op.ordenCompra.fechaActualizacion,
         }
@@ -406,7 +411,7 @@ export function useOportunidades(creadoPorLabel: string) {
             fechaVencimiento,
             items,
             limiteTotal: totalLimite,
-            estado: 'En Licitación',
+            estado: 'Cotizada',
             creadoPor: creadoPorLabel,
             createdAt: new Date().toLocaleString('es-PE'),
           };

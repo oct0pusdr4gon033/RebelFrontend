@@ -2,30 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { GoogleIcon } from '../../components/GoogleIcon';
 import { useAuth } from '../../context/AuthContext';
 import { isOportunidadOwner } from '../../utils/oportunidadUtils';
-import type { Oportunidad, OrdenCompra } from '../../types/oportunidades';
-import { cambiarEstadoApi, cambiarEstadoOCApi, type OrdenCompraApiResponse } from '../../api/services/oportunidades.service';
-
-function mapOC(oc: OrdenCompraApiResponse): OrdenCompra {
-  return {
-    id: oc.id,
-    oportunidadId: oc.oportunidadId,
-    numeroOC: oc.numeroOC,
-    fechaEmisionOC: oc.fechaEmisionOC,
-    estadoOC: oc.estadoOC as OrdenCompra['estadoOC'],
-    motivoRechazo: oc.motivoRechazo,
-    fechaDecisionOC: oc.fechaDecisionOC,
-    costoInicial: oc.costoInicial,
-    costoRenegociado: oc.costoRenegociado,
-    margenAdicional: oc.margenAdicional,
-    fechaRenegociacion: oc.fechaRenegociacion,
-    fechaDespacho: oc.fechaDespacho,
-    transportista: oc.transportista,
-    noGuiaRemision: oc.noGuiaRemision,
-    fechaEntrega: oc.fechaEntrega,
-    fechaRegistro: oc.fechaRegistro,
-    fechaActualizacion: oc.fechaActualizacion,
-  };
-}
+import type { Oportunidad } from '../../types/oportunidades';
+import { cambiarEstadoApi } from '../../api/services/oportunidades.service';
 
 interface MisOportunidadesViewProps {
   oportunidades: Oportunidad[];
@@ -148,6 +126,9 @@ const PIPELINE_ORDER = ['En Licitación', 'Cotizada', 'Adjudicada', 'Desestimada
 
 const OC_STATES = ['OC_RECIBIDA', 'OC_ACEPTADA', 'OC_RECHAZADA', 'ENTREGADA'] as const;
 const OC_ACTIVAS = ['OC_RECIBIDA', 'OC_ACEPTADA'] as const;
+const ACTIVAS_STATES = ['En Licitación', 'Por Vencer', 'Cotizada'] as const;
+const GANADAS_STATES = ['Adjudicada', 'OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'] as const;
+const PERDIDAS_STATES = ['Desestimada', 'OC_RECHAZADA'] as const;
 
 /** Cálculo seguro de estado de vencimiento para evitar NaN */
 function formatVencimientoSafe(dateStr?: string | null) {
@@ -205,11 +186,9 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
 }) => {
   const { empleado } = useAuth();
   const [cambiandoId, setCambiandoId] = useState<number | string | null>(null);
-  const [filtro, setFiltro] = useState<'todos' | 'activas' | 'ganadas' | 'perdidas' | 'oc'>('activas');
+  const [filtro, setFiltro] = useState<'todos' | 'activas' | 'ganadas' | 'perdidas'>('activas');
   const [vista, setVista] = useState<'pipeline' | 'lista' | 'oc'>('pipeline');
   const [confirmDesestimar, setConfirmDesestimar] = useState<Oportunidad | null>(null);
-  const [ocDecisionId, setOcDecisionId] = useState<number | string | null>(null);
-  const [motivos, setMotivos] = useState<Record<string | number, string>>({});
 
   const misOportunidades = useMemo(() => {
     return oportunidades.filter((op) => isOportunidadOwner(op, empleado, userEmail));
@@ -225,20 +204,33 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
     [conOC]
   );
 
+  const oportunidadesActivas = useMemo(
+    () => misOportunidades.filter((op) => (ACTIVAS_STATES as readonly string[]).includes(op.estado)),
+    [misOportunidades]
+  );
+
+  const oportunidadesGanadas = useMemo(
+    () => misOportunidades.filter((op) => (GANADAS_STATES as readonly string[]).includes(op.estado)),
+    [misOportunidades]
+  );
+
+  const oportunidadesPerdidas = useMemo(
+    () => misOportunidades.filter((op) => (PERDIDAS_STATES as readonly string[]).includes(op.estado)),
+    [misOportunidades]
+  );
+
   const oportunidadesFiltradas = useMemo(() => {
     switch (filtro) {
       case 'activas':
-        return misOportunidades.filter((op) => !(['Desestimada', 'Adjudicada', ...OC_STATES] as string[]).includes(op.estado));
+        return oportunidadesActivas;
       case 'ganadas':
-        return misOportunidades.filter((op) => (['Adjudicada', ...OC_STATES] as string[]).includes(op.estado));
+        return oportunidadesGanadas;
       case 'perdidas':
-        return misOportunidades.filter((op) => op.estado === 'Desestimada' || op.estado === 'OC_RECHAZADA');
-      case 'oc':
-        return conOC;
+        return oportunidadesPerdidas;
       default:
         return misOportunidades;
     }
-  }, [misOportunidades, conOC, filtro]);
+  }, [misOportunidades, oportunidadesActivas, oportunidadesGanadas, oportunidadesPerdidas, filtro]);
 
   const pipeline = useMemo(() => {
     const cols: Record<string, Oportunidad[]> = {
@@ -255,8 +247,6 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
 
   const kpis = useMemo(() => ({
     total: misOportunidades.length,
-    activas: misOportunidades.filter((op) => op.estado === 'En Licitación').length,
-    cotizadas: misOportunidades.filter((op) => op.estado === 'Cotizada').length,
     adjudicadas: misOportunidades.filter((op) => op.estado === 'Adjudicada').length,
     ocPendientes: ocPendientes.length,
     montoTotal: misOportunidades.reduce((sum, op) => sum + (Number(op.limiteTotal) || 0), 0),
@@ -271,30 +261,6 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
       alert(err.message || 'Error al cambiar estado');
     } finally {
       setCambiandoId(null);
-    }
-  };
-
-  const handleDecisionOC = async (op: Oportunidad, estadoOC: 'OC_ACEPTADA' | 'OC_RECHAZADA') => {
-    if (estadoOC === 'OC_RECHAZADA' && !(motivos[op.id] ?? '').trim()) {
-      alert('Debe indicar el motivo al rechazar la Orden de Compra.');
-      return;
-    }
-    setOcDecisionId(op.id);
-    try {
-      const actualizada = await cambiarEstadoOCApi(op.id, {
-        estadoOC,
-        motivoRechazo: estadoOC === 'OC_RECHAZADA' ? (motivos[op.id] ?? '').trim() : null,
-      });
-      onEstadoCambiado({
-        ...op,
-        estado: actualizada.estado as Oportunidad['estado'],
-        ordenCompra: actualizada.ordenCompra ? mapOC(actualizada.ordenCompra) : op.ordenCompra,
-      });
-      setMotivos((prev) => ({ ...prev, [op.id]: '' }));
-    } catch (err: any) {
-      alert(err.message || 'Error al actualizar la OC');
-    } finally {
-      setOcDecisionId(null);
     }
   };
 
@@ -354,7 +320,7 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
               </span>
             </div>
             <p style={{ fontSize: '13px', color: '#64748b', margin: '3px 0 0' }}>
-              {nombreEjecutiva} &bull; Pipeline de licitaciones asignadas y seguimiento de estados
+              {nombreEjecutiva} &bull; Mis licitaciones, estado comercial y órdenes de compra
             </p>
           </div>
         </div>
@@ -415,10 +381,9 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
       >
         {[
           { label: 'Total Registradas', value: kpis.total, icon: 'folder_shared', color: '#0f172a', iconColor: roleAccent, iconBg: `${roleAccent}15` },
-          { label: 'En Licitación', value: kpis.activas, icon: 'bolt', color: '#d97706', iconColor: '#d97706', iconBg: '#fef3c7' },
-          { label: 'Cotizadas', value: kpis.cotizadas, icon: 'description', color: roleAccent, iconColor: roleAccent, iconBg: `${roleAccent}15` },
+          { label: 'Activas', value: oportunidadesActivas.length, icon: 'bolt', color: '#d97706', iconColor: '#d97706', iconBg: '#fef3c7' },
           { label: 'Adjudicadas', value: kpis.adjudicadas, icon: 'verified', color: '#059669', iconColor: '#059669', iconBg: '#ecfdf5' },
-          { label: 'OC / Despacho', value: kpis.ocPendientes, icon: 'local_shipping', color: '#7c3aed', iconColor: '#7c3aed', iconBg: '#f5f3ff' },
+          { label: 'OC Activas', value: kpis.ocPendientes, icon: 'local_shipping', color: '#7c3aed', iconColor: '#7c3aed', iconBg: '#f5f3ff' },
           { label: 'Monto Acumulado', value: `S/ ${kpis.montoTotal.toLocaleString('es-PE')}`, icon: 'payments', color: '#0f172a', iconColor: '#0f172a', iconBg: '#f1f5f9' },
         ].map((kpi) => (
           <div
@@ -486,11 +451,10 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
       {vista === 'lista' && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           {[
-            { id: 'activas', label: 'Activas', count: kpis.activas + kpis.cotizadas },
+            { id: 'activas', label: 'Activas', count: oportunidadesActivas.length },
             { id: 'todos', label: 'Todas', count: kpis.total },
-            { id: 'ganadas', label: 'Ganadas', count: kpis.adjudicadas + ocPendientes.length },
-            { id: 'oc', label: 'Órdenes OC', count: conOC.length },
-            { id: 'perdidas', label: 'Desestimadas', count: misOportunidades.filter(op => op.estado === 'Desestimada' || op.estado === 'OC_RECHAZADA').length },
+            { id: 'ganadas', label: 'Ganadas', count: oportunidadesGanadas.length },
+            { id: 'perdidas', label: 'Desestimadas', count: oportunidadesPerdidas.length },
           ].map((f) => {
             const isFiltroActive = filtro === f.id;
             return (
@@ -826,8 +790,6 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
                   const oc = op.ordenCompra;
                   const cfg = ESTADO_CONFIG[op.estado] ?? { color: '#64748b', bg: '#f1f5f9', icon: 'circle', next: null };
                   const esPendiente = oc?.estadoOC === 'OC_RECIBIDA';
-                  const esOperacion = oc?.estadoOC === 'OC_ACEPTADA';
-                  const motivo = motivos[op.id] ?? '';
                   return (
                     <tr
                       key={op.id}
@@ -874,58 +836,7 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
                         {oc?.margenAdicional != null ? `S/ ${oc.margenAdicional.toLocaleString('es-PE', { minimumFractionDigits: 2 })}` : '—'}
                       </td>
                       <td style={{ padding: '13px 16px', textAlign: 'center' }}>
-                        {esPendiente ? (
-                          <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
-                            <button
-                              type="button"
-                              disabled={ocDecisionId === op.id}
-                              onClick={() => handleDecisionOC(op, 'OC_ACEPTADA')}
-                              style={{
-                                padding: '6px 12px',
-                                borderRadius: 4,
-                                border: 'none',
-                                background: '#059669',
-                                color: '#fff',
-                                fontSize: '11.5px',
-                                fontWeight: 700,
-                                cursor: ocDecisionId === op.id ? 'not-allowed' : 'pointer',
-                              }}
-                            >
-                              Aceptar
-                            </button>
-                            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                              <input
-                                value={motivo}
-                                onChange={(e) => setMotivos((prev) => ({ ...prev, [op.id]: e.target.value }))}
-                                placeholder="Motivo rechazo"
-                                style={{
-                                  width: 120,
-                                  padding: '5px 8px',
-                                  borderRadius: 4,
-                                  border: '1px solid #cbd5e1',
-                                  fontSize: '11px',
-                                }}
-                              />
-                              <button
-                                type="button"
-                                disabled={ocDecisionId === op.id}
-                                onClick={() => handleDecisionOC(op, 'OC_RECHAZADA')}
-                                style={{
-                                  padding: '6px 10px',
-                                  borderRadius: 4,
-                                  border: '1px solid #fecaca',
-                                  background: '#fee2e2',
-                                  color: '#dc2626',
-                                  fontSize: '11.5px',
-                                  fontWeight: 700,
-                                  cursor: ocDecisionId === op.id ? 'not-allowed' : 'pointer',
-                                }}
-                              >
-                                Rechazar
-                              </button>
-                            </div>
-                          </div>
-                        ) : esOperacion ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
                           <button
                             type="button"
                             onClick={() => onEdit(op)}
@@ -942,11 +853,13 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
                           >
                             Ver operación
                           </button>
-                        ) : (
-                          <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>
-                            {oc?.estadoOC === 'ENTREGADA' ? 'Completada' : '—'}
-                          </span>
-                        )}
+                          {esPendiente && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '11.5px', color: '#2563eb', fontWeight: 600 }}>
+                              <GoogleIcon name="admin_panel_settings" size={14} color="#2563eb" />
+                              Decisión del Admin/Master
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
