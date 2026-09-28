@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { GoogleIcon } from '../../components/GoogleIcon';
 import { useAuth } from '../../context/AuthContext';
 import { isOportunidadOwner } from '../../utils/oportunidadUtils';
-import type { Oportunidad, VencimientoBadge, Marca, ProductoItem } from '../../types/oportunidades';
+import type { Oportunidad, VencimientoBadge, Marca } from '../../types/oportunidades';
 import { DetalleOportunidadView } from './DetalleOportunidadView';
 
 const PAGE_SIZE = 10;
@@ -46,10 +46,13 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
   getVencimientoBadge,
 }) => {
   const { empleado } = useAuth();
+  const esRolGestion =
+    empleado?.rolNombre === 'Administrador' ||
+    empleado?.rolNombre === 'SysAdmin' ||
+    empleado?.rolNombre === 'Ejecutivo(a) Master Ventas';
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'Todos' | 'En Licitación' | 'Cotizada' | 'Adjudicada' | 'Desestimada'>('Todos');
-  const [ownerFilter, setOwnerFilter] = useState<'todos' | 'mios'>('todos');
-  const [selectedOpDetail, setSelectedOpDetail] = useState<Oportunidad | null>(null);
+  const [ownerFilter, setOwnerFilter] = useState<'todos' | 'mios'>(esRolGestion ? 'todos' : 'mios');
   const [detalleDrawerOp, setDetalleDrawerOp] = useState<Oportunidad | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -76,9 +79,9 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
     return oportunidades.filter((op) => op.estado === 'Cotizada' || op.estado === 'Adjudicada').length;
   }, [oportunidades]);
 
-  // Filtrado
+  // Filtrado + orden por defecto (más recientes primero)
   const filteredOportunidades = useMemo(() => {
-    return oportunidades.filter((op) => {
+    const filtered = oportunidades.filter((op) => {
       // Filtro de pertenencia (Todos vs Solo míos)
       if (ownerFilter === 'mios' && !isOportunidadOwner(op, empleado)) {
         return false;
@@ -99,9 +102,15 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
 
       return matchesStatus && matchesTerm;
     });
+
+    return [...filtered].sort((a, b) => {
+      const mayorHora = String(b.horaRegistroExacta || '').localeCompare(String(a.horaRegistroExacta || ''));
+      if (mayorHora !== 0) return mayorHora;
+      return String(b.fechaRegistro || '').localeCompare(String(a.fechaRegistro || ''));
+    });
   }, [oportunidades, searchTerm, statusFilter, ownerFilter, empleado]);
 
-  // Paginación (10 licitaciones por página)
+  // Paginación (10 oportunidades por página)
   const totalPages = Math.max(1, Math.ceil(filteredOportunidades.length / PAGE_SIZE));
   const safePage = Math.min(Math.max(currentPage, 1), totalPages);
   const startIndex = (safePage - 1) * PAGE_SIZE;
@@ -171,7 +180,7 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
               <GoogleIcon name="manage_search" size={18} color="#94a3b8" />
               <input
                 type="text"
-                placeholder="Buscar por N° Requerimiento, Acuerdo Marco, Empresa, Marca o Ejecutiva..."
+                placeholder="Buscar n° requerimiento, empresa o marca..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="reg-search-input"
@@ -187,18 +196,19 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
               )}
             </div>
 
-            {/* Segmented Control: Todos / Solo míos */}
-            <div
-              className="reg-owner-filter-toggle"
-              style={{
-                display: 'inline-flex',
-                background: '#f1f5f9',
-                padding: '4px',
-                borderRadius: '10px',
-                border: '1.5px solid #e2e8f0',
-                gap: 4,
-              }}
-            >
+            {/* Segmented Control: Todos / Solo míos (solo para gestión) */}
+            {esRolGestion && (
+              <div
+                className="reg-owner-filter-toggle"
+                style={{
+                  display: 'inline-flex',
+                  background: '#f1f5f9',
+                  padding: '4px',
+                  borderRadius: '10px',
+                  border: '1.5px solid #e2e8f0',
+                  gap: 4,
+                }}
+              >
               <button
                 type="button"
                 onClick={() => setOwnerFilter('todos')}
@@ -243,7 +253,8 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
                 <GoogleIcon name="person" size={16} color={ownerFilter === 'mios' ? '#ffffff' : '#64748b'} />
                 <span>Solo míos ({misOportunidadesCount})</span>
               </button>
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Fila Inferior: Chips de Estado y Conteo */}
@@ -264,11 +275,6 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
                   {st}
                 </button>
               ))}
-            </div>
-
-            <div style={{ fontSize: '12.5px', color: '#64748b', fontWeight: 600 }}>
-              Mostrando <strong style={{ color: '#0f172a' }}>{filteredOportunidades.length}</strong> {filteredOportunidades.length === 1 ? 'oportunidad' : 'oportunidades'}
-              {ownerFilter === 'mios' && <span style={{ color: roleAccent, fontWeight: 700 }}> (solo mis registros)</span>}
             </div>
           </div>
         </div>
@@ -294,7 +300,6 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
                   <th>Acuerdo Marco</th>
                   <th>Empresa / Entidad</th>
                   <th>Marcas</th>
-                  <th>Productos</th>
                   <th>Límite Total</th>
                   <th>Vencimiento</th>
                   <th>Estado</th>
@@ -348,19 +353,6 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
                             </span>
                           ))}
                         </div>
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedOpDetail(op)}
-                          className="reg-items-btn"
-                          title="Ver detalle de productos"
-                        >
-                          <GoogleIcon name="visibility" size={14} color="#0284c7" />
-                          <span>
-                            {op.items.length} {op.items.length === 1 ? 'ítem' : 'ítems'}
-                          </span>
-                        </button>
                       </td>
                       <td>
                         <strong className="reg-limite-total">
@@ -502,7 +494,7 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
         {filteredOportunidades.length > 0 && (
           <div className="reg-pagination-bar">
             <div className="reg-pagination-info">
-              Mostrando <strong>{startIndex + 1}</strong> - <strong>{endIndex}</strong> de <strong>{filteredOportunidades.length}</strong> {filteredOportunidades.length === 1 ? 'licitación' : 'licitaciones'}
+              Mostrando <strong>{startIndex + 1}</strong> - <strong>{endIndex}</strong> de <strong>{filteredOportunidades.length}</strong> {filteredOportunidades.length === 1 ? 'oportunidad' : 'oportunidades'}
             </div>
             {totalPages > 1 && (
               <div className="reg-pagination-controls">
@@ -576,133 +568,6 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
           }}
           getVencimientoBadge={getVencimientoBadge}
         />
-      )}
-
-      {/* ── Modal de Detalle de Productos (legacy, kept for fallback) ── */}
-      {selectedOpDetail && (
-        <div
-          className="modal-overlay"
-          onClick={() => setSelectedOpDetail(null)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(15, 23, 42, 0.6)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: 16,
-          }}
-        >
-          <div
-            className="modal-content"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: '#ffffff',
-              borderRadius: 16,
-              maxWidth: 750,
-              width: '100%',
-              padding: 24,
-              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, borderBottom: '1.5px solid #f1f5f9', paddingBottom: 12 }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
-                  Detalle de Requerimiento: {selectedOpDetail.numeroRequerimiento}
-                </h3>
-                <p style={{ margin: '3px 0 0', fontSize: '13px', color: '#64748b' }}>
-                  {selectedOpDetail.acuerdoMarco ? `${selectedOpDetail.acuerdoMarco.codigo} • ${selectedOpDetail.acuerdoMarco.descripcion}` : 'Sin Acuerdo Marco asignado'}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedOpDetail(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
-              >
-                <GoogleIcon name="close" size={20} color="#94a3b8" />
-              </button>
-            </div>
-
-            <div style={{ marginBottom: 16, background: '#f8fafc', padding: 12, borderRadius: 10, fontSize: '13px', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-              <div>
-                <span style={{ color: '#64748b' }}>Empresa / Cliente: </span>
-                <strong>{selectedOpDetail.empresaRazonSocial || selectedOpDetail.entidadConvocante || 'Sin asignar'}</strong>
-              </div>
-              <div>
-                <span style={{ color: '#64748b' }}>Límite Total: </span>
-                <strong style={{ color: '#0284c7' }}>
-                  S/ {Number(selectedOpDetail.limiteTotal).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-                </strong>
-              </div>
-            </div>
-
-            <h4 style={{ margin: '14px 0 8px', fontSize: '14px', fontWeight: 700, color: '#334155' }}>
-              Productos y Precios Límites ({selectedOpDetail.items.length}):
-            </h4>
-
-            <div className="reg-table-wrapper">
-              <table className="reg-table" style={{ fontSize: '12.5px' }}>
-                <thead>
-                  <tr>
-                    <th>N° Parte</th>
-                    <th>Descripción</th>
-                    <th style={{ textAlign: 'center' }}>Cantidad</th>
-                    <th style={{ textAlign: 'right' }}>Límite Unitario</th>
-                    <th style={{ textAlign: 'right' }}>Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedOpDetail.items.map((it: ProductoItem, idx: number) => {
-                    const sub = (it.cantidad || 0) * (it.limiteUnitario || 0);
-                    return (
-                      <tr key={idx}>
-                        <td><strong>{it.numeroParte}</strong></td>
-                        <td>{it.descripcion || '-'}</td>
-                        <td style={{ textAlign: 'center' }}>{it.cantidad}</td>
-                        <td style={{ textAlign: 'right' }}>
-                          S/ {Number(it.limiteUnitario).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>
-                          S/ {sub.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            <div style={{ marginTop: 20, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              {isOportunidadOwner(selectedOpDetail, empleado) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const op = selectedOpDetail;
-                    setSelectedOpDetail(null);
-                    onEdit(op);
-                  }}
-                  className="reg-table-btn-edit"
-                  style={{ padding: '8px 16px' }}
-                >
-                  <GoogleIcon name="edit" size={15} color="#0284c7" />
-                  <span>Editar Requerimiento</span>
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setSelectedOpDetail(null)}
-                className="reg-btn-cancel-sidebar"
-                style={{ width: 'auto', padding: '8px 16px', margin: 0 }}
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

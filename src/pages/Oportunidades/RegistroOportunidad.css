@@ -3292,3 +3292,90 @@
   }
 }
 
+/* ── Estilos de Soporte del Listado (ListadoOportunidadesView) ── */
+.reg-listado-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.reg-card {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px 18px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.reg-owner-filter-toggle {
+  display: inline-flex;
+  box-sizing: border-box;
+}
+
+.reg-empty-history {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px 20px;
+  text-align: center;
+}
+
+.reg-empty-history p {
+  margin: 0;
+  font-size: 13.5px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.reg-badge-req {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reg-badge-req strong {
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.reg-cell-acuerdo,
+.reg-cell-empresa,
+.reg-creado-por {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.empresa-name {
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.empresa-sin-asig {
+  color: #94a3b8;
+  font-style: italic;
+  font-size: 12px;
+}
+
+.reg-pill-estado {
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.reg-limite-total {
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.reg-table-btn-evidence:hover {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+  color: #059669 !important;
+}
+

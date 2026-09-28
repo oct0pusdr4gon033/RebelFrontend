@@ -53,6 +53,7 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
   const isOwner = isOportunidadOwner(op, empleado);
   const isAdmin = empleado?.rolNombre === 'Administrador' || empleado?.rolNombre === 'SysAdmin';
   const isMaster = empleado?.rolNombre === 'Ejecutivo(a) Master Ventas';
+  const esGestion = isAdmin || isMaster;
   const canManageStatus = isOwner || isAdmin || isMaster;
 
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
@@ -82,6 +83,11 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
   }, [cargarImagenes]);
 
   const vBadge = getVencimientoBadge(op.fechaVencimiento);
+  const esEstadoFinal = ['Adjudicada', 'Desestimada', 'OC_RECHAZADA', 'ENTREGADA'].includes(op.estado);
+  const vColor = esEstadoFinal && vBadge ? '#64748b' : (vBadge?.color ?? '#64748b');
+  const vBg = esEstadoFinal && vBadge ? '#f1f5f9' : (vBadge?.bg ?? '#f1f5f9');
+  const vKpiColor = esEstadoFinal ? '#64748b' : '#d97706';
+  const vKpiBg = esEstadoFinal ? '#f1f5f9' : '#fef3c7';
   const estadoCfg = ESTADO_CONFIG[op.estado] ?? {
     label: op.estado,
     color: '#64748b',
@@ -217,9 +223,9 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
                   {vBadge && (
                     <span
                       className="det-badge"
-                      style={{ background: vBadge.bg, color: vBadge.color, border: `1px solid ${vBadge.color}35` }}
+                      style={{ background: vBg, color: vColor, border: `1px solid ${vColor}35` }}
                     >
-                      <GoogleIcon name="alarm" size={13} color={vBadge.color} />
+                      <GoogleIcon name="alarm" size={13} color={vColor} />
                       {vBadge.label}
                     </span>
                   )}
@@ -315,13 +321,13 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
               </div>
             </div>
 
-            <div className="det-kpi-card" style={{ borderLeft: '4px solid #d97706' }}>
-              <div className="det-kpi-card__icon" style={{ background: '#fef3c7' }}>
-                <GoogleIcon name="schedule" size={24} color="#d97706" />
+            <div className="det-kpi-card" style={{ borderLeft: `4px solid ${vKpiColor}` }}>
+              <div className="det-kpi-card__icon" style={{ background: vKpiBg }}>
+                <GoogleIcon name="schedule" size={24} color={vKpiColor} />
               </div>
               <div className="det-kpi-card__content">
                 <span className="det-kpi-card__label">Vencimiento Oficial</span>
-                <span className="det-kpi-card__val" style={{ fontSize: '1.05rem' }}>
+                <span className="det-kpi-card__val" style={{ fontSize: '1.05rem', color: vColor }}>
                   {vBadge ? vBadge.label : 'Sin fecha'}
                 </span>
                 <span className="det-kpi-card__sub">
@@ -335,14 +341,14 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
 
 
 
-          {/* ── 1. Convocatoria Perú Compras ── */}
+          {/* ── 1. Convocatoria y Cliente ── */}
           <div className="det-section">
             <div className="det-section__header">
               <div className="det-section__title">
                 <div className="det-section__icon" style={{ background: `${roleAccent}15` }}>
                   <GoogleIcon name="feed" size={17} color={roleAccent} />
                 </div>
-                <h3>1. Convocatoria Oficial de Perú Compras</h3>
+                <h3>1. Convocatoria y Cliente</h3>
               </div>
             </div>
             <div className="det-section__body">
@@ -367,46 +373,6 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
                   </div>
                 </div>
 
-                <div className="det-field">
-                  <span className="det-field__label">Fecha y Hora de Cierre / Vencimiento</span>
-                  <div className="det-field__value">
-                    {op.fechaVencimiento ? (
-                      formatFechaHoraPeru(op.fechaVencimiento, { dateStyle: 'full', timeStyle: 'short' })
-                    ) : (
-                      <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>No fijado</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="det-field">
-                  <span className="det-field__label">Prioridad de Llegada</span>
-                  <div className="det-field__value">
-                    {op.prioridadGanada ? (
-                      <span style={{ color: '#15803d', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                        <GoogleIcon name="verified" size={16} color="#15803d" />
-                        Prioridad Ganada (1° lugar en orden de llegada)
-                      </span>
-                    ) : (
-                      <span>Registrado a las {op.horaRegistroExacta || 'hora estándar'}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ── 2. Entidad y Empresa ── */}
-          <div className="det-section">
-            <div className="det-section__header">
-              <div className="det-section__title">
-                <div className="det-section__icon" style={{ background: '#ecfdf5' }}>
-                  <GoogleIcon name="business" size={17} color="#059669" />
-                </div>
-                <h3>2. Empresa / Entidad Solicitante</h3>
-              </div>
-            </div>
-            <div className="det-section__body">
-              <div className="det-fields-grid">
                 <div className="det-field">
                   <span className="det-field__label">Entidad Convocante</span>
                   <div className="det-field__value">
@@ -448,7 +414,7 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
                 <div className="det-section__icon" style={{ background: '#fef3c7' }}>
                   <GoogleIcon name="local_offer" size={17} color="#d97706" />
                 </div>
-                <h3>3. Marcas con las que se cotiza ({op.marcas.length})</h3>
+                <h3>2. Marcas con las que se cotiza ({op.marcas.length})</h3>
               </div>
             </div>
             <div className="det-section__body">
@@ -476,7 +442,7 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
                 <div className="det-section__icon" style={{ background: '#ede9fe' }}>
                   <GoogleIcon name="inventory_2" size={17} color="#7c3aed" />
                 </div>
-                <h3>4. Detalle de Productos y Proforma ({op.items.length} ítems)</h3>
+                <h3>3. Detalle de Productos y Proforma ({op.items.length} ítems)</h3>
               </div>
               <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>
                 Total: {totalCantidad} unidades
@@ -583,7 +549,7 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
                 <div className="det-section__icon" style={{ background: `${roleAccent}15` }}>
                   <GoogleIcon name="collections" size={17} color={roleAccent} />
                 </div>
-                <h3>5. Evidencias y Capturas Adjuntas ({imagenes.length})</h3>
+                <h3>4. Evidencias y Capturas Adjuntas ({imagenes.length})</h3>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button
@@ -744,7 +710,7 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
                   <div className="det-section__icon" style={{ background: '#e0f2fe' }}>
                     <GoogleIcon name="receipt_long" size={17} color="#0284c7" />
                   </div>
-                  <h3>6. Orden de Compra Asociada (Bloque 2)</h3>
+                  <h3>5. Orden de Compra Asociada (Bloque 2)</h3>
                 </div>
               </div>
               <div className="det-section__body">
@@ -801,9 +767,10 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
             </div>
           )}
 
-          {/* ── 6. Trazabilidad y Auditoría ── */}
-          <div className="det-section">
-            <div className="det-section__header">
+          {/* ── 6. Trazabilidad y Auditoría (solo gestión) ── */}
+          {esGestion && (
+            <div className="det-section">
+              <div className="det-section__header">
               <div className="det-section__title">
                 <div className="det-section__icon" style={{ background: '#f1f5f9' }}>
                   <GoogleIcon name="history" size={17} color="#475569" />
@@ -846,6 +813,7 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
               </div>
             </div>
           </div>
+            )}
         </div>
 
         {/* ── Footer Sticky con Acciones ── */}
@@ -908,16 +876,18 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
 
             {/* Acciones Generales */}
             <div className="det-footer__right">
-              {/* Botón Copiar Resumen */}
-              <button
-                type="button"
-                className="det-btn-secondary"
-                onClick={copiarResumen}
-                title="Copiar resumen al portapapeles"
-              >
-                <GoogleIcon name={copiado ? 'check' : 'content_copy'} size={16} color="#334155" />
-                <span>{copiado ? '¡Copiado!' : 'Copiar Resumen'}</span>
-              </button>
+              {/* Botón Copiar Resumen (solo gestión) */}
+              {esGestion && (
+                <button
+                  type="button"
+                  className="det-btn-secondary"
+                  onClick={copiarResumen}
+                  title="Copiar resumen al portapapeles"
+                >
+                  <GoogleIcon name={copiado ? 'check' : 'content_copy'} size={16} color="#334155" />
+                  <span>{copiado ? '¡Copiado!' : 'Copiar Resumen'}</span>
+                </button>
+              )}
 
               {/* Botón Subir Evidencia */}
               {isOwner && (

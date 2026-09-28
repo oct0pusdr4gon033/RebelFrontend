@@ -84,6 +84,10 @@ function App() {
               element={<ResolverOportunidadesPage roleAccent="#2563eb" />}
             />
             <Route
+              path="seguimiento-oc"
+              element={<SeguimientoOCView roleAccent="#2563eb" />}
+            />
+            <Route
               path="mi-cuenta"
               element={
                 <MiCuentaPage

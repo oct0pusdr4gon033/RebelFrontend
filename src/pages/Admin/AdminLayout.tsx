@@ -36,6 +36,7 @@ export const adminNavItems: NavItem[] = [
     ],
   },
   { icon: 'handshake', label: 'Acuerdos Marco', path: '/admin/acuerdos', section: 'Comercial' },
+  { icon: 'local_shipping', label: 'Seguimiento OC', path: '/admin/seguimiento-oc', section: 'Licitaciones' },
   { icon: 'corporate_fare', label: 'Empresas', path: '/admin/empresas', section: null },
   { icon: 'badge', label: 'Empleados', path: '/admin/empleados', section: 'Gestión' },
   { icon: 'domain', label: 'Mi Sede', path: '/admin/sede', section: null },
