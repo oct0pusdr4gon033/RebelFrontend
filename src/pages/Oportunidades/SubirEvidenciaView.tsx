@@ -2,13 +2,28 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { GoogleIcon } from '../../components/GoogleIcon';
 import { useAuth } from '../../context/AuthContext';
 import { isOportunidadOwner } from '../../utils/oportunidadUtils';
-import type { Oportunidad, EvidenciaItem } from '../../types/oportunidades';
+import type { Oportunidad } from '../../types/oportunidades';
+import {
+  obtenerImagenesOportunidadApi,
+  subirImagenOportunidadApi,
+  eliminarImagenOportunidadApi,
+  getImagenArchivoUrl,
+  type OportunidadImagenItem,
+} from '../../api/services/oportunidades.service';
 
 interface SubirEvidenciaViewProps {
   oportunidades: Oportunidad[];
   roleAccent: string;
   preselectedOportunidadId?: string | number | null;
 }
+
+/**
+ * Estados considerados "Activos" para poder subir evidencias de cotización o capturas.
+ * Las oportunidades adjudicadas / con OC / entregadas quedan fuera del combo.
+ */
+const ESTADOS_ACTIVOS = ['En Licitación', 'Cotizada'];
+
+const esPdf = (item: OportunidadImagenItem) => item.contentType === 'application/pdf' || item.nombreArchivo.toLowerCase().endsWith('.pdf');
 
 export const SubirEvidenciaView: React.FC<SubirEvidenciaViewProps> = ({
   oportunidades,
@@ -22,73 +37,111 @@ export const SubirEvidenciaView: React.FC<SubirEvidenciaViewProps> = ({
     return oportunidades.filter((op) => isOportunidadOwner(op, empleado));
   }, [oportunidades, empleado]);
 
+  // Solo requerimientos en estado Activo (En Licitación / Cotizada)
+  const opcionesActivas = useMemo(() => {
+    return misOportunidades.filter((op) => ESTADOS_ACTIVOS.includes(op.estado));
+  }, [misOportunidades]);
+
   const [selectedOpId, setSelectedOpId] = useState<string | number>(() => {
     if (preselectedOportunidadId) {
       const match = oportunidades.find((o) => String(o.id) === String(preselectedOportunidadId));
-      if (match && isOportunidadOwner(match, empleado)) {
+      if (match && isOportunidadOwner(match, empleado) && ESTADOS_ACTIVOS.includes(match.estado)) {
         return preselectedOportunidadId;
       }
     }
-    const primeraPropia = oportunidades.find((o) => isOportunidadOwner(o, empleado));
-    return primeraPropia?.id ?? '';
+    const primeraActiva = opcionesActivas[0];
+    return primeraActiva?.id ?? '';
   });
 
   useEffect(() => {
     if (preselectedOportunidadId) {
-      const match = misOportunidades.find((o) => String(o.id) === String(preselectedOportunidadId));
+      const match = opcionesActivas.find((o) => String(o.id) === String(preselectedOportunidadId));
       if (match) {
         setSelectedOpId(preselectedOportunidadId);
-      } else if (misOportunidades.length > 0) {
-        setSelectedOpId(misOportunidades[0].id);
+      } else if (opcionesActivas.length > 0) {
+        setSelectedOpId(opcionesActivas[0].id);
       } else {
         setSelectedOpId('');
       }
-    } else if (misOportunidades.length > 0 && !misOportunidades.some((o) => String(o.id) === String(selectedOpId))) {
-      setSelectedOpId(misOportunidades[0].id);
-    } else if (misOportunidades.length === 0) {
+    } else if (opcionesActivas.length > 0 && !opcionesActivas.some((o) => String(o.id) === String(selectedOpId))) {
+      setSelectedOpId(opcionesActivas[0].id);
+    } else if (opcionesActivas.length === 0) {
       setSelectedOpId('');
     }
-  }, [preselectedOportunidadId, misOportunidades]);
+  }, [preselectedOportunidadId, opcionesActivas]);
 
-  const [tipoDoc, setTipoDoc] = useState<string>('Comprobante de Cotización en Perú Compras');
   const [comentario, setComentario] = useState<string>('');
   const [archivo, setArchivo] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Lista de evidencias cargadas
-  const [evidencias, setEvidencias] = useState<EvidenciaItem[]>([
-    {
-      id: 1,
-      oportunidadId: oportunidades[0]?.id ?? 1,
-      numeroRequerimiento: oportunidades[0]?.numeroRequerimiento ?? 'REQ-2026-0089',
-      tipoDocumento: 'Comprobante de Cotización en Perú Compras',
-      nombreArchivo: 'Constancia_Cotizacion_REQ-2026-0089.pdf',
-      tamanoArchivo: '1.4 MB',
-      subidoPor: 'Luciana Morales',
-      fechaSubida: '14/09/2026, 11:20:00',
-      estado: 'Verificado',
-      comentario: 'Presentado conforme al catálogo electrónico de computadoras.',
-    },
-    {
-      id: 2,
-      oportunidadId: 2,
-      numeroRequerimiento: 'REQ-2026-0094',
-      tipoDocumento: 'Acta de Buena Pro',
-      nombreArchivo: 'Acta_Adjudicacion_MINEDU.pdf',
-      tamanoArchivo: '2.1 MB',
-      subidoPor: 'Valeria Quispe',
-      fechaSubida: '13/09/2026, 16:45:12',
-      estado: 'Verificado',
-      comentario: 'Adjudicación exitosa en Perú Compras.',
-    },
-  ]);
+  // Lista de evidencias cargadas desde la Base de Datos (Storage BYTEA)
+  const [imagenes, setImagenes] = useState<OportunidadImagenItem[]>([]);
+  const [loadingImagenes, setLoadingImagenes] = useState<boolean>(false);
+  const [modalImagen, setModalImagen] = useState<OportunidadImagenItem | null>(null);
+
+  // Vista previa local del archivo seleccionado (imágenes o PDF)
+  const previewUrl = useMemo(() => {
+    if (!archivo) return null;
+    return URL.createObjectURL(archivo);
+  }, [archivo]);
+  const archivoEsPdf = useMemo(() => {
+    if (!archivo) return false;
+    return archivo.type === 'application/pdf' || archivo.name.toLowerCase().endsWith('.pdf');
+  }, [archivo]);
+
+  // Cargar evidencias de la oportunidad seleccionada desde la BD
+  const cargarImagenes = (opId: string | number) => {
+    if (!opId) {
+      setImagenes([]);
+      return;
+    }
+    setLoadingImagenes(true);
+    obtenerImagenesOportunidadApi(opId)
+      .then((data) => {
+        setImagenes(data);
+      })
+      .catch((err) => {
+        console.error('Error al cargar evidencias fotográficas:', err);
+      })
+      .finally(() => {
+        setLoadingImagenes(false);
+      });
+  };
+
+  useEffect(() => {
+    cargarImagenes(selectedOpId);
+  }, [selectedOpId]);
+
+  /**
+   * Validación: imágenes (JPG, PNG, WEBP) siempre; PDF únicamente para la
+   * cotización de la marca (el backend lo asigna como "Cotización de Marca").
+   */
+  const validarArchivoEvidencia = (file: File): boolean => {
+    const tiposImagen = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    const esImagenValida = tiposImagen.includes(file.type) || ['png', 'jpg', 'jpeg', 'webp'].includes(extension || '');
+    const esPdfValido = file.type === 'application/pdf' || extension === 'pdf';
+
+    if (!esImagenValida && !esPdfValido) {
+      setErrorMsg('Formato no permitido. Solo puedes subir capturas (imagen) o el PDF de cotización de la marca.');
+      return false;
+    }
+    setErrorMsg(null);
+    return true;
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setArchivo(e.target.files[0]);
+      const file = e.target.files[0];
+      if (validarArchivoEvidencia(file)) {
+        setArchivo(file);
+      } else {
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -96,11 +149,14 @@ export const SubirEvidenciaView: React.FC<SubirEvidenciaViewProps> = ({
     e.preventDefault();
     setDragOver(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setArchivo(e.dataTransfer.files[0]);
+      const file = e.dataTransfer.files[0];
+      if (validarArchivoEvidencia(file)) {
+        setArchivo(file);
+      }
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedOpId || !archivo) return;
 
@@ -109,322 +165,481 @@ export const SubirEvidenciaView: React.FC<SubirEvidenciaViewProps> = ({
       alert('Solo puedes subir evidencias a los requerimientos registrados por tu usuario.');
       return;
     }
+    if (!opcionesActivas.some((o) => String(o.id) === String(selectedOpId))) {
+      alert('El requerimiento ya no se encuentra en estado activo. Solo se admiten evidencias para En Licitación o Cotizada.');
+      return;
+    }
+
+    if (!validarArchivoEvidencia(archivo)) return;
 
     setLoading(true);
-    const reqCode = opEncontrada.numeroRequerimiento;
+    setErrorMsg(null);
 
-    setTimeout(() => {
-      const nuevaEvidencia: EvidenciaItem = {
-        id: Date.now(),
-        oportunidadId: selectedOpId,
-        numeroRequerimiento: reqCode,
-        tipoDocumento: tipoDoc,
-        nombreArchivo: archivo.name,
-        tamanoArchivo: `${(archivo.size / (1024 * 1024)).toFixed(2)} MB`,
-        subidoPor: empleado?.nombreCompleto || empleado?.userNombre || 'Usuario Actual',
-        fechaSubida: new Date().toLocaleString('es-PE'),
-        estado: 'Verificado',
-        comentario: comentario.trim() || undefined,
-      };
+    try {
+      const nuevaImagen = await subirImagenOportunidadApi(
+        selectedOpId,
+        archivo,
+        '',
+        comentario
+      );
 
-      setEvidencias((prev) => [nuevaEvidencia, ...prev]);
-      setSuccessMsg(`¡Evidencia "${archivo.name}" subida y certificada para ${reqCode}!`);
+      setImagenes((prev) => [nuevaImagen, ...prev]);
+      const tipoMostrado = nuevaImagen.tipoEvidencia;
+      setSuccessMsg(`¡Evidencia "${archivo.name}" guardada con éxito (${tipoMostrado}) para ${opEncontrada.numeroRequerimiento}!`);
       setArchivo(null);
       setComentario('');
       if (fileInputRef.current) fileInputRef.current.value = '';
-      setLoading(false);
 
       setTimeout(() => setSuccessMsg(null), 5000);
-    }, 600);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'No se pudo guardar la evidencia. Verifica tu conexión e inténtalo de nuevo.');
+    } finally {
+      setLoading(false);
+    }
   };
 
+  const handleEliminar = async (imagenId: number) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta evidencia?')) {
+      return;
+    }
+
+    try {
+      await eliminarImagenOportunidadApi(selectedOpId, imagenId);
+      setImagenes((prev) => prev.filter((img) => img.id !== imagenId));
+      setSuccessMsg('Evidencia eliminada correctamente.');
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (err: any) {
+      alert(err.message || 'Error al eliminar la evidencia. Inténtalo de nuevo.');
+    }
+  };
+
+  const totalPdf = imagenes.filter((i) => esPdf(i)).length;
+  const totalImagen = imagenes.length - totalPdf;
+
   return (
-    <div className="reg-evidencia-container">
+    <div className="evi-page">
+      {/* ── Héroe / Cabecera ── */}
+      <div className="evi-hero" style={{ background: `linear-gradient(135deg, ${roleAccent} 0%, #1e293b 130%)` }}>
+        <div className="evi-hero__icon">
+          <GoogleIcon name="upload_file" size={28} color="#ffffff" />
+        </div>
+        <div className="evi-hero__body">
+          <h2 className="evi-hero__title">
+            Subir Evidencia Perú Compras
+            {opcionesActivas.length === 0 && <span className="evi-hero__empty-tag">Sin requerimientos activos</span>}
+          </h2>
+          <p className="evi-hero__sub">
+            Adjunta el sustento visual (captura del portal Perú Compras) o el <strong>PDF de cotización de la marca</strong>.
+            El tipo de evidencia se asigna automáticamente según el archivo que subas.
+          </p>
+        </div>
+        <div className="evi-hero__stats">
+          <div className="evi-stat">
+            <b>{opcionesActivas.length}</b>
+            <span>Activos</span>
+          </div>
+          <div className="evi-stat">
+            <b>{totalPdf}</b>
+            <span>PDF</span>
+          </div>
+          <div className="evi-stat">
+            <b>{totalImagen}</b>
+            <span>Capturas</span>
+          </div>
+        </div>
+      </div>
+
       {/* ── Toast de Éxito ── */}
       {successMsg && (
-        <div className="reg-toast-success" style={{ marginBottom: 18 }}>
+        <div className="evi-toast evi-toast--success">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <GoogleIcon name="check_circle" size={20} color="#059669" />
             <strong>{successMsg}</strong>
           </div>
-          <button
-            type="button"
-            onClick={() => setSuccessMsg(null)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#065f46' }}
-          >
+          <button type="button" onClick={() => setSuccessMsg(null)} className="evi-toast__close">
             <GoogleIcon name="close" size={16} color="#065f46" />
           </button>
         </div>
       )}
 
+      {/* ── Toast de Error ── */}
+      {errorMsg && (
+        <div className="evi-toast evi-toast--error">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <GoogleIcon name="error" size={20} color="#dc2626" />
+            <span>{errorMsg}</span>
+          </div>
+          <button type="button" onClick={() => setErrorMsg(null)} className="evi-toast__close">
+            <GoogleIcon name="close" size={16} color="#b91c1c" />
+          </button>
+        </div>
+      )}
+
       {/* ── Formulario de Carga de Evidencia ── */}
-      <div className="reg-card">
-        <div className="reg-card__header" style={{ marginBottom: 18 }}>
-          <div className="reg-card__header-icon" style={{ background: `${roleAccent}15` }}>
-            <GoogleIcon name="upload_file" size={20} color={roleAccent} />
+      <div className="evi-card">
+        <div className="evi-card__head">
+          <div className="evi-card__head-icon" style={{ background: `${roleAccent}15` }}>
+            <GoogleIcon name="add_photo_alternate" size={22} color={roleAccent} />
           </div>
           <div>
-            <h3>Subir Evidencia de Licitación / Cotización</h3>
-            <p>
-              Adjunta el sustento digital (captura del portal Perú Compras, constancia PDF u Orden de Compra) para respaldar tus requerimientos registrados.
-            </p>
+            <h3>Adjuntar nueva evidencia</h3>
+            <p>Selecciona el requerimiento, arrastra el archivo y sube la evidencia.</p>
           </div>
         </div>
 
-        {misOportunidades.length === 0 ? (
-          <div
-            style={{
-              padding: '36px 20px',
-              textAlign: 'center',
-              background: '#f8fafc',
-              borderRadius: '12px',
-              border: '1.5px dashed #cbd5e1',
-              margin: '10px 0',
-            }}
-          >
-            <div
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: '50%',
-                background: 'rgba(239, 68, 68, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 12px',
-              }}
-            >
-              <GoogleIcon name="lock" size={24} color="#ef4444" />
+        <div className="evi-card__body">
+          {opcionesActivas.length === 0 ? (
+            <div className="evi-empty">
+              <div className="evi-empty__icon">
+                <GoogleIcon name="lock" size={28} color="#ef4444" />
+              </div>
+              <h4>
+                {misOportunidades.length === 0
+                  ? 'Solo puedes subir evidencias para tus propios requerimientos'
+                  : 'No tienes requerimientos en estado activo'}
+              </h4>
+              <p>
+                {misOportunidades.length === 0
+                  ? 'Actualmente no tienes requerimientos registrados a tu nombre. Para cargar capturas o el PDF de cotización, primero debes registrar una oportunidad comercial.'
+                  : 'Actualmente no tienes requerimientos en estado En Licitación o Cotizada. Las oportunidades ya adjudicadas se gestionan desde el panel de Órdenes de Compra.'}
+              </p>
             </div>
-            <h4 style={{ margin: '0 0 6px', color: '#1e293b', fontSize: '15px', fontWeight: 700 }}>
-              Solo puedes subir evidencias para tus propios requerimientos
-            </h4>
-            <p style={{ margin: 0, color: '#64748b', fontSize: '13px', maxWidth: 480, marginInline: 'auto', lineHeight: 1.5 }}>
-              Actualmente no tienes requerimientos registrados a tu nombre en el sistema. Para cargar constancias o actas de Perú Compras, primero debes registrar una oportunidad comercial.
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="reg-evidencia-form">
-            <div className="reg-form-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
-              {/* Oportunidad asociada */}
-              <div className="reg-field">
-                <label>
-                  Requerimiento / Oportunidad Vinculada <span className="required">*</span>
-                </label>
-                <select
-                  className="reg-input"
-                  value={selectedOpId}
-                  onChange={(e) => setSelectedOpId(e.target.value)}
-                  required
-                >
-                  {misOportunidades.map((op) => (
-                    <option key={op.id} value={op.id}>
-                      {op.numeroRequerimiento} &bull; {op.acuerdoMarco?.codigo ?? 'Acuerdo'} &bull; S/ {Number(op.limiteTotal).toLocaleString('es-PE')}
-                    </option>
-                  ))}
-                </select>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              <div className="evi-grid-2">
+                {/* Oportunidad asociada (SOLO ESTADOS ACTIVOS) */}
+                <div className="evi-field">
+                  <label>
+                    Requerimiento <span className="required">*</span>
+                  </label>
+                  <select
+                    className="evi-select"
+                    value={selectedOpId}
+                    onChange={(e) => setSelectedOpId(e.target.value)}
+                    required
+                  >
+                    {opcionesActivas.map((op) => (
+                      <option key={op.id} value={op.id}>
+                        {op.numeroRequerimiento} &bull; {op.estado} &bull; S/ {Number(op.limiteTotal).toLocaleString('es-PE')}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Tipo de documento auto-detectado (contexto informativo) */}
+                <div className="evi-field">
+                  <label>Tipo de evidencia</label>
+                  <div className="evi-note" style={{ background: `${roleAccent}0d`, borderColor: `${roleAccent}30` }}>
+                    <GoogleIcon name="auto_awesome" size={18} color={roleAccent} />
+                    <span>
+                      <strong>Se asigna automáticamente:</strong> imágenes &rarr; Captura de Evidencia &middot; PDF &rarr; Cotización de Marca.
+                    </span>
+                  </div>
+                </div>
               </div>
 
-            {/* Tipo de Documento */}
-            <div className="reg-field">
-              <label>
-                Tipo de Evidencia / Documento <span className="required">*</span>
-              </label>
-              <select
-                className="reg-input"
-                value={tipoDoc}
-                onChange={(e) => setTipoDoc(e.target.value)}
-                required
+              {/* Zona Drag & Drop (IMÁGENES O PDF DE COTIZACIÓN) */}
+              <div
+                className={`evi-dropzone ${dragOver ? 'dragover' : ''} ${archivo ? 'has-file' : ''}`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver(true);
+                }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
               >
-                <option value="Comprobante de Cotización en Perú Compras">
-                  📄 Comprobante de Cotización en Perú Compras
-                </option>
-                <option value="Acta de Buena Pro">
-                  📑 Acta de Buena Pro / Adjudicación
-                </option>
-                <option value="Orden de Compra (OC)">
-                  💼 Orden de Compra Electrónica (OC)
-                </option>
-                <option value="Propuesta Presentada">
-                  📝 Propuesta Técnica / Económica Registrada
-                </option>
-              </select>
-            </div>
-          </div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/png,image/jpeg,image/jpg,image/webp,application/pdf,.pdf"
+                  style={{ display: 'none' }}
+                />
 
-          {/* Zona Drag & Drop */}
-          <div
-            className={`reg-dropzone ${dragOver ? 'drag-over' : ''} ${archivo ? 'has-file' : ''}`}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragOver(true);
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            style={{
-              borderColor: dragOver ? roleAccent : archivo ? '#10b981' : '#cbd5e1',
-              background: dragOver ? `${roleAccent}08` : archivo ? '#f0fdf4' : '#f8fafc',
-            }}
-          >
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept=".pdf,.png,.jpg,.jpeg,.zip"
-              style={{ display: 'none' }}
-            />
+                {archivo ? (
+                  <div className="evi-file-card">
+                    {previewUrl && !archivoEsPdf ? (
+                      <img src={previewUrl} alt="Vista previa" className="evi-file-thumb" />
+                    ) : (
+                      <div
+                        className="evi-file-icon"
+                        style={{
+                          background: archivoEsPdf ? '#fee2e2' : '#dcfce7',
+                        }}
+                      >
+                        <GoogleIcon name={archivoEsPdf ? 'picture_as_pdf' : 'check_circle'} size={30} color={archivoEsPdf ? '#dc2626' : '#16a34a'} />
+                      </div>
+                    )}
+                    <div className="evi-file-meta">
+                      <div className="evi-file-name">{archivo.name}</div>
+                      <div className="evi-file-sub">
+                        {(archivo.size / (1024 * 1024)).toFixed(2)} MB &bull;{' '}
+                        {archivoEsPdf ? 'Cotización de Marca (PDF) lista para guardar' : 'Captura (imagen) lista para guardar'}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setArchivo(null);
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                      }}
+                      className="evi-btn-ghost evi-btn-ghost--remove"
+                    >
+                      <GoogleIcon name="close" size={14} color="#ef4444" />
+                      <span>Cambiar</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="evi-dropzone__inner">
+                    <div className="evi-dropzone__icon" style={{ background: `${roleAccent}15` }}>
+                      <GoogleIcon name="add_photo_alternate" size={34} color={roleAccent} />
+                    </div>
+                    <div>
+                      <div className="evi-dropzone__title">Arrastra tu evidencia aquí o haz clic para examinar</div>
+                      <div className="evi-dropzone__hint">Capturas de pantalla (imágenes) para la evidencia visual &bull; <strong>PDF</strong> para la cotización de la marca &bull; Máximo 25 MB</div>
+                    </div>
+                    <div className="evi-dropzone__tags">
+                      <span className="evi-tag evi-tag--img">
+                        <GoogleIcon name="image" size={13} color="#1d4ed8" /> Captura (imagen)
+                      </span>
+                      <span className="evi-tag evi-tag--pdf">
+                        <GoogleIcon name="picture_as_pdf" size={13} color="#b91c1c" /> Cotización (PDF)
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
 
-            {archivo ? (
-              <div className="reg-dropzone-content">
-                <div className="reg-dropzone-icon" style={{ background: '#dcfce7', color: '#16a34a' }}>
-                  <GoogleIcon name="check_circle" size={32} color="#16a34a" />
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '15px' }}>
-                    {archivo.name}
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                    {(archivo.size / 1024).toFixed(1)} KB &bull; Archivo listo para subir
-                  </div>
-                </div>
+              {/* Observaciones opcionales */}
+              <div className="evi-field" style={{ marginTop: 16 }}>
+                <label>Observaciones / N° de Registro en Perú Compras (Opcional)</label>
+                <input
+                  type="text"
+                  className="evi-input"
+                  value={comentario}
+                  onChange={(e) => setComentario(e.target.value)}
+                  placeholder="Ej: Confirmación de envío de proforma en catálogo electrónico a las 11:15 AM"
+                />
+              </div>
+
+              {/* Botón de Enviar */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 18 }}>
                 <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setArchivo(null);
-                    if (fileInputRef.current) fileInputRef.current.value = '';
-                  }}
-                  className="reg-dropzone-remove-btn"
+                  type="submit"
+                  disabled={!archivo || !selectedOpId || loading}
+                  className="evi-btn-submit"
                 >
-                  <GoogleIcon name="close" size={14} color="#ef4444" />
-                  <span>Cambiar archivo</span>
+                  <GoogleIcon name="cloud_upload" size={18} color="#ffffff" />
+                  <span>{loading ? 'Guardando...' : 'Subir evidencia'}</span>
                 </button>
               </div>
-            ) : (
-              <div className="reg-dropzone-content">
-                <div className="reg-dropzone-icon" style={{ background: `${roleAccent}15`, color: roleAccent }}>
-                  <GoogleIcon name="upload_file" size={34} color={roleAccent} />
-                </div>
-                <div>
-                  <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '14.5px' }}>
-                    Arrastra tu archivo aquí o haz clic para examinar
-                  </div>
-                  <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: 4 }}>
-                    Formatos admitidos: <strong>PDF, JPG, PNG o ZIP</strong> (Máximo 25 MB)
-                  </div>
+            </form>
+          )}
+        </div>
+      </div>
+
+      {/* ── Listado de Evidencias Almacenadas en la Base de Datos ── */}
+      <div className="evi-card">
+        <div className="evi-card__head evi-card__head--list">
+          <div className="evi-card__head-icon" style={{ background: `${roleAccent}15` }}>
+            <GoogleIcon name="collections" size={20} color={roleAccent} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <h3>Evidencias Registradas <span className="evi-counter">{imagenes.length}</span></h3>
+            <p>Evidencias subidas para el requerimiento seleccionado.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => cargarImagenes(selectedOpId)}
+            title="Actualizar listado de evidencias"
+            className="evi-btn-refresh"
+          >
+            <GoogleIcon name="refresh" size={16} color="#64748b" />
+            <span>Actualizar</span>
+          </button>
+        </div>
+
+        <div className="evi-card__body" style={{ paddingTop: 6 }}>
+          {loadingImagenes ? (
+            <div className="evi-state">
+              <GoogleIcon name="hourglass_empty" size={32} color={roleAccent} />
+              <p>Cargando evidencias...</p>
+            </div>
+          ) : imagenes.length === 0 ? (
+            <div className="evi-state">
+              <div className="evi-empty__icon" style={{ background: '#f8fafc' }}>
+                <GoogleIcon name="photo_camera_back" size={32} color="#94a3b8" />
+              </div>
+              <p style={{ fontWeight: 600, color: '#475569' }}>Aún no se han guardado evidencias para este requerimiento.</p>
+              <p style={{ margin: 0, fontSize: 13, color: '#94a3b8' }}>
+                Utiliza el formulario superior para adjuntar capturas de pantalla o el PDF de cotización de la marca.
+              </p>
+            </div>
+          ) : (
+            <div className="evi-table-wrap">
+              <table className="evi-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: 64 }}>{esPdf(imagenes[0]) ? 'Icono' : 'Miniatura'}</th>
+                    <th>Requerimiento</th>
+                    <th>Tipo de Evidencia</th>
+                    <th>Archivo</th>
+                    <th>Observación</th>
+                    <th>Subido por</th>
+                    <th>Fecha de Registro</th>
+                    <th style={{ textAlign: 'center' }}>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {imagenes.map((ev) => {
+                    const archivoUrl = getImagenArchivoUrl(ev.oportunidadId, ev.id);
+                    const pdf = esPdf(ev);
+                    return (
+                      <tr key={ev.id}>
+                        <td>
+                          {pdf ? (
+                            <div
+                              onClick={() => setModalImagen(ev)}
+                              className="evi-thumb evi-thumb--pdf"
+                              title="Clic para ver el PDF"
+                            >
+                              <GoogleIcon name="picture_as_pdf" size={22} color="#dc2626" />
+                            </div>
+                          ) : (
+                            <img
+                              src={archivoUrl}
+                              alt={ev.nombreArchivo}
+                              onClick={() => setModalImagen(ev)}
+                              className="evi-thumb"
+                              title="Clic para ver en tamaño completo"
+                            />
+                          )}
+                        </td>
+                        <td>
+                          <span className="evi-req">
+                            <GoogleIcon name="assignment" size={13} color="#0369a1" />
+                            <strong>{ev.numeroRequerimiento}</strong>
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`evi-type-badge ${pdf ? 'evi-type-badge--pdf' : 'evi-type-badge--img'}`}>
+                            <GoogleIcon name={pdf ? 'picture_as_pdf' : 'image'} size={13} color={pdf ? '#b91c1c' : '#1d4ed8'} />
+                            {ev.tipoEvidencia}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <a
+                              href={archivoUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="evi-link"
+                              title="Abrir archivo en pestaña nueva"
+                            >
+                              {ev.nombreArchivo}
+                            </a>
+                            <span className="evi-size">({ev.tamanoArchivo})</span>
+                          </div>
+                        </td>
+                        <td className="evi-cell-muted" style={{ maxWidth: 200 }}>
+                          {ev.comentario ?? '-'}
+                        </td>
+                        <td style={{ fontSize: 13, color: '#334155' }}>
+                          {ev.subidoPor}
+                        </td>
+                        <td className="evi-cell-muted">
+                          {new Date(ev.fechaSubida).toLocaleString('es-PE')}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                            <button
+                              type="button"
+                              onClick={() => setModalImagen(ev)}
+                              title="Ver archivo completo"
+                              className="evi-action evi-action--view"
+                            >
+                              <GoogleIcon name="visibility" size={16} color="#1d4ed8" />
+                            </button>
+                            <a
+                              href={archivoUrl}
+                              download={ev.nombreArchivo}
+                              title="Descargar archivo"
+                              className="evi-action evi-action--download"
+                              style={{ textDecoration: 'none' }}
+                            >
+                              <GoogleIcon name="download" size={16} color="#059669" />
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => handleEliminar(ev.id)}
+                              title="Eliminar evidencia"
+                              className="evi-action evi-action--delete"
+                            >
+                              <GoogleIcon name="delete" size={16} color="#ef4444" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Modal de Vista en Tamaño Completo (Imagen o PDF) ── */}
+      {modalImagen && (
+        <div className="evi-modal-overlay" onClick={() => setModalImagen(null)}>
+          <div className="evi-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="evi-modal__head">
+              <div style={{ minWidth: 0 }}>
+                <h4>{modalImagen.nombreArchivo}</h4>
+                <div className="evi-modal__meta">
+                  {modalImagen.numeroRequerimiento} &bull; {modalImagen.tipoEvidencia} &bull; {modalImagen.tamanoArchivo}
                 </div>
               </div>
-            )}
-          </div>
-
-          {/* Observaciones opcionales */}
-          <div className="reg-field" style={{ marginTop: 14 }}>
-            <label>Observaciones / N° de Registro en Perú Compras (Opcional)</label>
-            <input
-              type="text"
-              className="reg-input"
-              value={comentario}
-              onChange={(e) => setComentario(e.target.value)}
-              placeholder="Ej: Registro N° 458821 confirmado en portal Perú Compras a las 11:15 AM"
-            />
-          </div>
-
-          {/* Botón de Enviar */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-            <button
-              type="submit"
-              disabled={!archivo || !selectedOpId || loading}
-              className="reg-btn-submit"
-              style={{
-                width: 'auto',
-                padding: '12px 28px',
-                background: archivo && selectedOpId ? roleAccent : '#cbd5e1',
-                cursor: archivo && selectedOpId ? 'pointer' : 'not-allowed',
-              }}
-            >
-              <GoogleIcon name="verified_user" size={18} color="#ffffff" />
-              <span>{loading ? 'Certificando Evidencia...' : '⚡ Subir y Certificar Evidencia'}</span>
-            </button>
-          </div>
-        </form>
-        )}
-      </div>
-
-      {/* ── Listado de Evidencias Subidas ── */}
-      <div className="reg-card" style={{ marginTop: 20 }}>
-        <div className="reg-card__header" style={{ marginBottom: 16 }}>
-          <div className="reg-card__header-icon" style={{ background: `${roleAccent}15` }}>
-            <GoogleIcon name="folder_shared" size={18} color={roleAccent} />
-          </div>
-          <div>
-            <h3>Evidencias y Constancias Registradas ({evidencias.length})</h3>
-            <p>Historial auditable de constancias de cotización y actas subidas por el equipo.</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <a
+                  href={getImagenArchivoUrl(modalImagen.oportunidadId, modalImagen.id)}
+                  download={modalImagen.nombreArchivo}
+                  className="evi-modal__download"
+                  style={{ background: roleAccent }}
+                >
+                  <GoogleIcon name="download" size={16} color="#ffffff" />
+                  <span>Descargar</span>
+                </a>
+                <button type="button" onClick={() => setModalImagen(null)} className="evi-modal__close">
+                  <GoogleIcon name="close" size={18} color="#475569" />
+                </button>
+              </div>
+            </div>
+            <div className="evi-modal__body">
+              {esPdf(modalImagen) ? (
+                <iframe
+                  src={getImagenArchivoUrl(modalImagen.oportunidadId, modalImagen.id)}
+                  title={modalImagen.nombreArchivo}
+                  className="evi-modal__frame"
+                />
+              ) : (
+                <img
+                  src={getImagenArchivoUrl(modalImagen.oportunidadId, modalImagen.id)}
+                  alt={modalImagen.nombreArchivo}
+                  className="evi-modal__img"
+                />
+              )}
+              {modalImagen.comentario && (
+                <div className="evi-modal__footer">
+                  <strong>Observación:</strong> {modalImagen.comentario}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-
-        <div className="reg-table-wrapper">
-          <table className="reg-table">
-            <thead>
-              <tr>
-                <th>Requerimiento</th>
-                <th>Tipo de Evidencia</th>
-                <th>Archivo Adjunto</th>
-                <th>Observación</th>
-                <th>Subido por</th>
-                <th>Fecha y Hora</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {evidencias.map((ev) => (
-                <tr key={ev.id}>
-                  <td>
-                    <span className="reg-badge-req">
-                      <GoogleIcon name="assignment" size={13} color="#0369a1" />
-                      <strong>{ev.numeroRequerimiento}</strong>
-                    </span>
-                  </td>
-                  <td style={{ fontSize: '13px', color: '#0f172a', fontWeight: 600 }}>
-                    {ev.tipoDocumento}
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <GoogleIcon name="description" size={16} color="#0284c7" />
-                      <span style={{ fontSize: '12.5px', color: '#0284c7', fontWeight: 600 }}>
-                        {ev.nombreArchivo}
-                      </span>
-                      <span style={{ fontSize: '11px', color: '#94a3b8' }}>({ev.tamanoArchivo})</span>
-                    </div>
-                  </td>
-                  <td style={{ fontSize: '12px', color: '#64748b', maxWidth: 220 }}>
-                    {ev.comentario ?? '-'}
-                  </td>
-                  <td style={{ fontSize: '13px', color: '#334155' }}>
-                    {ev.subidoPor}
-                  </td>
-                  <td style={{ fontSize: '12px', color: '#64748b' }}>
-                    {ev.fechaSubida}
-                  </td>
-                  <td>
-                    <span
-                      className="reg-pill"
-                      style={{
-                        background: ev.estado === 'Verificado' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(234, 179, 8, 0.12)',
-                        color: ev.estado === 'Verificado' ? '#059669' : '#b45309',
-                        fontWeight: 700,
-                        fontSize: '11.5px',
-                      }}
-                    >
-                      {ev.estado === 'Verificado' ? '✅ Verificado' : '⏳ En Revisión'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

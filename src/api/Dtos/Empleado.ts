@@ -7,6 +7,7 @@ export interface EmpleadoDto {
   cargo: string;
   telefono?: string;
   email?: string;
+  fotoUrl?: string;
   fechaIngreso: string;
   activo: boolean;
   fechaCreacion?: string;

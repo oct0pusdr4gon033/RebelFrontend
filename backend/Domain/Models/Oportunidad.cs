@@ -27,11 +27,18 @@ namespace Domain.Models
         public virtual ICollection<OportunidadMarca> OportunidadMarcas { get; set; } = new List<OportunidadMarca>();
         public virtual ICollection<OportunidadProducto> Productos { get; set; } = new List<OportunidadProducto>();
 
+        // Evidencias fotográficas / capturas vinculadas (1 Oportunidad - 1,N Imágenes en BD)
+        public virtual ICollection<OportunidadImagen> Imagenes { get; set; } = new List<OportunidadImagen>();
+
         // Límite total de cotización en Soles: Sum(Cantidad * LimiteUnitario)
         public decimal LimiteTotal { get; set; }
 
-        // Estado: "En Licitación", "Cotizada", "Ganada", "Desestimada"
+        // Estado: "En Licitación", "Cotizada", "Adjudicada", "Desestimada",
+        // "OC_RECIBIDA", "OC_ACEPTADA", "OC_RECHAZADA", "ENTREGADA"
         public string Estado { get; set; } = "En Licitación";
+
+        // Orden de Compra asociada (Bloque 2) cuando la oportunidad es adjudicada
+        public virtual OrdenCompra? OrdenCompra { get; set; }
 
         // Auditoría
         public string? CreadoPorUsuarioId { get; set; }

@@ -644,7 +644,7 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
                 <GoogleIcon name="military_tech" size={22} color="#ca8a04" />
               </div>
               <div>
-                <div className="reg-award-title">🏆 Ganadora de Prioridad</div>
+                <div className="reg-award-title">Ganadora de Prioridad</div>
                 <div className="reg-award-winner">
                   {top1?.esEmpateTecnico ? `${top1.nombre} (Empate técnico)` : top1?.nombre ?? 'Sin registro'}
                 </div>
@@ -664,7 +664,7 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
                 <GoogleIcon name="groups" size={22} color="#0284c7" />
               </div>
               <div>
-                <div className="reg-award-title">👥 Concurrencia de Ejecutivas</div>
+                <div className="reg-award-title">Concurrencia de Ejecutivas</div>
                 <div className="reg-award-winner">{ranking.length} Registros en Disputa</div>
                 <div className="reg-award-desc">
                   Requerimiento {selectedReq} registrado por {ranking.length} ejecutivas
@@ -698,7 +698,7 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
                 <GoogleIcon name="bolt" size={22} color="#ca8a04" />
               </div>
               <div>
-                <div className="reg-award-title">⚡ Más Rápida en Captura</div>
+                <div className="reg-award-title">Más Rápida en Captura</div>
                 <div className="reg-award-winner">{top1?.nombre ?? 'Sin datos'}</div>
                 <div className="reg-award-desc">
                   {top1?.reqsGanadosPrimero ?? 0} requerimientos registrados antes que nadie
@@ -714,7 +714,7 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
                 <GoogleIcon name="verified" size={22} color="#0284c7" />
               </div>
               <div>
-                <div className="reg-award-title">🥇 Mayor Volumen de Licitaciones</div>
+                <div className="reg-award-title">Mayor Volumen de Licitaciones</div>
                 <div className="reg-award-winner">
                   {top1?.totalOportunidades ?? 0} Oportunidades Registradas
                 </div>
@@ -730,7 +730,7 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
                 <GoogleIcon name="assignment_turned_in" size={22} color="#059669" />
               </div>
               <div>
-                <div className="reg-award-title">🏛️ Adjudicación Perú Compras</div>
+                <div className="reg-award-title">Adjudicación Perú Compras</div>
                 <div className="reg-award-winner">
                   {top1?.licitacionesAdjudicadas ?? 0} Convocatorias Ganadas
                 </div>
@@ -748,7 +748,7 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
                 <GoogleIcon name="monetization_on" size={22} color="#ca8a04" />
               </div>
               <div>
-                <div className="reg-award-title">💰 Mayor Volumen Licitado</div>
+                <div className="reg-award-title">Mayor Volumen Licitado</div>
                 <div className="reg-award-winner">{top1?.nombre ?? '-'}</div>
                 <div className="reg-award-desc">
                   S/ {top1?.totalCotizado.toLocaleString('es-PE') || 0} en licitaciones
@@ -764,7 +764,7 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
                 <GoogleIcon name="shopping_cart_checkout" size={22} color="#0284c7" />
               </div>
               <div>
-                <div className="reg-award-title">📦 Total Oportunidades</div>
+                <div className="reg-award-title">Total Oportunidades</div>
                 <div className="reg-award-winner">
                   {top1?.totalOportunidades ?? 0} Oportunidades Registradas
                 </div>
@@ -780,7 +780,7 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
                 <GoogleIcon name="trending_up" size={22} color="#059669" />
               </div>
               <div>
-                <div className="reg-award-title">🎯 Promedio por Oportunidad</div>
+                <div className="reg-award-title">Promedio por Oportunidad</div>
                 <div className="reg-award-winner">
                   S/ {top1?.ticketPromedio?.toLocaleString('es-PE') ?? 0}
                 </div>
@@ -789,213 +789,6 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
             </div>
           </>
         )}
-      </div>
-
-      {/* ── Tabla de Clasificación Completa ── */}
-      <div className="reg-card">
-        <div className="reg-card__header" style={{ marginBottom: 16 }}>
-          <div className="reg-card__header-icon" style={{ background: `${roleAccent}15` }}>
-            <GoogleIcon name="leaderboard" size={18} color={roleAccent} />
-          </div>
-          <div>
-            <h3>
-              {selectedReq !== 'todos'
-                ? `Orden de Llegada Completo — Requerimiento ${selectedReq}`
-                : tipoPodio === 'licitaciones'
-                  ? 'Ranking de Licitaciones — Requerimientos Ganados 1°'
-                  : 'Ranking de Ventas — Monto Total Licitado'}
-            </h3>
-            <p>
-              {selectedReq !== 'todos'
-                ? 'Orden cronológico exacto al segundo de quién registró primero este requerimiento.'
-                : tipoPodio === 'licitaciones'
-                  ? 'Ordenado por número de requerimientos donde la ejecutiva registró primero por orden de llegada.'
-                  : 'Ordenado por monto total cotizado por cada ejecutiva.'}
-            </p>
-          </div>
-        </div>
-
-        <div className="reg-table-wrapper">
-          <table className="reg-table">
-            <thead>
-              {selectedReq !== 'todos' ? (
-                <tr>
-                  <th style={{ width: '130px', textAlign: 'center' }}>Posición</th>
-                  <th>Ejecutiva</th>
-                  <th>Hora Exacta (Hora de Perú)</th>
-                  <th style={{ textAlign: 'center' }}>Diferencia de Llegada</th>
-                  <th style={{ textAlign: 'right' }}>Monto Cotizado</th>
-                  <th style={{ textAlign: 'center' }}>Prioridad</th>
-                  <th>Insignia</th>
-                </tr>
-              ) : tipoPodio === 'licitaciones' ? (
-                <tr>
-                  <th style={{ width: '130px', textAlign: 'center' }}>Posición</th>
-                  <th>Ejecutiva</th>
-                  <th>Cargo</th>
-                  <th style={{ textAlign: 'center' }}>Reqs Ganados 1°</th>
-                  <th style={{ textAlign: 'center' }}>Total Registradas</th>
-                  <th style={{ textAlign: 'right' }}>Total Licitado</th>
-                  <th style={{ textAlign: 'center' }}>Efectividad 1°</th>
-                  <th>Insignia</th>
-                </tr>
-              ) : (
-                <tr>
-                  <th style={{ width: '130px', textAlign: 'center' }}>Posición</th>
-                  <th>Ejecutiva</th>
-                  <th>Cargo</th>
-                  <th style={{ textAlign: 'center' }}>Oportunidades</th>
-                  <th style={{ textAlign: 'right' }}>Total Licitado</th>
-                  <th style={{ textAlign: 'right' }}>Ticket Promedio</th>
-                  <th style={{ textAlign: 'center' }}>Adjudicadas</th>
-                  <th>Insignia</th>
-                </tr>
-              )}
-            </thead>
-            <tbody>
-              {ranking.map((item) => (
-                <tr key={`${item.posicion}-${item.nombre}`}>
-                  <td style={{ textAlign: 'center' }}>
-                    {item.esEmpateTecnico ? (
-                      <span className="pos-badge pos-tie" title={`Empate técnico (${item.posicion}° lugar)`}>
-                        🤝 Empate técnico
-                      </span>
-                    ) : (
-                      <span className={`pos-badge pos-${item.posicion}`}>
-                        {item.posicion === 1
-                          ? '🥇'
-                          : item.posicion === 2
-                            ? '🥈'
-                            : item.posicion === 3
-                              ? '🥉'
-                              : `#${item.posicion}`}
-                      </span>
-                    )}
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div
-                        className="reg-avatar-circle"
-                        style={{ background: `${roleAccent}18`, color: roleAccent }}
-                      >
-                        {item.nombre.substring(0, 2).toUpperCase()}
-                      </div>
-                      <strong style={{ color: '#0f172a' }}>{item.nombre}</strong>
-                    </div>
-                  </td>
-
-                  {selectedReq !== 'todos' ? (
-                    <>
-                      <td style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
-                        {item.horaRegistro ?? '—'}
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <span
-                          className={`reg-podium-timing-badge ${item.esGanadoraReq ? 'timing-gold' : 'timing-delta'
-                            }`}
-                        >
-                          {item.diferenciaTiempo}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>
-                        S/ {item.totalCotizado.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        {item.esEmpateTecnico ? (
-                          <span
-                            className="reg-pill"
-                            style={{ background: '#fef3c7', color: '#b45309', fontWeight: 800 }}
-                          >
-                            🤝 Empate técnico ({item.posicion}°)
-                          </span>
-                        ) : item.esGanadoraReq ? (
-                          <span
-                            className="reg-pill"
-                            style={{ background: '#fef3c7', color: '#b45309', fontWeight: 800 }}
-                          >
-                            👑 1° Asignada (Ganadora)
-                          </span>
-                        ) : (
-                          <span
-                            className="reg-pill"
-                            style={{ background: '#f1f5f9', color: '#64748b', fontWeight: 600 }}
-                          >
-                            {item.posicion}° en Registro
-                          </span>
-                        )}
-                      </td>
-                    </>
-                  ) : tipoPodio === 'licitaciones' ? (
-                    <>
-                      <td style={{ color: '#64748b', fontSize: '13px' }}>{item.cargo}</td>
-                      <td style={{ textAlign: 'center' }}>
-                        <span
-                          className="reg-priority-badge"
-                          title="Requerimientos únicos donde registró antes que nadie"
-                          style={{
-                            background: item.reqsGanadosPrimero && item.reqsGanadosPrimero > 0 ? '#fef3c7' : '#f1f5f9',
-                            color: item.reqsGanadosPrimero && item.reqsGanadosPrimero > 0 ? '#b45309' : '#64748b',
-                            fontWeight: 800,
-                          }}
-                        >
-                          🥇 {item.reqsGanadosPrimero ?? 0} ganados
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 600 }}>
-                        {item.totalOportunidades}
-                      </td>
-                      <td style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>
-                        S/ {item.totalCotizado.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <span
-                          className="reg-pill"
-                          style={{ background: '#ecfdf5', color: '#059669', fontWeight: 700 }}
-                        >
-                          {item.tasaEfectividad}%
-                        </span>
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td style={{ color: '#64748b', fontSize: '13px' }}>{item.cargo}</td>
-                      <td style={{ textAlign: 'center' }}>
-                        <span
-                          className="reg-pill"
-                          style={{ background: '#f1f5f9', color: '#334155', fontWeight: 700 }}
-                        >
-                          {item.totalOportunidades}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>
-                        S/ {item.totalCotizado.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td style={{ textAlign: 'right', fontSize: '12.5px', color: '#64748b' }}>
-                        S/ {(item.ticketPromedio || 0).toLocaleString('es-PE')}
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <span
-                          className="reg-pill"
-                          style={{ background: '#ecfdf5', color: '#059669', fontWeight: 700 }}
-                        >
-                          {item.licitacionesAdjudicadas}
-                        </span>
-                      </td>
-                    </>
-                  )}
-
-                  <td>
-                    {item.insignia ? (
-                      <span className="reg-insignia-pill">{item.insignia}</span>
-                    ) : (
-                      <span style={{ color: '#94a3b8', fontSize: '12px' }}>-</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       </div>
     </div>
   );

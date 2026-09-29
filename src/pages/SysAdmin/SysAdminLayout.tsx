@@ -6,10 +6,10 @@ import { GoogleIcon } from '../../components/GoogleIcon';
 import '../DashboardLayout.css';
 import './SysAdminTelemetry.css';
 
-const ACCENT = '#4F9AFF';
-const ACCENT_BG = 'rgba(79,154,255,0.1)';
-const ACCENT_BORDER = 'rgba(79,154,255,0.28)';
-const AVATAR_GRAD = 'linear-gradient(135deg, #4F9AFF, #1a73e8)';
+const ACCENT = '#2563eb';
+const ACCENT_BG = 'rgba(37, 99, 235, 0.1)';
+const ACCENT_BORDER = 'rgba(37, 99, 235, 0.28)';
+const AVATAR_GRAD = 'linear-gradient(135deg, #2563eb, #1d4ed8)';
 
 export const sysAdminNavItems: NavItem[] = [
   { icon: 'dashboard', label: 'Dashboard & Telemetría', path: '/sysadmin', section: null },

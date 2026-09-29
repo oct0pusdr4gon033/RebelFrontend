@@ -1,21 +1,45 @@
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Sidebar, type NavItem } from '../../components/Sidebar';
 import { GoogleIcon } from '../../components/GoogleIcon';
 import '../DashboardLayout.css';
 
-const ACCENT = '#3b5bdb';
-const ACCENT_BG = 'rgba(59,91,219,0.1)';
-const ACCENT_BORDER = 'rgba(59,91,219,0.28)';
-const AVATAR_GRAD = 'linear-gradient(135deg, #3b5bdb, #1e40af)';
+const ACCENT = '#2563eb';
+const ACCENT_BG = 'rgba(37, 99, 235, 0.1)';
+const ACCENT_BORDER = 'rgba(37, 99, 235, 0.28)';
+const AVATAR_GRAD = 'linear-gradient(135deg, #2563eb, #1d4ed8)';
 
 export const adminNavItems: NavItem[] = [
   { icon: 'dashboard', label: 'Dashboard', path: '/admin', section: null },
+  {
+    icon: 'gavel',
+    label: 'Resolver Oportunidades',
+    path: '/admin/resolver-oportunidades',
+    section: 'Licitaciones',
+    pushButtons: [
+      {
+        id: 'bandeja',
+        tabKey: 'bandeja',
+        label: 'Bandeja',
+        path: '/admin/resolver-oportunidades?tab=bandeja',
+        description: 'Todas las Oportunidades',
+      },
+      {
+        id: 'resolver',
+        tabKey: 'resolver',
+        label: 'Resolver',
+        path: '/admin/resolver-oportunidades?tab=resolver',
+        badge: 'Podio',
+        description: 'Podio y Veredicto por RQ',
+      },
+    ],
+  },
+  { icon: 'handshake', label: 'Acuerdos Marco', path: '/admin/acuerdos', section: 'Comercial' },
+  { icon: 'local_shipping', label: 'Seguimiento OC', path: '/admin/seguimiento-oc', section: 'Licitaciones' },
+  { icon: 'corporate_fare', label: 'Empresas', path: '/admin/empresas', section: null },
   { icon: 'badge', label: 'Empleados', path: '/admin/empleados', section: 'Gestión' },
   { icon: 'domain', label: 'Mi Sede', path: '/admin/sede', section: null },
-  { icon: 'handshake', label: 'Acuerdos Marco', path: '/admin/acuerdos', section: 'Comercial' },
-  { icon: 'corporate_fare', label: 'Empresas', path: '/admin/empresas', section: null },
   { icon: 'bar_chart', label: 'Reportes', path: '/admin/reportes', section: 'Análisis' },
   { icon: 'calendar_month', label: 'Calendario', path: '/admin/calendario', section: null },
   // ── Administración de Empresa ──
@@ -27,6 +51,7 @@ export const adminNavItems: NavItem[] = [
 
 export function AdminDashboard() {
   const { empleado } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <>
@@ -43,23 +68,32 @@ export function AdminDashboard() {
         </div>
         <h2>Bienvenida, {empleado?.nombres ?? 'Administradora'}</h2>
         <p>
-          Gestiona el equipo, las sedes y los acuerdos comerciales. Tienes acceso completo a la operación de tu área.
+          Gestiona el equipo, las sedes, los acuerdos comerciales y la resolución de licitaciones públicas. Tienes acceso completo a la operación de tu área.
         </p>
       </div>
 
       <p className="dash__section-title">Resumen Operativo</p>
       <div className="dash__stats">
         {[
-          { icon: 'badge', value: '12', label: 'Empleados activos' },
-          { icon: 'handshake', value: '8', label: 'Acuerdos marco' },
-          { icon: 'corporate_fare', value: '5', label: 'Empresas registradas' },
-          { icon: 'assignment', value: '3', label: 'Tareas pendientes' },
+          { icon: 'gavel', value: 'Resolver', label: 'Licitaciones y Oportunidades', path: '/admin/resolver-oportunidades', highlight: true },
+          { icon: 'badge', value: '12', label: 'Empleados activos', path: '/admin/empresa/empleados' },
+          { icon: 'handshake', value: '8', label: 'Acuerdos marco', path: '/admin/acuerdos' },
+          { icon: 'corporate_fare', value: '5', label: 'Empresas registradas', path: '/admin/empresas' },
         ].map((s, i) => (
-          <div key={i} className="dash__stat-card" style={{ borderColor: i === 0 ? ACCENT_BORDER : undefined }}>
+          <div
+            key={i}
+            className="dash__stat-card"
+            style={{
+              borderColor: s.highlight ? ACCENT : undefined,
+              cursor: s.path ? 'pointer' : 'default',
+              transition: 'all 0.2s ease',
+            }}
+            onClick={() => s.path && navigate(s.path)}
+          >
             <div className="dash__stat-icon">
-              <GoogleIcon name={s.icon} size={24} color={i === 0 ? ACCENT : '#64748b'} />
+              <GoogleIcon name={s.icon} size={24} color={s.highlight ? ACCENT : '#64748b'} />
             </div>
-            <div className="dash__stat-value" style={{ color: i === 0 ? ACCENT : undefined }}>
+            <div className="dash__stat-value" style={{ color: s.highlight ? ACCENT : undefined }}>
               {s.value}
             </div>
             <div className="dash__stat-label">{s.label}</div>
@@ -70,12 +104,17 @@ export function AdminDashboard() {
       <p className="dash__section-title">Acciones Rápidas</p>
       <div className="dash__actions-grid">
         {[
-          { icon: 'person_add', title: 'Nuevo Empleado', desc: 'Registrar al equipo' },
-          { icon: 'handshake', title: 'Acuerdo Marco', desc: 'Crear nuevo acuerdo' },
-          { icon: 'add_business', title: 'Nueva Empresa', desc: 'Registrar cliente' },
-          { icon: 'bar_chart', title: 'Ver Reportes', desc: 'Análisis del período' },
+          { icon: 'gavel', title: 'Resolver Oportunidades', desc: 'Dictaminar estado y adjudicación', path: '/admin/resolver-oportunidades' },
+          { icon: 'person_add', title: 'Nuevo Empleado', desc: 'Registrar al equipo', path: '/admin/empresa/empleados' },
+          { icon: 'handshake', title: 'Acuerdo Marco', desc: 'Crear nuevo acuerdo', path: '/admin/acuerdos' },
+          { icon: 'add_business', title: 'Nueva Empresa', desc: 'Registrar cliente', path: '/admin/empresas' },
         ].map((a, i) => (
-          <button key={i} className="dash__action-btn" style={{ borderColor: ACCENT_BORDER }}>
+          <button
+            key={i}
+            className="dash__action-btn"
+            style={{ borderColor: ACCENT_BORDER }}
+            onClick={() => a.path && navigate(a.path)}
+          >
             <div className="dash__action-btn-icon">
               <GoogleIcon name={a.icon} size={24} color={ACCENT} />
             </div>

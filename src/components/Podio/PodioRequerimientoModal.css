@@ -1,0 +1,516 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Podio Requerimiento Modal — Sales Rebel (Perú Compras)
+   Estilos Corporativos Premium para Dictamen y Asignación de Ganador
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.pod-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(6px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: podFadeIn 0.2s ease-out;
+}
+
+@keyframes podFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.pod-modal {
+  background: #ffffff;
+  width: 100%;
+  max-width: 960px;
+  max-height: 90vh;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.4);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: podSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes podSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Encabezado ── */
+.pod-header {
+  flex-shrink: 0;
+  padding: 18px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.pod-header__left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.pod-header__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.15);
+}
+
+.pod-header__titles h2 {
+  margin: 0;
+  font-size: 1.28rem;
+  font-weight: 800;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pod-header__titles p {
+  margin: 3px 0 0 0;
+  font-size: 0.84rem;
+  color: #64748b;
+}
+
+.pod-header__req-badge {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.pod-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  flex-shrink: 0;
+}
+
+.pod-close-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fca5a5;
+  transform: rotate(90deg);
+}
+
+/* ── Cuerpo Scrollable ── */
+.pod-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  background: #f8fafc;
+}
+
+/* Banner de Resumen / Situación Legal */
+.pod-summary-banner {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03);
+}
+
+.pod-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pod-summary-item__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.04em;
+}
+
+.pod-summary-item__value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+/* Alert Info */
+.pod-alert-info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: #1e40af;
+  line-height: 1.45;
+}
+
+/* ── Grid del Podio ── */
+.pod-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.pod-card {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+}
+
+.pod-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.07);
+}
+
+/* 1er Lugar - Oro */
+.pod-card--gold {
+  border-color: #facc15;
+  background: linear-gradient(180deg, #fefce8 0%, #ffffff 35%);
+  box-shadow: 0 4px 16px rgba(234, 179, 8, 0.12);
+}
+
+/* 2do Lugar - Plata */
+.pod-card--silver {
+  border-color: #cbd5e1;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 35%);
+}
+
+/* 3er Lugar - Bronce */
+.pod-card--bronze {
+  border-color: #fdba74;
+  background: linear-gradient(180deg, #fff7ed 0%, #ffffff 35%);
+}
+
+/* Ganador Adjudicado */
+.pod-card--winner {
+  border-color: #86efac !important;
+  background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 40%) !important;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.18) !important;
+}
+
+/* Desestimado */
+.pod-card--dismissed {
+  opacity: 0.78;
+  background: #fdf2f2;
+  border-color: #fca5a5;
+}
+
+/* Cabecera de la tarjeta */
+.pod-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pod-card__badge-pos {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.pod-card__badge-pos--gold {
+  background: #fef08a;
+  color: #854d0e;
+  border: 1px solid #fde047;
+}
+
+.pod-card__badge-pos--silver {
+  background: #e2e8f0;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+.pod-card__badge-pos--bronze {
+  background: #ffedd5;
+  color: #9a3412;
+  border: 1px solid #fed7aa;
+}
+
+.pod-card__badge-pos--winner {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.pod-card__badge-time {
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pod-card__badge-time--lead {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  font-weight: 800;
+}
+
+/* Usuario / Ejecutiva */
+.pod-card__user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pod-card__avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.05rem;
+  flex-shrink: 0;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pod-card__avatar--gold {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.pod-card__avatar--silver {
+  background: linear-gradient(135deg, #94a3b8, #64748b);
+}
+
+.pod-card__avatar--bronze {
+  background: linear-gradient(135deg, #d97706, #9a3412);
+}
+
+.pod-card__avatar--winner {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.pod-card__user-data {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pod-card__name {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.pod-card__meta-time {
+  font-size: 0.75rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Métricas del registro */
+.pod-card__details {
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8rem;
+}
+
+.pod-card__detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pod-card__detail-label {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.pod-card__detail-val {
+  font-weight: 700;
+  color: #0f172a;
+  text-align: right;
+}
+
+.pod-card__amount {
+  color: #0284c7;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+/* Estado pill */
+.pod-card__status-pill {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Botón de Asignación / Ganador */
+.pod-card__action {
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.pod-btn-win {
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  background: #059669;
+  color: #ffffff;
+  font-size: 0.86rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+  transition: all 0.18s ease;
+}
+
+.pod-btn-win:hover {
+  background: #047857;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(5, 150, 105, 0.35);
+}
+
+.pod-btn-win:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.pod-badge-won {
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: #ecfdf5;
+  border: 1.5px solid #86efac;
+  color: #059669;
+  font-size: 0.86rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.pod-badge-lost {
+  width: 100%;
+  padding: 9px 14px;
+  border-radius: 8px;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* ── Footer ── */
+.pod-footer {
+  flex-shrink: 0;
+  padding: 14px 24px;
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pod-footer__help {
+  font-size: 0.8rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pod-btn-close {
+  padding: 9px 20px;
+  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.pod-btn-close:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}

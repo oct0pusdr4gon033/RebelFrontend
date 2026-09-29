@@ -33,6 +33,14 @@ export interface ProductoItem {
   cantidad: number;
   /** Límite unitario en Soles (S/) fijado por Perú Compras */
   limiteUnitario: number;
+  // ── Datos de la proforma Perú Compras (opcionales) ──
+  fichaProducto?: string;
+  marcaProducto?: string;
+  moneda?: string;
+  precioUnitarioBase?: number | null;
+  precioUnitarioOfertado?: number | null;
+  condicionesAdicionales?: string;
+  fichaTecnica?: string;
 }
 
 /** Estado posible de una Oportunidad de Licitación */
@@ -41,7 +49,45 @@ export type EstadoOportunidad =
   | 'Por Vencer'
   | 'Cotizada'
   | 'Adjudicada'
-  | 'Desestimada';
+  | 'Desestimada'
+  | 'OC_RECIBIDA'
+  | 'OC_ACEPTADA'
+  | 'OC_RECHAZADA'
+  | 'ENTREGADA';
+
+/** Estado de la Orden de Compra dentro del Bloque 2 */
+export type EstadoOC =
+  | 'OC_RECIBIDA'
+  | 'OC_ACEPTADA'
+  | 'OC_RECHAZADA'
+  | 'ENTREGADA';
+
+/** Orden de Compra emitida por la entidad pública (Bloque 2) */
+export interface OrdenCompra {
+  id: number;
+  oportunidadId: number;
+  numeroOC: string;
+  fechaEmisionOC?: string | null;
+  estadoOC: EstadoOC;
+  motivoRechazo?: string | null;
+  fechaDecisionOC?: string | null;
+  costoInicial?: number | null;
+  costoRenegociado?: number | null;
+  margenAdicional?: number | null;
+  fechaRenegociacion?: string | null;
+  fechaDespacho?: string | null;
+  transportista?: string | null;
+  noGuiaRemision?: string | null;
+  fechaEntrega?: string | null;
+  // ── Buena Pro / Adjudicación (Perú Compras) ──
+  nroOCAM?: string | null;
+  nroExpediente?: string | null;
+  unidad?: string | null;
+  codigoCIAF?: string | null;
+  montoOCAM?: number | null;
+  fechaRegistro: string;
+  fechaActualizacion?: string | null;
+}
 
 /** Tipo de Podio: Licitaciones vs Ventas */
 export type TipoPodio = 'licitaciones' | 'ventas';
@@ -50,7 +96,7 @@ export type TipoPodio = 'licitaciones' | 'ventas';
 export interface Oportunidad {
   id: string | number;
   numeroRequerimiento: string;
-  acuerdoMarco: AcuerdoMarco;
+  acuerdoMarco?: AcuerdoMarco | null;
   empresaId?: number | null;
   empresaRazonSocial?: string;
   empresaRuc?: string;
@@ -60,6 +106,7 @@ export interface Oportunidad {
   items: ProductoItem[];
   limiteTotal: number;
   estado: EstadoOportunidad;
+  ordenCompra?: OrdenCompra;
   creadoPor: string;
   creadoPorUsuarioId?: string;
   createdAt: string;

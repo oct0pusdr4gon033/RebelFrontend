@@ -5,4 +5,12 @@ export interface ProductoItem {
     descripcion: string;
     cantidad: number;
     limiteUnitario: number; // En Soles S/
+    // ── Datos de la proforma Perú Compras (opcionales) ──
+    fichaProducto?: string;
+    marcaProducto?: string;
+    moneda?: string; // PEN | USD
+    precioUnitarioBase?: number | null;
+    precioUnitarioOfertado?: number | null;
+    condicionesAdicionales?: string;
+    fichaTecnica?: string;
 }

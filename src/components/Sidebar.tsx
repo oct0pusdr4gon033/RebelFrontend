@@ -45,10 +45,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   roleName,
   roleDisplayName = roleName,
   roleIcon = 'shield_person',
-  accent = '#4F9AFF',
-  accentBg = 'rgba(79, 154, 255, 0.1)',
-  accentBorder = 'rgba(79, 154, 255, 0.28)',
-  avatarGrad = 'linear-gradient(135deg, #4F9AFF, #1a73e8)',
+  accent = '#2563eb',
+  accentBg: _accentBg,
+  accentBorder: _accentBorder,
+  avatarGrad = 'linear-gradient(135deg, #2563eb, #1d4ed8)',
   basePath,
   navItems,
   isOpen = false,
@@ -64,6 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>({
     'Oportunidades': true,
     'Registro Oportunidad': true,
+    'Resolver Oportunidades': true,
   });
 
   const toggleGroup = (label: string) => {
@@ -185,32 +186,46 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   style={
                     isActive
                       ? {
-                          background: accentBg,
-                          color: accent,
-                          borderLeft: `3.5px solid ${accent}`,
-                          border: `1px solid ${accentBorder}`,
+                          background: accent,
+                          color: '#ffffff',
+                          border: 'none',
+                          boxShadow: 'none',
+                          outline: 'none',
                         }
-                      : undefined
+                      : { border: 'none', outline: 'none' }
                   }
                   onClick={() => handleNavClick(item)}
                   title={isCollapsed ? item.label : undefined}
                 >
                   <div className="sb-nav__item-main">
-                    <span className="sb-nav__item-icon">
-                      <GoogleIcon name={item.icon} size={19} />
+                    <span className="sb-nav__item-icon" style={{ color: isActive ? '#ffffff' : undefined }}>
+                      <GoogleIcon name={item.icon} size={19} color={isActive ? '#ffffff' : undefined} />
                     </span>
-                    {!isCollapsed && <span className="sb-nav__item-label">{item.label}</span>}
+                    {!isCollapsed && (
+                      <span className="sb-nav__item-label" style={{ color: isActive ? '#ffffff' : undefined }}>
+                        {item.label}
+                      </span>
+                    )}
                   </div>
                   {!isCollapsed && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       {item.badge && (
-                        <span className="sb-nav__item-badge">{item.badge}</span>
+                        <span
+                          className="sb-nav__item-badge"
+                          style={
+                            isActive
+                              ? { background: 'rgba(255, 255, 255, 0.25)', color: '#ffffff' }
+                              : undefined
+                          }
+                        >
+                          {item.badge}
+                        </span>
                       )}
                       {item.pushButtons && item.pushButtons.length > 0 && (
                         <GoogleIcon
                           name={isGroupOpen ? 'expand_less' : 'expand_more'}
                           size={16}
-                          color="#94a3b8"
+                          color={isActive ? '#ffffff' : '#94a3b8'}
                         />
                       )}
                     </div>
@@ -226,7 +241,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   >
                     {item.pushButtons.map((pb) => {
                       const searchParams = new URLSearchParams(location.search);
-                      const currentTab = searchParams.get('tab') || 'registrar';
+                      const isResolver = item.path?.includes('resolver-oportunidades');
+                      const currentTab = searchParams.get('tab') || (isResolver ? 'bandeja' : 'registrar');
                       const currentTipo = searchParams.get('tipo') || (currentTab === 'podio' ? 'licitaciones' : null);
 
                       let pbTab = pb.tabKey;
@@ -253,10 +269,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             isPbActive
                               ? {
                                   color: accent,
-                                  background: accentBg,
+                                  background: `${accent}14`,
                                   fontWeight: 700,
+                                  border: 'none',
+                                  boxShadow: 'none',
+                                  outline: 'none',
                                 }
-                              : undefined
+                              : { border: 'none', outline: 'none' }
                           }
                           onClick={() => {
                             navigate(pb.path);
@@ -264,13 +283,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           }}
                           title={pb.label}
                         >
-                          <span className="sb-sub-item__label">{pb.label}</span>
+                          <span className="sb-sub-item__label" style={{ color: isPbActive ? accent : undefined }}>
+                            {pb.label}
+                          </span>
                           {!isCollapsed && pb.badge !== undefined && (
                             <span
                               className="sb-sub-item__badge"
                               style={
                                 isPbActive
-                                  ? { background: accentBg, color: accent }
+                                  ? { background: `${accent}22`, color: accent }
                                   : undefined
                               }
                             >

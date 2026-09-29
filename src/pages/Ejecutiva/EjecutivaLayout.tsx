@@ -5,10 +5,10 @@ import { Sidebar, type NavItem } from '../../components/Sidebar';
 import { GoogleIcon } from '../../components/GoogleIcon';
 import '../DashboardLayout.css';
 
-const ACCENT = '#06b6d4';
-const ACCENT_BG = 'rgba(6,182,212,0.1)';
-const ACCENT_BORDER = 'rgba(6,182,212,0.28)';
-const AVATAR_GRAD = 'linear-gradient(135deg, #06b6d4, #0891b2)';
+const ACCENT = '#2563eb';
+const ACCENT_BG = 'rgba(37, 99, 235, 0.1)';
+const ACCENT_BORDER = 'rgba(37, 99, 235, 0.28)';
+const AVATAR_GRAD = 'linear-gradient(135deg, #2563eb, #1d4ed8)';
 
 export const ejecutivaNavItems: NavItem[] = [
   { icon: 'dashboard', label: 'Dashboard', path: '/ejecutiva', section: null },
@@ -59,6 +59,7 @@ export const ejecutivaNavItems: NavItem[] = [
     ],
   },
   { icon: 'track_changes', label: 'Mis Metas', path: '/ejecutiva/metas', section: null },
+  { icon: 'local_shipping', label: 'Seguimiento OC', path: '/ejecutiva/seguimiento-oc', section: 'Ventas' },
   { icon: 'folder_shared', label: 'Mi Cartera', path: '/ejecutiva/cartera', section: null },
   { icon: 'add_shopping_cart', label: 'Nueva Venta', path: '/ejecutiva/nueva-venta', section: null },
   { icon: 'leaderboard', label: 'Mi Ranking', path: '/ejecutiva/ranking', section: 'Rendimiento' },

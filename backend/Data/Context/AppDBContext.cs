@@ -25,6 +25,8 @@ namespace Data.Context
         public DbSet<Oportunidad> Oportunidades { get; set; }
         public DbSet<OportunidadMarca> OportunidadMarcas { get; set; }
         public DbSet<OportunidadProducto> OportunidadProductos { get; set; }
+        public DbSet<OrdenCompra> OrdenesCompra { get; set; }
+        public DbSet<OportunidadImagen> OportunidadImagenes { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -38,6 +40,8 @@ namespace Data.Context
             builder.ApplyConfiguration(new OportunidadMarcaConfiguration());
             builder.ApplyConfiguration(new OportunidadProductoConfiguration());
             builder.ApplyConfiguration(new MarcaConfiguration());
+            builder.ApplyConfiguration(new OrdenCompraConfiguration());
+            builder.ApplyConfiguration(new OportunidadImagenConfiguration());
 
             // Convertidor universal para asegurar DateTimeKind.Utc en PostgreSQL / Npgsql
             foreach (var entityType in builder.Model.GetEntityTypes())
@@ -63,3 +67,4 @@ namespace Data.Context
         }
     }
 }
+

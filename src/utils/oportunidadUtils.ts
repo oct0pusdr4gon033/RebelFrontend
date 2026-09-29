@@ -11,7 +11,7 @@ import type { EmpleadoDto } from '../api/Dtos/Empleado';
  * 5. Nombres y apellidos combinados
  */
 export function isOportunidadOwner(
-  op: Oportunidad,
+  op: { creadoPor?: string; creadoPorUsuarioId?: string } | Oportunidad,
   empleado?: EmpleadoDto | null,
   userEmail?: string | null
 ): boolean {

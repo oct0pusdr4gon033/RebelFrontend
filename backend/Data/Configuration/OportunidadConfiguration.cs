@@ -16,8 +16,6 @@ namespace Data.Configuration
                 .IsRequired()
                 .HasMaxLength(50);
 
-            builder.HasIndex(o => o.NumeroRequerimiento);
-
             builder.Property(o => o.EntidadConvocante)
                 .HasMaxLength(250);
 
@@ -41,6 +39,11 @@ namespace Data.Configuration
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            // Índice único compuesto para evitar registros duplicados de la misma ejecutiva en un requerimiento
+            builder.HasIndex(o => new { o.NumeroRequerimiento, o.CreadoPorUsuarioId })
+                .IsUnique()
+                .HasDatabaseName("IX_Oportunidades_NumeroRequerimiento_Usuario");
+
             // Relación con AppUser (Usuario que creó la oportunidad)
             builder.HasOne(o => o.CreadoPorUsuario)
                 .WithMany()
@@ -53,6 +56,94 @@ namespace Data.Configuration
                 .WithOne(p => p.Oportunidad)
                 .HasForeignKey(p => p.OportunidadId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Relación 1:1 con OrdenCompra (Bloque 2)
+            builder.HasOne(o => o.OrdenCompra)
+                .WithOne(oc => oc.Oportunidad)
+                .HasForeignKey<OrdenCompra>(oc => oc.OportunidadId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Relación 1 a N con Imágenes (Evidencias de la Oportunidad en BD)
+            builder.HasMany(o => o.Imagenes)
+                .WithOne(i => i.Oportunidad)
+                .HasForeignKey(i => i.OportunidadId)
+                .OnDelete(DeleteBehavior.Cascade);
+        }
+    }
+
+    public class OrdenCompraConfiguration : IEntityTypeConfiguration<OrdenCompra>
+    {
+        public void Configure(EntityTypeBuilder<OrdenCompra> builder)
+        {
+            builder.ToTable("OrdenesCompra");
+
+            builder.HasKey(oc => oc.Id);
+
+            builder.Property(oc => oc.NumeroOC)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            builder.Property(oc => oc.MotivoRechazo)
+                .HasMaxLength(500);
+
+            builder.Property(oc => oc.CostoInicial)
+                .HasPrecision(14, 2);
+
+            builder.Property(oc => oc.CostoRenegociado)
+                .HasPrecision(14, 2);
+
+            builder.Property(oc => oc.MargenAdicional)
+                .HasPrecision(14, 2);
+
+            builder.Property(oc => oc.Transportista)
+                .HasMaxLength(150);
+
+            builder.Property(oc => oc.NoGuiaRemision)
+                .HasMaxLength(100);
+        }
+    }
+
+    public class OportunidadImagenConfiguration : IEntityTypeConfiguration<OportunidadImagen>
+    {
+        public void Configure(EntityTypeBuilder<OportunidadImagen> builder)
+        {
+            builder.ToTable("OportunidadImagenes");
+
+            builder.HasKey(i => i.Id);
+
+            builder.Property(i => i.TipoEvidencia)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            builder.Property(i => i.NombreArchivo)
+                .IsRequired()
+                .HasMaxLength(255);
+
+            builder.Property(i => i.ContentType)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            builder.Property(i => i.TamanoArchivo)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            builder.Property(i => i.Datos)
+                .IsRequired();
+
+            builder.Property(i => i.Comentario)
+                .HasMaxLength(500);
+
+            builder.Property(i => i.SubidoPor)
+                .IsRequired()
+                .HasMaxLength(150);
+
+            builder.HasOne(i => i.SubidoPorUsuario)
+                .WithMany()
+                .HasForeignKey(i => i.SubidoPorUsuarioId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.HasIndex(i => i.OportunidadId);
         }
     }
 
@@ -96,6 +187,27 @@ namespace Data.Configuration
 
             builder.Property(p => p.LimiteSubtotal)
                 .HasPrecision(14, 2);
+
+            builder.Property(p => p.FichaProducto)
+                .HasMaxLength(50);
+
+            builder.Property(p => p.MarcaProducto)
+                .HasMaxLength(80);
+
+            builder.Property(p => p.Moneda)
+                .HasMaxLength(3);
+
+            builder.Property(p => p.PrecioUnitarioBase)
+                .HasPrecision(12, 2);
+
+            builder.Property(p => p.PrecioUnitarioOfertado)
+                .HasPrecision(12, 2);
+
+            builder.Property(p => p.CondicionesAdicionales)
+                .HasMaxLength(500);
+
+            builder.Property(p => p.FichaTecnica)
+                .HasMaxLength(500);
         }
     }
 

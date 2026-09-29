@@ -8,7 +8,9 @@ import MasterLayout, { MasterDashboard } from './pages/Master';
 import EjecutivaLayout, { EjecutivaDashboard } from './pages/Ejecutiva';
 import MiCuentaPage from './pages/MiCuenta';
 import RegistroOportunidadPage from './pages/Oportunidades';
+import { SeguimientoOCView } from './pages/Oportunidades/SeguimientoOCView';
 import { EmpresaLayout, SedesPage, EmpleadosPage, UsuariosPage } from './pages/Admin/Empresa';
+import { ResolverOportunidadesPage } from './pages/Admin/ResolverOportunidades';
 import RolesPage from './pages/SysAdmin/RolesPage';
 import GlobalSessionGuard from './components/SessionModal/GlobalSessionGuard';
 
@@ -56,7 +58,7 @@ function App() {
                 <MiCuentaPage
                   defaultRole="SysAdmin"
                   roleIcon="admin_panel_settings"
-                  accentColor="#4F9AFF"
+                  accentColor="#2563eb"
                 />
               }
             />
@@ -78,12 +80,20 @@ function App() {
           >
             <Route index element={<AdminDashboard />} />
             <Route
+              path="resolver-oportunidades"
+              element={<ResolverOportunidadesPage roleAccent="#2563eb" />}
+            />
+            <Route
+              path="seguimiento-oc"
+              element={<SeguimientoOCView roleAccent="#2563eb" />}
+            />
+            <Route
               path="mi-cuenta"
               element={
                 <MiCuentaPage
                   defaultRole="Administrador"
                   roleIcon="shield_person"
-                  accentColor="#3b5bdb"
+                  accentColor="#2563eb"
                 />
               }
             />
@@ -111,7 +121,11 @@ function App() {
             <Route index element={<MasterDashboard />} />
             <Route
               path="registro-oportunidad"
-              element={<RegistroOportunidadPage roleAccent="#0ea5e9" />}
+              element={<RegistroOportunidadPage roleAccent="#2563eb" />}
+            />
+            <Route
+              path="seguimiento-oc"
+              element={<SeguimientoOCView roleAccent="#2563eb" />}
             />
             <Route
               path="mi-cuenta"
@@ -119,7 +133,7 @@ function App() {
                 <MiCuentaPage
                   defaultRole="Ejecutivo(a) Master Ventas"
                   roleIcon="star"
-                  accentColor="#0ea5e9"
+                  accentColor="#2563eb"
                 />
               }
             />
@@ -138,7 +152,11 @@ function App() {
             <Route index element={<EjecutivaDashboard />} />
             <Route
               path="registro-oportunidad"
-              element={<RegistroOportunidadPage roleAccent="#06b6d4" />}
+              element={<RegistroOportunidadPage roleAccent="#2563eb" />}
+            />
+            <Route
+              path="seguimiento-oc"
+              element={<SeguimientoOCView roleAccent="#2563eb" />}
             />
             <Route
               path="mi-cuenta"
@@ -146,7 +164,7 @@ function App() {
                 <MiCuentaPage
                   defaultRole="Ejecutivo(a) Ventas"
                   roleIcon="work"
-                  accentColor="#06b6d4"
+                  accentColor="#2563eb"
                 />
               }
             />

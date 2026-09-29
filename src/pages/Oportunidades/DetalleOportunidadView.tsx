@@ -1,493 +1,998 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import Swal from 'sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
 import { GoogleIcon } from '../../components/GoogleIcon';
 import { useAuth } from '../../context/AuthContext';
 import { isOportunidadOwner } from '../../utils/oportunidadUtils';
 import type { Oportunidad, ProductoItem } from '../../types/oportunidades';
-import { cambiarEstadoApi } from '../../api/services/oportunidades.service';
+import {
+  cambiarEstadoApi,
+  obtenerImagenesOportunidadApi,
+  getImagenArchivoUrl,
+  type OportunidadImagenItem,
+} from '../../api/services/oportunidades.service';
 import { formatFechaHoraPeru } from '../../utils/dateUtils';
+import './DetalleOportunidadView.css';
 
 interface DetalleOportunidadViewProps {
   oportunidad: Oportunidad;
+  todasOportunidades?: Oportunidad[];
   roleAccent: string;
   onClose: () => void;
   onEdit: (op: Oportunidad) => void;
   onSubirEvidencia: (opId: string | number) => void;
   onEstadoCambiado?: (op: Oportunidad) => void;
+  onOportunidadesActualizadas?: (ops: Oportunidad[]) => void;
   getVencimientoBadge: (fechaIso: string) => { label: string; color: string; bg: string } | null;
 }
 
-const ESTADO_CONFIG: Record<string, { color: string; bg: string; icon: string }> = {
-  'En Licitación': { color: '#d97706', bg: '#fef3c7', icon: 'bolt' },
-  'Por Vencer':    { color: '#dc2626', bg: '#fee2e2', icon: 'timer' },
-  'Cotizada':      { color: '#0284c7', bg: '#e0f2fe', icon: 'description' },
-  'Adjudicada':    { color: '#059669', bg: '#d1fae5', icon: 'verified' },
-  'Desestimada':   { color: '#dc2626', bg: '#fee2e2', icon: 'cancel' },
+const ESTADO_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
+  'En Licitación': { label: 'En Licitación', color: '#d97706', bg: '#fef3c7', icon: 'bolt' },
+  'Por Vencer':    { label: 'Por Vencer',    color: '#dc2626', bg: '#fee2e2', icon: 'timer' },
+  'Cotizada':      { label: 'Cotizada',      color: '#2563eb', bg: '#eff6ff', icon: 'description' },
+  'Adjudicada':    { label: 'Adjudicada',    color: '#059669', bg: '#ecfdf5', icon: 'verified' },
+  'Desestimada':   { label: 'Desestimada',   color: '#dc2626', bg: '#fee2e2', icon: 'cancel' },
+  'OC_RECIBIDA':   { label: 'OC Recibida',   color: '#0284c7', bg: '#e0f2fe', icon: 'receipt_long' },
+  'OC_ACEPTADA':   { label: 'OC Aceptada',   color: '#059669', bg: '#ecfdf5', icon: 'thumb_up' },
+  'OC_RECHAZADA':  { label: 'OC Rechazada',  color: '#dc2626', bg: '#fee2e2', icon: 'thumb_down' },
+  'ENTREGADA':     { label: 'Entregada',     color: '#7c3aed', bg: '#f5f3ff', icon: 'inventory' },
 };
 
 export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
   oportunidad: op,
-  roleAccent,
+  todasOportunidades: _todasOportunidades,
+  roleAccent = '#2563eb',
   onClose,
   onEdit,
   onSubirEvidencia,
   onEstadoCambiado,
+  onOportunidadesActualizadas: _onOportunidadesActualizadas,
   getVencimientoBadge,
 }) => {
   const { empleado } = useAuth();
   const isOwner = isOportunidadOwner(op, empleado);
+  const isAdmin = empleado?.rolNombre === 'Administrador' || empleado?.rolNombre === 'SysAdmin';
+  const isMaster = empleado?.rolNombre === 'Ejecutivo(a) Master Ventas';
+  const esGestion = isAdmin || isMaster;
+  const canManageStatus = isOwner || isAdmin || isMaster;
+
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
-  const [errorEstado, setErrorEstado] = useState<string | null>(null);
+  const [copiado, setCopiado] = useState(false);
+  const [imagenes, setImagenes] = useState<OportunidadImagenItem[]>([]);
+  const [loadingImagenes, setLoadingImagenes] = useState<boolean>(true);
+  const [modalImagen, setModalImagen] = useState<OportunidadImagenItem | null>(null);
+
+  const cargarImagenes = useCallback(() => {
+    if (!op?.id) return;
+    setLoadingImagenes(true);
+    obtenerImagenesOportunidadApi(op.id)
+      .then((data) => {
+        setImagenes(data || []);
+      })
+      .catch((err) => {
+        console.error('Error al cargar evidencias fotográficas en Detalle:', err);
+        setImagenes([]);
+      })
+      .finally(() => {
+        setLoadingImagenes(false);
+      });
+  }, [op?.id]);
+
+  useEffect(() => {
+    cargarImagenes();
+  }, [cargarImagenes]);
+
   const vBadge = getVencimientoBadge(op.fechaVencimiento);
-  const estadoCfg = ESTADO_CONFIG[op.estado] ?? { color: '#64748b', bg: '#f1f5f9', icon: 'circle' };
-  const totalLimite = op.items.reduce(
-    (acc, it) => acc + (Number(it.cantidad) || 0) * (Number(it.limiteUnitario) || 0),
-    0,
+  const esEstadoFinal = ['Adjudicada', 'Desestimada', 'OC_RECHAZADA', 'ENTREGADA'].includes(op.estado);
+  const vColor = esEstadoFinal && vBadge ? '#64748b' : (vBadge?.color ?? '#64748b');
+  const vBg = esEstadoFinal && vBadge ? '#f1f5f9' : (vBadge?.bg ?? '#f1f5f9');
+  const vKpiColor = esEstadoFinal ? '#64748b' : '#d97706';
+  const vKpiBg = esEstadoFinal ? '#f1f5f9' : '#fef3c7';
+  const estadoCfg = ESTADO_CONFIG[op.estado] ?? {
+    label: op.estado,
+    color: '#64748b',
+    bg: '#f1f5f9',
+    icon: 'help',
+  };
+
+  // Atajo de teclado: cerrar con tecla ESC
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  // Totales
+  const totalCantidad = useMemo(
+    () => op.items.reduce((acc, it) => acc + (Number(it.cantidad) || 0), 0),
+    [op.items]
   );
 
-  const transicionesPermitidas: Record<string, string[]> = {
-    'En Licitación': ['Cotizada', 'Desestimada'],
-    'Cotizada': ['Adjudicada', 'Desestimada'],
+  const totalCalculado = useMemo(
+    () =>
+      op.items.reduce(
+        (acc, it) => acc + (Number(it.cantidad) || 0) * (Number(it.limiteUnitario) || 0),
+        0
+      ),
+    [op.items]
+  );
+
+  const totalLimite = Number(op.limiteTotal || totalCalculado);
+
+  // Transiciones de estado
+  const handleCambiarEstado = useCallback(
+    async (nuevoEstado: string, accionLabel: string) => {
+      setCambiandoEstado(true);
+      try {
+        const actualizada = await cambiarEstadoApi(op.id, nuevoEstado);
+        const estadoFinal = (actualizada.estado || nuevoEstado) as Oportunidad['estado'];
+
+        onEstadoCambiado?.({
+          ...op,
+          estado: estadoFinal,
+        });
+
+        Swal.fire({
+          icon: 'success',
+          title: `¡Oportunidad ${accionLabel}!`,
+          text: `El requerimiento "${op.numeroRequerimiento}" ahora está "${nuevoEstado}".`,
+          confirmButtonColor: roleAccent,
+          confirmButtonText: 'Aceptar',
+          timer: 2500,
+          timerProgressBar: true,
+        });
+      } catch (err: any) {
+        Swal.fire({
+          icon: 'error',
+          title: 'No se pudo actualizar el estado',
+          text: err.message || 'Ocurrió un error al comunicarse con el servidor.',
+          confirmButtonColor: '#dc2626',
+        });
+      } finally {
+        setCambiandoEstado(false);
+      }
+    },
+    [op, onEstadoCambiado, roleAccent]
+  );
+
+  // Copiar resumen al portapapeles
+  const copiarResumen = () => {
+    const resumen = [
+      `📋 *OPORTUNIDAD PERÚ COMPRAS: ${op.numeroRequerimiento}*`,
+      `🏢 *Entidad/Empresa:* ${op.entidadConvocante || op.empresaRazonSocial || 'No especificada'}`,
+      op.empresaRuc ? `📄 *RUC:* ${op.empresaRuc}` : null,
+      `🤝 *Acuerdo Marco:* ${op.acuerdoMarco ? `${op.acuerdoMarco.codigo} - ${op.acuerdoMarco.descripcion}` : 'Sin acuerdo'}`,
+      `🏷️ *Marcas:* ${op.marcas.map((m) => m.nombre).join(', ') || 'N/A'}`,
+      `📦 *Ítems:* ${op.items.length} productos (${totalCantidad} unidades)`,
+      `💰 *Límite Total:* S/ ${totalLimite.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`,
+      `⏰ *Vencimiento:* ${op.fechaVencimiento ? formatFechaHoraPeru(op.fechaVencimiento) : 'No especificado'}`,
+      `👤 *Ejecutiva:* ${op.creadoPor}`,
+      `📌 *Estado actual:* ${op.estado}`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    navigator.clipboard.writeText(resumen);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2000);
   };
 
-  const estadosSiguientes = transicionesPermitidas[op.estado] ?? [];
 
-  const handleCambiarEstado = async (nuevoEstado: string) => {
-    setCambiandoEstado(true);
-    setErrorEstado(null);
-    try {
-      const actualizada = await cambiarEstadoApi(op.id, nuevoEstado);
-      onEstadoCambiado?.({
-        ...op,
-        estado: actualizada.estado as Oportunidad['estado'],
-      });
-    } catch (err: any) {
-      setErrorEstado(err.message || 'Error al cambiar estado');
-    } finally {
-      setCambiandoEstado(false);
-    }
-  };
+
   return (
-    <>
-      {/* Overlay */}
-      <div
-        onClick={onClose}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(15, 23, 42, 0.55)',
-          backdropFilter: 'blur(6px)',
-          zIndex: 9998,
-          animation: 'detFadeIn 0.2s ease',
-        }}
-      />
-
-      {/* Full Screen Panel */}
-      <div
-        className="det-fullscreen"
-        style={{
-          position: 'fixed',
-          inset: 0,
-          width: '100vw',
-          height: '100dvh',
-          background: '#f8fafc', // Softer background for full screen
-          zIndex: 9999,
-          display: 'flex',
-          flexDirection: 'column',
-          animation: 'detFadeIn 0.25s ease',
-          overflowY: 'auto',
-        }}
-      >
-        {/* Header */}
-        <div
-          style={{
-            padding: '24px 32px',
-            borderBottom: '1px solid #e2e8f0',
-            background: `linear-gradient(135deg, ${roleAccent}10 0%, #ffffff 100%)`,
-            position: 'sticky',
-            top: 0,
-            zIndex: 10,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
-          }}
-        >
-          <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+    <div className="det-overlay" onClick={onClose}>
+      <div className="det-modal" onClick={(e) => e.stopPropagation()}>
+        {/* ── Encabezado Sticky ── */}
+        <div className="det-header">
+          <div className="det-header__top">
+            <div className="det-header__main">
               <div
+                className="det-header__icon-box"
                 style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  background: `${roleAccent}18`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
+                  background: `linear-gradient(135deg, ${roleAccent}20, ${roleAccent}35)`,
+                  color: roleAccent,
                 }}
               >
-                <GoogleIcon name="assignment" size={22} color={roleAccent} />
+                <GoogleIcon name="feed" size={24} color={roleAccent} />
               </div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
-                    {op.numeroRequerimiento}
-                  </h2>
+
+              <div className="det-header__title-wrap">
+                <div className="det-header__req-row">
+                  <h2 className="det-header__req-code">{op.numeroRequerimiento}</h2>
+
+                  {/* Badge de Prioridad Ganada */}
                   {op.prioridadGanada && (
-                    <span
-                      style={{
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        background: '#dcfce7',
-                        color: '#15803d',
-                        padding: '2px 8px',
-                        borderRadius: 20,
-                        border: '1px solid #bbf7d0',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 4,
-                      }}
-                    >
-                      <GoogleIcon name="verified" size={11} color="#15803d" />
+                    <span className="det-badge det-badge--priority" title="Prioridad de llegada legal ganada">
+                      <GoogleIcon name="verified" size={13} color="#15803d" />
                       Prioridad 1°
                     </span>
                   )}
-                  {isOwner ? (
+
+                  {/* Badge de Estado Actual */}
+                  <span
+                    className="det-badge"
+                    style={{ background: estadoCfg.bg, color: estadoCfg.color, border: `1px solid ${estadoCfg.color}35` }}
+                  >
+                    <GoogleIcon name={estadoCfg.icon} size={13} color={estadoCfg.color} />
+                    {estadoCfg.label}
+                  </span>
+
+                  {/* Badge de Vencimiento */}
+                  {vBadge && (
                     <span
-                      style={{
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        background: '#e0f2fe',
-                        color: '#0284c7',
-                        padding: '2px 8px',
-                        borderRadius: 20,
-                        border: '1px solid #bae6fd',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 4,
-                      }}
+                      className="det-badge"
+                      style={{ background: vBg, color: vColor, border: `1px solid ${vColor}35` }}
                     >
-                      <GoogleIcon name="person" size={11} color="#0284c7" />
+                      <GoogleIcon name="alarm" size={13} color={vColor} />
+                      {vBadge.label}
+                    </span>
+                  )}
+
+                  {/* Badge de Propiedad / Acceso */}
+                  {isOwner ? (
+                    <span className="det-badge det-badge--owner">
+                      <GoogleIcon name="person" size={13} color="#0284c7" />
                       Tu Licitación
                     </span>
+                  ) : isAdmin ? (
+                    <span className="det-badge det-badge--admin">
+                      <GoogleIcon name="shield_person" size={13} color="#6d28d9" />
+                      Administración
+                    </span>
                   ) : (
-                    <span
-                      style={{
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        background: '#f1f5f9',
-                        color: '#64748b',
-                        padding: '2px 8px',
-                        borderRadius: 20,
-                        border: '1px solid #e2e8f0',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 4,
-                      }}
-                    >
-                      <GoogleIcon name="lock" size={11} color="#64748b" />
-                      Solo lectura
+                    <span className="det-badge det-badge--readonly">
+                      <GoogleIcon name="visibility" size={13} color="#475569" />
+                      {op.creadoPor}
                     </span>
                   )}
                 </div>
-                <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: '#64748b' }}>
-                  {op.acuerdoMarco.codigo} · {op.acuerdoMarco.descripcion}
+
+                <p className="det-header__sub">
+                  <span>
+                    {op.acuerdoMarco
+                      ? `${op.acuerdoMarco.codigo} — ${op.acuerdoMarco.descripcion}`
+                      : 'Sin Acuerdo Marco oficial asociado'}
+                  </span>
+                  <span>&bull;</span>
+                  <span>
+                    Registrado el {op.createdAt || 'recientemente'}
+                    {op.horaRegistroExacta ? ` a las ${op.horaRegistroExacta}` : ''}
+                  </span>
                 </p>
               </div>
             </div>
+
             <button
               type="button"
+              className="det-close-btn"
               onClick={onClose}
-              style={{
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                borderRadius: 8,
-                width: 34,
-                height: 34,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                flexShrink: 0,
-              }}
-              title="Cerrar"
+              title="Cerrar ventana de detalles (Esc)"
+              aria-label="Cerrar"
             >
-              <GoogleIcon name="close" size={18} color="#64748b" />
+              <GoogleIcon name="close" size={20} color="#64748b" />
             </button>
           </div>
         </div>
 
-        {/* Body */}
-        <div style={{ flex: 1, padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div style={{ width: '100%', maxWidth: 1200, display: 'flex', flexDirection: 'column', gap: 24 }}>
-
-          {/* Estado y Vencimiento */}
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                background: estadoCfg.bg,
-                color: estadoCfg.color,
-                fontWeight: 700,
-                fontSize: '12.5px',
-                padding: '5px 12px',
-                borderRadius: 20,
-              }}
-            >
-              <GoogleIcon name={estadoCfg.icon} size={14} color={estadoCfg.color} />
-              {op.estado}
-            </span>
-            {vBadge && (
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  background: vBadge.bg,
-                  color: vBadge.color,
-                  fontWeight: 700,
-                  fontSize: '12.5px',
-                  padding: '5px 12px',
-                  borderRadius: 20,
-                }}
-              >
-                <GoogleIcon name="schedule" size={14} color={vBadge.color} />
-                {vBadge.label}
-              </span>
-            )}
-          </div>
-
-          {/* KPI Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-            {[
-              { label: 'Límite Total', value: `S/ ${Number(op.limiteTotal || totalLimite).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`, icon: 'payments', color: '#0284c7', bg: '#e0f2fe' },
-              { label: 'Productos', value: `${op.items.length} ítem${op.items.length !== 1 ? 's' : ''}`, icon: 'inventory_2', color: '#7c3aed', bg: '#ede9fe' },
-              { label: 'Marcas', value: `${op.marcas.length} marca${op.marcas.length !== 1 ? 's' : ''}`, icon: 'local_offer', color: '#d97706', bg: '#fef3c7' },
-            ].map((kpi) => (
-              <div key={kpi.label} style={{ background: '#f8fafc', border: '1.5px solid #f1f5f9', borderRadius: 12, padding: '12px 14px' }}>
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: kpi.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 6 }}>
-                  <GoogleIcon name={kpi.icon} size={16} color={kpi.color} />
-                </div>
-                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 500 }}>{kpi.label}</div>
-                <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', marginTop: 2 }}>{kpi.value}</div>
+        {/* ── Cuerpo del Modal ── */}
+        <div className="det-body">
+          {/* KPIs Strip */}
+          <div className="det-kpis">
+            <div className="det-kpi-card" style={{ borderLeft: `4px solid ${roleAccent}` }}>
+              <div className="det-kpi-card__icon" style={{ background: `${roleAccent}15` }}>
+                <GoogleIcon name="payments" size={24} color={roleAccent} />
               </div>
-            ))}
-          </div>
-
-          {/* Convocatoria */}
-          <Section title="Convocatoria Perú Compras" icon="feed" accent={roleAccent}>
-            <FieldRow label="N° Requerimiento" value={op.numeroRequerimiento} mono />
-            <FieldRow label="Acuerdo Marco" value={`${op.acuerdoMarco.codigo} — ${op.acuerdoMarco.descripcion}`} />
-            <FieldRow
-              label="Fecha de Vencimiento"
-              value={op.fechaVencimiento ? formatFechaHoraPeru(op.fechaVencimiento, { dateStyle: 'full', timeStyle: 'short' }) : '—'}
-            />
-          </Section>
-
-          {/* Empresa */}
-          <Section title="Empresa / Entidad Solicitante" icon="business" accent={roleAccent}>
-            {op.empresaRazonSocial ? (
-              <>
-                <FieldRow label="Razón Social" value={op.empresaRazonSocial} />
-                <FieldRow label="RUC" value={op.empresaRuc || '—'} mono />
-              </>
-            ) : op.entidadConvocante ? (
-              <FieldRow label="Entidad Convocante" value={op.entidadConvocante} />
-            ) : (
-              <p style={{ margin: 0, color: '#94a3b8', fontSize: '13px', fontStyle: 'italic' }}>Sin empresa asociada (Registro Exprés)</p>
-            )}
-          </Section>
-
-          {/* Marcas */}
-          <Section title="Marcas Participantes" icon="local_offer" accent={roleAccent}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {op.marcas.map((m) => (
-                <span
-                  key={m.id}
-                  style={{ background: `${roleAccent}14`, color: roleAccent, border: `1px solid ${roleAccent}30`, borderRadius: 20, padding: '4px 12px', fontSize: '12.5px', fontWeight: 600 }}
-                >
-                  {m.nombre}
+              <div className="det-kpi-card__content">
+                <span className="det-kpi-card__label">Límite Total Perú Compras</span>
+                <span className="det-kpi-card__val" style={{ color: roleAccent }}>
+                  S/ {totalLimite.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
-              ))}
-              {op.marcas.length === 0 && <span style={{ color: '#94a3b8', fontSize: '13px', fontStyle: 'italic' }}>Sin marcas</span>}
+                <span className="det-kpi-card__sub">Tope oficial máximo para cotizar</span>
+              </div>
             </div>
-          </Section>
 
-          {/* Productos */}
-          <Section title={`Productos / Ítems (${op.items.length})`} icon="inventory_2" accent={roleAccent}>
-            <div style={{ overflowX: 'auto', borderRadius: 10, border: '1px solid #f1f5f9' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
-                <thead>
-                  <tr style={{ background: '#f8fafc' }}>
-                    {['#', 'N° Parte', 'Descripción', 'Cant.', 'Límite Unit.', 'Subtotal'].map((h) => (
-                      <th key={h} style={{ padding: '8px 10px', textAlign: ['Cant.', 'Límite Unit.', 'Subtotal'].includes(h) ? 'right' : 'left', color: '#64748b', fontWeight: 600, fontSize: '11.5px', borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap' }}>
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {op.items.map((it: ProductoItem, idx: number) => {
-                    const sub = (it.cantidad || 0) * (it.limiteUnitario || 0);
-                    return (
-                      <tr key={it.id} style={{ borderBottom: idx < op.items.length - 1 ? '1px solid #f8fafc' : 'none' }}>
-                        <td style={{ padding: '8px 10px', color: '#94a3b8', fontWeight: 600 }}>{idx + 1}</td>
-                        <td style={{ padding: '8px 10px', fontWeight: 700, color: '#0f172a' }}>
-                          <code style={{ background: '#f1f5f9', padding: '1px 5px', borderRadius: 4, fontSize: '11px' }}>{it.numeroParte || '—'}</code>
-                        </td>
-                        <td style={{ padding: '8px 10px', color: '#334155', maxWidth: 160, wordBreak: 'break-word' }}>{it.descripcion || '—'}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 600, color: '#334155' }}>{it.cantidad}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'right', color: '#64748b' }}>S/ {Number(it.limiteUnitario).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: '#0284c7' }}>S/ {sub.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr style={{ borderTop: '2px solid #e2e8f0', background: '#f8fafc' }}>
-                    <td colSpan={4} style={{ padding: '8px 10px' }} />
-                    <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '11.5px', color: '#64748b', fontWeight: 600 }}>Total Límite:</td>
-                    <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 800, fontSize: '14px', color: '#0f172a' }}>
-                      S/ {totalLimite.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
+            <div className="det-kpi-card" style={{ borderLeft: '4px solid #7c3aed' }}>
+              <div className="det-kpi-card__icon" style={{ background: '#ede9fe' }}>
+                <GoogleIcon name="inventory_2" size={24} color="#7c3aed" />
+              </div>
+              <div className="det-kpi-card__content">
+                <span className="det-kpi-card__label">Ítems / Productos</span>
+                <span className="det-kpi-card__val">
+                  {op.items.length} {op.items.length === 1 ? 'producto' : 'productos'}
+                </span>
+                <span className="det-kpi-card__sub">{totalCantidad} unidades en total</span>
+              </div>
             </div>
-          </Section>
 
-          {/* Auditoría */}
-          <Section title="Auditoría y Trazabilidad" icon="history" accent={roleAccent}>
-            <FieldRow label="Registrado por" value={op.creadoPor} />
-            <FieldRow label="Fecha de Registro" value={op.createdAt} />
-            {op.horaRegistroExacta && <FieldRow label="Hora exacta de captura" value={op.horaRegistroExacta} accent="#059669" />}
-            {op.updatedAt && <FieldRow label="Última actualización" value={op.updatedAt} />}
-          </Section>
+            <div className="det-kpi-card" style={{ borderLeft: '4px solid #059669' }}>
+              <div className="det-kpi-card__icon" style={{ background: '#ecfdf5' }}>
+                <GoogleIcon name="local_offer" size={24} color="#059669" />
+              </div>
+              <div className="det-kpi-card__content">
+                <span className="det-kpi-card__label">Marcas Participantes</span>
+                <span className="det-kpi-card__val">
+                  {op.marcas.length} {op.marcas.length === 1 ? 'marca' : 'marcas'}
+                </span>
+                <span className="det-kpi-card__sub">
+                  {op.marcas.map((m) => m.nombre).join(', ') || 'Sin marcas'}
+                </span>
+              </div>
+            </div>
+
+            <div className="det-kpi-card" style={{ borderLeft: `4px solid ${vKpiColor}` }}>
+              <div className="det-kpi-card__icon" style={{ background: vKpiBg }}>
+                <GoogleIcon name="schedule" size={24} color={vKpiColor} />
+              </div>
+              <div className="det-kpi-card__content">
+                <span className="det-kpi-card__label">Vencimiento Oficial</span>
+                <span className="det-kpi-card__val" style={{ fontSize: '1.05rem', color: vColor }}>
+                  {vBadge ? vBadge.label : 'Sin fecha'}
+                </span>
+                <span className="det-kpi-card__sub">
+                  {op.fechaVencimiento
+                    ? formatFechaHoraPeru(op.fechaVencimiento, { dateStyle: 'medium', timeStyle: 'short' })
+                    : 'Sin límite fijado'}
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* Footer */}
-        <div
-          style={{
-            padding: '20px 32px',
-            borderTop: '1px solid #e2e8f0',
-            background: '#ffffff',
-            position: 'sticky',
-            bottom: 0,
-            boxShadow: '0 -4px 20px rgba(0,0,0,0.03)',
-            zIndex: 10,
-          }}
-        >
-          <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', gap: 12, justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap' }}>
-          {errorEstado && (
-            <span style={{ color: '#dc2626', fontSize: '12px', fontWeight: 600 }}>{errorEstado}</span>
-          )}
-          {!isOwner ? (
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                color: '#64748b',
-                padding: '7px 12px',
-                borderRadius: 8,
-                fontSize: '12px',
-                fontWeight: 600,
-                marginRight: 'auto',
-              }}
-            >
-              <GoogleIcon name="lock" size={14} color="#64748b" />
-              <span>Modo solo lectura &bull; Registrado por {op.creadoPor}</span>
+
+
+          {/* ── 1. Convocatoria y Cliente ── */}
+          <div className="det-section">
+            <div className="det-section__header">
+              <div className="det-section__title">
+                <div className="det-section__icon" style={{ background: `${roleAccent}15` }}>
+                  <GoogleIcon name="feed" size={17} color={roleAccent} />
+                </div>
+                <h3>1. Convocatoria y Cliente</h3>
+              </div>
             </div>
-          ) : estadosSiguientes.length > 0 ? (
-            <div style={{ display: 'flex', gap: 8, marginRight: 'auto' }}>
-              {estadosSiguientes.map((estado) => {
-                const cfg = ESTADO_CONFIG[estado] ?? { color: '#64748b', bg: '#f1f5f9', icon: 'circle' };
-                return (
+            <div className="det-section__body">
+              <div className="det-fields-grid">
+                <div className="det-field">
+                  <span className="det-field__label">Número de Requerimiento</span>
+                  <div className="det-field__value">
+                    <code>{op.numeroRequerimiento}</code>
+                  </div>
+                </div>
+
+                <div className="det-field">
+                  <span className="det-field__label">Acuerdo Marco</span>
+                  <div className="det-field__value">
+                    {op.acuerdoMarco ? (
+                      <span>
+                        <strong>{op.acuerdoMarco.codigo}</strong> — {op.acuerdoMarco.descripcion}
+                      </span>
+                    ) : (
+                      <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>No asignado</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="det-field">
+                  <span className="det-field__label">Entidad Convocante</span>
+                  <div className="det-field__value">
+                    {op.entidadConvocante ? (
+                      <strong>{op.entidadConvocante}</strong>
+                    ) : (
+                      <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>No especificada en el registro</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="det-field">
+                  <span className="det-field__label">Empresa Asociada (Cliente)</span>
+                  <div className="det-field__value">
+                    {op.empresaRazonSocial ? (
+                      <strong>{op.empresaRazonSocial}</strong>
+                    ) : (
+                      <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Sin empresa vinculada (Registro Rápido)</span>
+                    )}
+                  </div>
+                </div>
+
+                {op.empresaRuc && (
+                  <div className="det-field">
+                    <span className="det-field__label">RUC de Empresa</span>
+                    <div className="det-field__value">
+                      <code>{op.empresaRuc}</code>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* ── 3. Marcas Participantes ── */}
+          <div className="det-section">
+            <div className="det-section__header">
+              <div className="det-section__title">
+                <div className="det-section__icon" style={{ background: '#fef3c7' }}>
+                  <GoogleIcon name="local_offer" size={17} color="#d97706" />
+                </div>
+                <h3>2. Marcas con las que se cotiza ({op.marcas.length})</h3>
+              </div>
+            </div>
+            <div className="det-section__body">
+              {op.marcas.length > 0 ? (
+                <div className="det-brand-chips">
+                  {op.marcas.map((m) => (
+                    <span key={m.id} className="det-brand-chip">
+                      <GoogleIcon name="check_circle" size={15} color="#2563eb" />
+                      <span>{m.nombre}</span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                  No se registraron marcas participantes.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* ── 4. Tabla de Productos e Ítems ── */}
+          <div className="det-section">
+            <div className="det-section__header">
+              <div className="det-section__title">
+                <div className="det-section__icon" style={{ background: '#ede9fe' }}>
+                  <GoogleIcon name="inventory_2" size={17} color="#7c3aed" />
+                </div>
+                <h3>3. Detalle de Productos y Proforma ({op.items.length} ítems)</h3>
+              </div>
+              <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>
+                Total: {totalCantidad} unidades
+              </span>
+            </div>
+            <div className="det-section__body" style={{ padding: 0 }}>
+              <div className="det-table-wrap">
+                <table className="det-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '40px', textAlign: 'center' }}>#</th>
+                      <th>N° de Parte</th>
+                      <th>Descripción del Ítem</th>
+                      <th style={{ textAlign: 'center' }}>Detalles / Ficha</th>
+                      <th style={{ textAlign: 'right' }}>Cant.</th>
+                      <th style={{ textAlign: 'right' }}>Límite Unitario</th>
+                      <th style={{ textAlign: 'right' }}>Subtotal Límite</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {op.items.map((it: ProductoItem, idx: number) => {
+                      const sub = (Number(it.cantidad) || 0) * (Number(it.limiteUnitario) || 0);
+
+                      return (
+                        <tr key={it.id || idx}>
+                          <td style={{ textAlign: 'center', color: '#94a3b8', fontWeight: 700 }}>
+                            {idx + 1}
+                          </td>
+                          <td>
+                            <span className="det-item-part">{it.numeroParte || 'N/A'}</span>
+                          </td>
+                          <td>
+                            <div className="det-item-desc">{it.descripcion || 'Sin descripción'}</div>
+                            {it.condicionesAdicionales && (
+                              <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '3px' }}>
+                                <em>Condiciones: {it.condicionesAdicionales}</em>
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <div className="det-item-meta" style={{ justifyContent: 'center' }}>
+                              {it.marcaProducto && (
+                                <span className="det-item-pill">Marca: {it.marcaProducto}</span>
+                              )}
+                              {it.fichaProducto && (
+                                <span className="det-item-pill">Ficha: {it.fichaProducto}</span>
+                              )}
+                              {it.fichaTecnica && (
+                                <span className="det-item-pill" style={{ color: '#2563eb' }}>
+                                  PDF Técnico
+                                </span>
+                              )}
+                              {!it.marcaProducto && !it.fichaProducto && !it.fichaTecnica && (
+                                <span style={{ color: '#cbd5e1', fontSize: '0.75rem' }}>—</span>
+                              )}
+                            </div>
+                          </td>
+                          <td style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>
+                            {it.cantidad}
+                          </td>
+                          <td style={{ textAlign: 'right', color: '#64748b' }}>
+                            S/{' '}
+                            {Number(it.limiteUnitario).toLocaleString('es-PE', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </td>
+                          <td style={{ textAlign: 'right', fontWeight: 800, color: '#0284c7' }}>
+                            S/{' '}
+                            {sub.toLocaleString('es-PE', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: 'right', color: '#64748b' }}>
+                        Límite Total Consolidado:
+                      </td>
+                      <td style={{ textAlign: 'right', color: '#0f172a' }}>{totalCantidad}</td>
+                      <td style={{ textAlign: 'right', color: '#64748b' }}>Soles (PEN)</td>
+                      <td style={{ textAlign: 'right', color: '#059669', fontSize: '1rem' }}>
+                        S/{' '}
+                        {totalLimite.toLocaleString('es-PE', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* ── 5. Evidencias y Capturas de Sustento ── */}
+          <div className="det-section">
+            <div className="det-section__header">
+              <div className="det-section__title">
+                <div className="det-section__icon" style={{ background: `${roleAccent}15` }}>
+                  <GoogleIcon name="collections" size={17} color={roleAccent} />
+                </div>
+                <h3>4. Evidencias y Capturas Adjuntas ({imagenes.length})</h3>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={cargarImagenes}
+                  title="Refrescar lista de evidencias"
+                  style={{
+                    background: 'none',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 6,
+                    padding: '4px 8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    fontSize: '12px',
+                    color: '#64748b',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <GoogleIcon name="refresh" size={14} color="#64748b" />
+                  <span>Actualizar</span>
+                </button>
+                {isOwner && (
                   <button
-                    key={estado}
                     type="button"
-                    disabled={cambiandoEstado}
-                    onClick={() => handleCambiarEstado(estado)}
+                    onClick={() => {
+                      onSubirEvidencia(op.id);
+                      onClose();
+                    }}
+                    title="Subir nueva captura o foto de sustento"
                     style={{
-                      padding: '8px 14px',
-                      borderRadius: 8,
-                      border: `1.5px solid ${cfg.color}40`,
-                      background: cfg.bg,
-                      color: cfg.color,
-                      fontWeight: 700,
-                      fontSize: '12px',
-                      cursor: cambiandoEstado ? 'not-allowed' : 'pointer',
-                      display: 'inline-flex',
+                      background: 'rgba(37, 99, 235, 0.08)',
+                      border: '1px solid rgba(37, 99, 235, 0.25)',
+                      borderRadius: 6,
+                      padding: '4px 10px',
+                      display: 'flex',
                       alignItems: 'center',
-                      gap: 5,
-                      opacity: cambiandoEstado ? 0.6 : 1,
+                      gap: 4,
+                      fontSize: '12px',
+                      color: roleAccent,
+                      fontWeight: 700,
+                      cursor: 'pointer',
                     }}
                   >
-                    <GoogleIcon name={cfg.icon} size={13} color={cfg.color} />
-                    Marcar como {estado}
+                    <GoogleIcon name="add_photo_alternate" size={14} color={roleAccent} />
+                    <span>+ Adjuntar</span>
                   </button>
-                );
-              })}
+                )}
+              </div>
             </div>
-          ) : null}
-          <button type="button" onClick={onClose} style={{ padding: '10px 18px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#f8fafc', color: '#64748b', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
-            Cerrar
-          </button>
-          {isOwner && (
-            <button
-              type="button"
-              onClick={() => { onSubirEvidencia(op.id); onClose(); }}
-              style={{ padding: '10px 18px', borderRadius: 8, border: '1.5px solid rgba(16,185,129,0.3)', background: 'rgba(16,185,129,0.08)', color: '#059669', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-            >
-              <GoogleIcon name="upload_file" size={15} color="#059669" />
-              Subir Evidencia
-            </button>
+
+            <div className="det-section__body">
+              {loadingImagenes ? (
+                <div style={{ textAlign: 'center', padding: '28px 16px', color: '#64748b' }}>
+                  <GoogleIcon name="hourglass_empty" size={28} color={roleAccent} />
+                  <p style={{ marginTop: 8, fontSize: '13px', margin: 0 }}>Cargando evidencias fotográficas...</p>
+                </div>
+              ) : imagenes.length === 0 ? (
+                <div className="det-evidence-empty">
+                  <GoogleIcon name="photo_camera_back" size={36} color="#94a3b8" />
+                  <p className="det-evidence-empty__title">Sin evidencias fotográficas adjuntas</p>
+                  <p className="det-evidence-empty__sub">
+                    Aún no se han registrado capturas de cotización o proformas para este requerimiento.
+                  </p>
+                  {isOwner && (
+                    <button
+                      type="button"
+                      className="det-btn-secondary"
+                      style={{ marginTop: 12, fontSize: '12.5px' }}
+                      onClick={() => {
+                        onSubirEvidencia(op.id);
+                        onClose();
+                      }}
+                    >
+                      <GoogleIcon name="upload_file" size={16} color="#059669" />
+                      <span>Subir Primera Evidencia</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="det-evidence-grid">
+                  {imagenes.map((ev) => {
+                    const archivoUrl = getImagenArchivoUrl(ev.oportunidadId, ev.id);
+                    return (
+                      <div key={ev.id} className="det-evidence-card">
+                        <div
+                          className="det-evidence-card__preview"
+                          onClick={() => setModalImagen(ev)}
+                          title="Clic para ver en tamaño completo"
+                        >
+                          <img
+                            src={archivoUrl}
+                            alt={ev.nombreArchivo}
+                            loading="lazy"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).src = '/logo.png';
+                            }}
+                          />
+                          <div className="det-evidence-card__overlay">
+                            <GoogleIcon name="zoom_in" size={24} color="#ffffff" />
+                            <span>Ampliar Imagen</span>
+                          </div>
+                        </div>
+                        <div className="det-evidence-card__info">
+                          <div className="det-evidence-card__type">
+                            <GoogleIcon name="image" size={13} color={roleAccent} />
+                            <span title={ev.tipoEvidencia}>{ev.tipoEvidencia}</span>
+                          </div>
+                          <div className="det-evidence-card__filename" title={ev.nombreArchivo}>
+                            {ev.nombreArchivo}
+                          </div>
+                          {ev.comentario && (
+                            <div className="det-evidence-card__comment" title={ev.comentario}>
+                              <em>"{ev.comentario}"</em>
+                            </div>
+                          )}
+                          <div className="det-evidence-card__meta">
+                            <span>{ev.subidoPor}</span>
+                            <span>&bull;</span>
+                            <span>{ev.tamanoArchivo}</span>
+                          </div>
+                        </div>
+                        <div className="det-evidence-card__actions">
+                          <button
+                            type="button"
+                            className="det-evidence-btn"
+                            onClick={() => setModalImagen(ev)}
+                            title="Ver en pantalla completa"
+                          >
+                            <GoogleIcon name="visibility" size={14} color={roleAccent} />
+                            <span>Ver</span>
+                          </button>
+                          <a
+                            href={archivoUrl}
+                            download={ev.nombreArchivo}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="det-evidence-btn"
+                            title="Descargar archivo original"
+                          >
+                            <GoogleIcon name="download" size={14} color="#64748b" />
+                            <span>Descargar</span>
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── 6. Orden de Compra (si existe) ── */}
+          {op.ordenCompra && (
+            <div className="det-section">
+              <div className="det-section__header">
+                <div className="det-section__title">
+                  <div className="det-section__icon" style={{ background: '#e0f2fe' }}>
+                    <GoogleIcon name="receipt_long" size={17} color="#0284c7" />
+                  </div>
+                  <h3>5. Orden de Compra Asociada (Bloque 2)</h3>
+                </div>
+              </div>
+              <div className="det-section__body">
+                <div className="det-fields-grid">
+                  <div className="det-field">
+                    <span className="det-field__label">N° de Orden de Compra</span>
+                    <div className="det-field__value">
+                      <code>{op.ordenCompra.numeroOC}</code>
+                    </div>
+                  </div>
+
+                  <div className="det-field">
+                    <span className="det-field__label">Estado de la OC</span>
+                    <div className="det-field__value">
+                      <strong>{op.ordenCompra.estadoOC}</strong>
+                    </div>
+                  </div>
+
+                  {op.ordenCompra.fechaEmisionOC && (
+                    <div className="det-field">
+                      <span className="det-field__label">Fecha de Emisión</span>
+                      <div className="det-field__value">
+                        {formatFechaHoraPeru(op.ordenCompra.fechaEmisionOC)}
+                      </div>
+                    </div>
+                  )}
+
+                  {op.ordenCompra.transportista && (
+                    <div className="det-field">
+                      <span className="det-field__label">Transportista</span>
+                      <div className="det-field__value">{op.ordenCompra.transportista}</div>
+                    </div>
+                  )}
+
+                  {op.ordenCompra.noGuiaRemision && (
+                    <div className="det-field">
+                      <span className="det-field__label">Guía de Remisión</span>
+                      <div className="det-field__value">
+                        <code>{op.ordenCompra.noGuiaRemision}</code>
+                      </div>
+                    </div>
+                  )}
+
+                  {op.ordenCompra.fechaEntrega && (
+                    <div className="det-field">
+                      <span className="det-field__label">Fecha de Entrega</span>
+                      <div className="det-field__value">
+                        {formatFechaHoraPeru(op.ordenCompra.fechaEntrega)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
-          {isOwner && (
-            <button
-              type="button"
-              onClick={() => { onEdit(op); onClose(); }}
-              style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: roleAccent, color: '#ffffff', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, boxShadow: `0 4px 14px ${roleAccent}40` }}
-            >
-              <GoogleIcon name="edit" size={15} color="#ffffff" />
-              Editar Oportunidad
-            </button>
-          )}
+
+          {/* ── 6. Trazabilidad y Auditoría (solo gestión) ── */}
+          {esGestion && (
+            <div className="det-section">
+              <div className="det-section__header">
+              <div className="det-section__title">
+                <div className="det-section__icon" style={{ background: '#f1f5f9' }}>
+                  <GoogleIcon name="history" size={17} color="#475569" />
+                </div>
+                <h3>Trazabilidad y Auditoría</h3>
+              </div>
+            </div>
+            <div className="det-section__body">
+              <div className="det-audit-row">
+                <div className="det-audit-user">
+                  <div className="det-audit-avatar">
+                    {(op.creadoPor || 'E').charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div>Registrado por: <strong>{op.creadoPor || 'Ejecutiva'}</strong></div>
+                    <div style={{ fontSize: '0.74rem', color: '#94a3b8' }}>Usuario asignado a la oportunidad</div>
+                  </div>
+                </div>
+
+                <div className="det-audit-times">
+                  <div className="det-audit-time-item">
+                    <GoogleIcon name="event" size={15} color="#64748b" />
+                    <span>Fecha: <strong>{op.createdAt || 'N/A'}</strong></span>
+                  </div>
+
+                  {op.horaRegistroExacta && (
+                    <div className="det-audit-time-item">
+                      <GoogleIcon name="timer" size={15} color="#059669" />
+                      <span>Captura legal: <strong style={{ color: '#059669' }}>{op.horaRegistroExacta}</strong></span>
+                    </div>
+                  )}
+
+                  {op.updatedAt && (
+                    <div className="det-audit-time-item">
+                      <GoogleIcon name="update" size={15} color="#2563eb" />
+                      <span>Modificado: <strong>{op.updatedAt}</strong></span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+            )}
+        </div>
+
+        {/* ── Footer Sticky con Acciones ── */}
+        <div className="det-footer">
+          <div className="det-footer__inner">
+            {/* Acciones de Estado / Resolución */}
+            <div className="det-footer__left">
+              {canManageStatus && op.estado === 'En Licitación' && (
+                <button
+                  type="button"
+                  className="det-btn-secondary"
+                  disabled={cambiandoEstado}
+                  onClick={() => handleCambiarEstado('Cotizada', 'Cotizada')}
+                  title="Marcar como cotizada ante Perú Compras"
+                >
+                  <GoogleIcon name="description" size={16} color="#2563eb" />
+                  <span>Marcar Cotizada</span>
+                </button>
+              )}
+
+              {canManageStatus && op.estado !== 'Adjudicada' && (
+                <button
+                  type="button"
+                  className="det-btn-success"
+                  disabled={cambiandoEstado}
+                  onClick={() => handleCambiarEstado('Adjudicada', 'Adjudicada')}
+                  title="Dictaminar Buena Pro / Adjudicación"
+                >
+                  <GoogleIcon name="verified" size={16} color="#059669" />
+                  <span>Adjudicar</span>
+                </button>
+              )}
+
+              {canManageStatus && op.estado !== 'Desestimada' && (
+                <button
+                  type="button"
+                  className="det-btn-danger"
+                  disabled={cambiandoEstado}
+                  onClick={() => handleCambiarEstado('Desestimada', 'Desestimada')}
+                  title="Marcar como desestimada o perdida"
+                >
+                  <GoogleIcon name="cancel" size={16} color="#dc2626" />
+                  <span>Desestimar</span>
+                </button>
+              )}
+
+              {canManageStatus && (op.estado === 'Desestimada' || op.estado === 'Adjudicada') && (
+                <button
+                  type="button"
+                  className="det-btn-secondary"
+                  disabled={cambiandoEstado}
+                  onClick={() => handleCambiarEstado('En Licitación', 'Reabierta')}
+                  title="Reabrir la licitación"
+                >
+                  <GoogleIcon name="replay" size={16} color="#d97706" />
+                  <span>Reabrir</span>
+                </button>
+              )}
+            </div>
+
+            {/* Acciones Generales */}
+            <div className="det-footer__right">
+              {/* Botón Copiar Resumen (solo gestión) */}
+              {esGestion && (
+                <button
+                  type="button"
+                  className="det-btn-secondary"
+                  onClick={copiarResumen}
+                  title="Copiar resumen al portapapeles"
+                >
+                  <GoogleIcon name={copiado ? 'check' : 'content_copy'} size={16} color="#334155" />
+                  <span>{copiado ? '¡Copiado!' : 'Copiar Resumen'}</span>
+                </button>
+              )}
+
+              {/* Botón Subir Evidencia */}
+              {isOwner && (
+                <button
+                  type="button"
+                  className="det-btn-secondary"
+                  onClick={() => {
+                    onSubirEvidencia(op.id);
+                    onClose();
+                  }}
+                  title="Adjuntar constancia oficial de Perú Compras"
+                >
+                  <GoogleIcon name="upload_file" size={16} color="#059669" />
+                  <span>Subir Evidencia</span>
+                </button>
+              )}
+
+              {/* Botón Editar Oportunidad */}
+              {isOwner && (
+                <button
+                  type="button"
+                  className="det-btn-primary"
+                  style={{ background: roleAccent }}
+                  onClick={() => {
+                    onEdit(op);
+                    onClose();
+                  }}
+                  title="Editar datos de la oportunidad"
+                >
+                  <GoogleIcon name="edit" size={16} color="#ffffff" />
+                  <span>Editar Oportunidad</span>
+                </button>
+              )}
+
+              {/* Botón Cerrar */}
+              <button type="button" className="det-btn-secondary" onClick={onClose}>
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <style>{`
-        @keyframes detFadeIn  { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
-        .det-fullscreen::-webkit-scrollbar       { width: 8px }
-        .det-fullscreen::-webkit-scrollbar-track { background: #f8fafc }
-        .det-fullscreen::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px }
-        .det-fullscreen::-webkit-scrollbar-thumb:hover { background: #94a3b8 }
-      `}</style>
-    </>
+      {/* ── Lightbox para Visualización en Pantalla Completa de la Imagen ── */}
+      {modalImagen && (
+        <div
+          className="det-lightbox-overlay"
+          onClick={() => setModalImagen(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="det-lightbox-container"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="det-lightbox-header">
+              <div className="det-lightbox-title-wrap">
+                <GoogleIcon name="image" size={22} color={roleAccent} />
+                <div>
+                  <h4>{modalImagen.nombreArchivo}</h4>
+                  <p>
+                    {modalImagen.tipoEvidencia} &bull; {modalImagen.tamanoArchivo} &bull; Subido por {modalImagen.subidoPor}
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <a
+                  href={getImagenArchivoUrl(modalImagen.oportunidadId, modalImagen.id)}
+                  download={modalImagen.nombreArchivo}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="det-btn-secondary"
+                  style={{ textDecoration: 'none', padding: '6px 12px', fontSize: '12px' }}
+                >
+                  <GoogleIcon name="download" size={16} />
+                  <span>Descargar</span>
+                </a>
+                <button
+                  type="button"
+                  className="det-close-btn"
+                  onClick={() => setModalImagen(null)}
+                  title="Cerrar vista previa (Esc)"
+                >
+                  <GoogleIcon name="close" size={20} color="#64748b" />
+                </button>
+              </div>
+            </div>
+
+            <div className="det-lightbox-body">
+              <img
+                src={getImagenArchivoUrl(modalImagen.oportunidadId, modalImagen.id)}
+                alt={modalImagen.nombreArchivo}
+              />
+            </div>
+
+            {modalImagen.comentario && (
+              <div className="det-lightbox-footer">
+                <strong>Observación / Comentario:</strong> {modalImagen.comentario}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
-/* Sub-components */
-const Section: React.FC<{ title: string; icon: string; accent: string; children: React.ReactNode }> = ({ title, icon, accent, children }) => (
-  <div style={{ background: '#fafafa', border: '1.5px solid #f1f5f9', borderRadius: 14, overflow: 'hidden' }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 16px', background: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
-      <div style={{ width: 28, height: 28, borderRadius: 7, background: `${accent}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <GoogleIcon name={icon} size={15} color={accent} />
-      </div>
-      <span style={{ fontWeight: 700, fontSize: '13px', color: '#334155' }}>{title}</span>
-    </div>
-    <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>{children}</div>
-  </div>
-);
-
-const FieldRow: React.FC<{ label: string; value: string; mono?: boolean; accent?: string }> = ({ label, value, mono, accent }) => (
-  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
-    <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500, whiteSpace: 'nowrap', paddingTop: 1 }}>{label}</span>
-    <span style={{ fontSize: '13px', color: accent ?? '#0f172a', fontWeight: accent ? 700 : 600, textAlign: 'right', fontFamily: mono ? 'monospace' : undefined, wordBreak: 'break-word' }}>
-      {value}
-    </span>
-  </div>
-);
+export default DetalleOportunidadView;
