@@ -213,42 +213,9 @@ export const SubirEvidenciaView: React.FC<SubirEvidenciaViewProps> = ({
     }
   };
 
-  const totalPdf = imagenes.filter((i) => esPdf(i)).length;
-  const totalImagen = imagenes.length - totalPdf;
 
   return (
     <div className="evi-page">
-      {/* ── Héroe / Cabecera ── */}
-      <div className="evi-hero" style={{ background: `linear-gradient(135deg, ${roleAccent} 0%, #1e293b 130%)` }}>
-        <div className="evi-hero__icon">
-          <GoogleIcon name="upload_file" size={28} color="#ffffff" />
-        </div>
-        <div className="evi-hero__body">
-          <h2 className="evi-hero__title">
-            Subir Evidencia Perú Compras
-            {opcionesActivas.length === 0 && <span className="evi-hero__empty-tag">Sin requerimientos activos</span>}
-          </h2>
-          <p className="evi-hero__sub">
-            Adjunta el sustento visual (captura del portal Perú Compras) o el <strong>PDF de cotización de la marca</strong>.
-            El tipo de evidencia se asigna automáticamente según el archivo que subas.
-          </p>
-        </div>
-        <div className="evi-hero__stats">
-          <div className="evi-stat">
-            <b>{opcionesActivas.length}</b>
-            <span>Activos</span>
-          </div>
-          <div className="evi-stat">
-            <b>{totalPdf}</b>
-            <span>PDF</span>
-          </div>
-          <div className="evi-stat">
-            <b>{totalImagen}</b>
-            <span>Capturas</span>
-          </div>
-        </div>
-      </div>
-
       {/* ── Toast de Éxito ── */}
       {successMsg && (
         <div className="evi-toast evi-toast--success">

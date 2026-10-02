@@ -11,6 +11,7 @@ import RegistroOportunidadPage from './pages/Oportunidades';
 import { SeguimientoOCView } from './pages/Oportunidades/SeguimientoOCView';
 import { EmpresaLayout, SedesPage, EmpleadosPage, UsuariosPage } from './pages/Admin/Empresa';
 import { ResolverOportunidadesPage } from './pages/Admin/ResolverOportunidades';
+import { PagosPage } from './pages/Admin/Pagos';
 import RolesPage from './pages/SysAdmin/RolesPage';
 import GlobalSessionGuard from './components/SessionModal/GlobalSessionGuard';
 
@@ -66,6 +67,7 @@ function App() {
             <Route path="roles" element={<RolesPage />} />
             <Route path="sedes" element={<SedesPage />} />
             <Route path="usuarios" element={<UsuariosPage />} />
+            <Route path="pagos" element={<PagosPage roleAccent="#2563eb" />} />
             <Route path="*" element={<Navigate to="/sysadmin" replace />} />
           </Route>
 
@@ -86,6 +88,10 @@ function App() {
             <Route
               path="seguimiento-oc"
               element={<SeguimientoOCView roleAccent="#2563eb" />}
+            />
+            <Route
+              path="pagos"
+              element={<PagosPage roleAccent="#2563eb" />}
             />
             <Route
               path="mi-cuenta"

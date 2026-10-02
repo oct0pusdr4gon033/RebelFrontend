@@ -65,6 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     'Oportunidades': true,
     'Registro Oportunidad': true,
     'Resolver Oportunidades': true,
+    'Pagos': true,
   });
 
   const toggleGroup = (label: string) => {
@@ -242,7 +243,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     {item.pushButtons.map((pb) => {
                       const searchParams = new URLSearchParams(location.search);
                       const isResolver = item.path?.includes('resolver-oportunidades');
-                      const currentTab = searchParams.get('tab') || (isResolver ? 'bandeja' : 'registrar');
+                      const isPagos = item.path?.includes('/pagos');
+                      const currentTab = searchParams.get('tab') || (isPagos ? 'historial' : isResolver ? 'bandeja' : 'registrar');
                       const currentTipo = searchParams.get('tipo') || (currentTab === 'podio' ? 'licitaciones' : null);
 
                       let pbTab = pb.tabKey;
