@@ -61,7 +61,6 @@ export interface ProductoItem {
 export type EstadoOportunidad =
   | 'En Licitación'
   | 'Por Vencer'
-  | 'Cotizada'
   | 'Adjudicada'
   | 'Desestimada'
   | 'OC_RECIBIDA'
@@ -120,6 +119,7 @@ export interface Oportunidad {
   items: ProductoItem[];
   limiteTotal: number;
   estado: EstadoOportunidad;
+  motivoDesestimacion?: string | null;
   ordenCompra?: OrdenCompra;
   creadoPor: string;
   creadoPorUsuarioId?: string;

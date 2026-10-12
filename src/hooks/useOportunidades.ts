@@ -64,7 +64,8 @@ export function mapApiToOportunidad(op: any): Oportunidad {
       })),
     })),
     limiteTotal: op.limiteTotal,
-    estado: (op.estado as Oportunidad['estado']) || 'Cotizada',
+    estado: (op.estado as Oportunidad['estado']) || 'En Licitación',
+    motivoDesestimacion: op.motivoDesestimacion ?? null,
     ordenCompra: op.ordenCompra
       ? {
           id: op.ordenCompra.id,
@@ -418,7 +419,7 @@ export function useOportunidades(creadoPorLabel: string) {
             fechaVencimiento,
             items,
             limiteTotal: totalLimite,
-            estado: 'Cotizada',
+            estado: 'En Licitación',
             creadoPor: creadoPorLabel,
             createdAt: new Date().toLocaleString('es-PE'),
           };

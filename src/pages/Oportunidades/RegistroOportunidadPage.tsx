@@ -519,7 +519,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
         text: `Ya has registrado previamente el requerimiento "${reqUpper}". Cada ejecutiva puede registrar solo una oportunidad por requerimiento.`,
         confirmButtonColor: roleAccent || '#0284c7',
         confirmButtonText: 'Entendido',
-        customClass: { popup: 'reg-swal-modal' },
+        customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
       });
       return false;
     }
@@ -545,7 +545,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
           text: `El requerimiento "${reqUpper}" ya fue registrado por otra ejecutiva hace menos de 5 minutos y conserva la prioridad del podio (primero registrado: ${mine}). Puedes volver a intentarlo en ${restanteSeg} segundos.`,
           confirmButtonColor: roleAccent || '#0284c7',
           confirmButtonText: 'Entendido',
-          customClass: { popup: 'reg-swal-modal' },
+          customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
         });
         return false;
       }
@@ -578,7 +578,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
         text: `La suma de cantidades de los proveedores no puede superar la cantidad requerida. ${detalle}`,
         confirmButtonColor: roleAccent || '#0284c7',
         confirmButtonText: 'Corregir',
-        customClass: { popup: 'reg-swal-modal' },
+        customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
       });
       return;
     }
@@ -598,7 +598,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
         text: 'Para guardar el registro completo necesitas al menos un producto con N° de parte en la Sección 4.',
         confirmButtonColor: roleAccent || '#0284c7',
         confirmButtonText: 'Entendido',
-        customClass: { popup: 'reg-swal-modal' },
+        customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
       });
       return;
     }
@@ -666,7 +666,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
           text: `La oportunidad "${numeroRequerimiento}" se ha actualizado con éxito.`,
           confirmButtonColor: roleAccent || '#0284c7',
           confirmButtonText: 'Aceptar',
-          customClass: { popup: 'reg-swal-modal' },
+          customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
         });
       } else {
         // ── MODO CREACIÓN ──
@@ -717,7 +717,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
             text: apiError ?? 'No se pudo registrar en el servidor. Verifica que el backend esté activo e intenta nuevamente.',
             confirmButtonColor: '#dc2626',
             confirmButtonText: 'Cerrar',
-            customClass: { popup: 'reg-swal-modal' },
+            customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
           });
           return;
         }
@@ -736,7 +736,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
           fechaVencimiento,
           items: validItems,
           limiteTotal: validTotalLimite,
-          estado: 'Cotizada',
+          estado: 'En Licitación',
           creadoPor: empleado?.nombreCompleto || (empleado?.nombres ? `${empleado.nombres} ${empleado.apellidos}` : 'Ejecutiva'),
           creadoPorUsuarioId: empleado?.userId,
           createdAt: formatFechaHoraPeru(new Date()),
@@ -764,7 +764,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                 <strong style="color: #0f172a;">${horaExacta}</strong>
               </div>
               <div style="font-size: 12.5px; color: #065f46; margin-top: 12px; padding: 10px 12px; background: #ecfdf5; border-radius: 6px; border: 1px solid #a7f3d0;">
-                Prioridad de llegada asegurada. La oportunidad se registró en estado <strong>Cotizada</strong>. Recuerda adjuntar la cotización de la marca o tus evidencias en la pestaña <strong>Subir Evidencia</strong>.
+                Prioridad de llegada asegurada. La oportunidad se registró en estado <strong>En Licitación</strong>. Recuerda adjuntar la cotización de la marca o tus evidencias en la sección <strong>Evidencia / Cotización</strong>.
               </div>
             </div>
           `,
@@ -774,7 +774,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
           confirmButtonColor: roleAccent || '#0284c7',
           cancelButtonColor: '#64748b',
           reverseButtons: true,
-          customClass: { popup: 'reg-swal-modal' },
+          customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
         }).then((result) => {
           if (result.isConfirmed && backendId) {
             handleIrASubirEvidencia(backendId);
@@ -805,12 +805,15 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
         text: 'Ingresa el N° de requerimiento y selecciona al menos una marca para continuar.',
         confirmButtonColor: roleAccent || '#0284c7',
         confirmButtonText: 'Entendido',
-        customClass: { popup: 'reg-swal-modal' },
+        customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
       });
       return;
     }
 
-    if (!validarRegistroPrevio(reqUpper)) return;
+    if (!validarRegistroPrevio(reqUpper)) {
+      setIsQuickModalOpen(false);
+      return;
+    }
 
     isSubmittingRef.current = true;
     setLoading(true);
@@ -836,7 +839,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
         fechaVencimiento: '',
         items: [],
         limiteTotal: 0,
-        estado: 'Cotizada',
+        estado: 'En Licitación',
         creadoPor: empleado?.nombreCompleto || (empleado?.nombres ? `${empleado.nombres} ${empleado.apellidos}` : 'Ejecutiva'),
         creadoPorUsuarioId: empleado?.userId,
         createdAt: formatFechaHoraPeru(new Date()),
@@ -857,7 +860,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
         text: `La oportunidad "${reqUpper}" se guardó. Completa los demás datos y productos y pulsa "Guardar Cambios en Oportunidad".`,
         confirmButtonColor: roleAccent || '#0284c7',
         confirmButtonText: 'Seguir completando',
-        customClass: { popup: 'reg-swal-modal' },
+        customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
       }).then(() => {
         document.getElementById('reg-section-2')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
@@ -869,7 +872,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
         text: err?.message ?? 'Error al conectar con el servidor.',
         confirmButtonColor: roleAccent || '#0284c7',
         confirmButtonText: 'Entendido',
-        customClass: { popup: 'reg-swal-modal' },
+        customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
       });
     } finally {
       isSubmittingRef.current = false;

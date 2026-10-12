@@ -16,7 +16,8 @@ export interface Oportunidad {
     fechaVencimiento: string;
     items: ProductoItem[];
     limiteTotal: number;
-    estado: 'En Licitación' | 'Por Vencer' | 'Cotizada' | 'Adjudicada' | 'Desestimada';
+    estado: 'En Licitación' | 'Por Vencer' | 'Adjudicada' | 'Desestimada';
+    motivoDesestimacion?: string | null;
     creadoPor: string;
     createdAt: string;
     updatedAt?: string;

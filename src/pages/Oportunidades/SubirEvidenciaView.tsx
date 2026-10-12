@@ -21,7 +21,7 @@ interface SubirEvidenciaViewProps {
  * Estados considerados "Activos" para poder subir evidencias de cotización o capturas.
  * Las oportunidades adjudicadas / con OC / entregadas quedan fuera del combo.
  */
-const ESTADOS_ACTIVOS = ['En Licitación', 'Cotizada'];
+const ESTADOS_ACTIVOS = ['En Licitación'];
 
 const esPdf = (item: OportunidadImagenItem) => item.contentType === 'application/pdf' || item.nombreArchivo.toLowerCase().endsWith('.pdf');
 
@@ -37,7 +37,7 @@ export const SubirEvidenciaView: React.FC<SubirEvidenciaViewProps> = ({
     return oportunidades.filter((op) => isOportunidadOwner(op, empleado));
   }, [oportunidades, empleado]);
 
-  // Solo requerimientos en estado Activo (En Licitación / Cotizada)
+  // Solo requerimientos en estado Activo (En Licitación)
   const opcionesActivas = useMemo(() => {
     return misOportunidades.filter((op) => ESTADOS_ACTIVOS.includes(op.estado));
   }, [misOportunidades]);
@@ -166,7 +166,7 @@ export const SubirEvidenciaView: React.FC<SubirEvidenciaViewProps> = ({
       return;
     }
     if (!opcionesActivas.some((o) => String(o.id) === String(selectedOpId))) {
-      alert('El requerimiento ya no se encuentra en estado activo. Solo se admiten evidencias para En Licitación o Cotizada.');
+      alert('El requerimiento ya no se encuentra en estado activo. Solo se admiten evidencias para En Licitación.');
       return;
     }
 
@@ -268,7 +268,7 @@ export const SubirEvidenciaView: React.FC<SubirEvidenciaViewProps> = ({
               <p>
                 {misOportunidades.length === 0
                   ? 'Actualmente no tienes requerimientos registrados a tu nombre. Para cargar capturas o el PDF de cotización, primero debes registrar una oportunidad comercial.'
-                  : 'Actualmente no tienes requerimientos en estado En Licitación o Cotizada. Las oportunidades ya adjudicadas se gestionan desde el panel de Órdenes de Compra.'}
+                  : 'Actualmente no tienes requerimientos en estado En Licitación. Las oportunidades ya adjudicadas se gestionan desde el panel de Órdenes de Compra.'}
               </p>
             </div>
           ) : (

@@ -29,7 +29,6 @@ interface DetalleOportunidadViewProps {
 const ESTADO_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
   'En Licitación': { label: 'En Licitación', color: '#d97706', bg: '#fef3c7', icon: 'bolt' },
   'Por Vencer':    { label: 'Por Vencer',    color: '#dc2626', bg: '#fee2e2', icon: 'timer' },
-  'Cotizada':      { label: 'Cotizada',      color: '#2563eb', bg: '#eff6ff', icon: 'description' },
   'Adjudicada':    { label: 'Adjudicada',    color: '#059669', bg: '#ecfdf5', icon: 'verified' },
   'Desestimada':   { label: 'Desestimada',   color: '#dc2626', bg: '#fee2e2', icon: 'cancel' },
   'OC_RECIBIDA':   { label: 'OC Recibida',   color: '#0284c7', bg: '#e0f2fe', icon: 'receipt_long' },
@@ -123,15 +122,16 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
 
   // Transiciones de estado
   const handleCambiarEstado = useCallback(
-    async (nuevoEstado: string, accionLabel: string) => {
+    async (nuevoEstado: string, accionLabel: string, motivo?: string) => {
       setCambiandoEstado(true);
       try {
-        const actualizada = await cambiarEstadoApi(op.id, nuevoEstado);
+        const actualizada = await cambiarEstadoApi(op.id, nuevoEstado, motivo);
         const estadoFinal = (actualizada.estado || nuevoEstado) as Oportunidad['estado'];
 
         onEstadoCambiado?.({
           ...op,
           estado: estadoFinal,
+          motivoDesestimacion: actualizada.motivoDesestimacion ?? null,
         });
 
         Swal.fire({
@@ -156,6 +156,25 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
     },
     [op, onEstadoCambiado, roleAccent]
   );
+
+  // Desestimar exige un motivo obligatorio
+  const handleDesestimar = useCallback(async () => {
+    const { value, isConfirmed } = await Swal.fire({
+      title: 'Desestimar requerimiento',
+      html: `Indica el motivo por el cual se desestima <strong>${op.numeroRequerimiento}</strong>.`,
+      input: 'textarea',
+      inputPlaceholder: 'Ej. Precio no competitivo, el cliente ya no requiere el bien...',
+      inputAttributes: { 'aria-label': 'Motivo de desestimación', maxlength: '500' },
+      showCancelButton: true,
+      confirmButtonText: 'Sí, desestimar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#64748b',
+      inputValidator: (v) => (!v || !v.trim() ? 'El motivo es obligatorio para desestimar.' : undefined),
+    });
+    if (!isConfirmed || !value) return;
+    await handleCambiarEstado('Desestimada', 'Desestimada', value.trim());
+  }, [op.numeroRequerimiento, handleCambiarEstado]);
 
   // Copiar resumen al portapapeles
   const copiarResumen = () => {
@@ -248,6 +267,23 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
                     </span>
                   )}
                 </div>
+
+                {op.estado === 'Desestimada' && op.motivoDesestimacion && (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      fontSize: '12.5px',
+                      color: '#b91c1c',
+                      background: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      borderRadius: 4,
+                      padding: '8px 10px',
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    <strong>Motivo de desestimación:</strong> {op.motivoDesestimacion}
+                  </div>
+                )}
 
                 <p className="det-header__sub">
                   <span>
@@ -821,19 +857,6 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
           <div className="det-footer__inner">
             {/* Acciones de Estado / Resolución */}
             <div className="det-footer__left">
-              {canManageStatus && op.estado === 'En Licitación' && (
-                <button
-                  type="button"
-                  className="det-btn-secondary"
-                  disabled={cambiandoEstado}
-                  onClick={() => handleCambiarEstado('Cotizada', 'Cotizada')}
-                  title="Marcar como cotizada ante Perú Compras"
-                >
-                  <GoogleIcon name="description" size={16} color="#2563eb" />
-                  <span>Marcar Cotizada</span>
-                </button>
-              )}
-
               {canManageStatus && op.estado !== 'Adjudicada' && (
                 <button
                   type="button"
@@ -852,7 +875,7 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
                   type="button"
                   className="det-btn-danger"
                   disabled={cambiandoEstado}
-                  onClick={() => handleCambiarEstado('Desestimada', 'Desestimada')}
+                  onClick={handleDesestimar}
                   title="Marcar como desestimada o perdida"
                 >
                   <GoogleIcon name="cancel" size={16} color="#dc2626" />

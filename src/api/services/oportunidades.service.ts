@@ -125,6 +125,7 @@ export interface OportunidadApiResponse {
   }[];
   limiteTotal: number;
   estado: string;
+  motivoDesestimacion?: string | null;
   ordenCompra?: OrdenCompraApiResponse | null;
   creadoPorUsuarioId?: string;
   creadoPorNombre?: string;
@@ -267,15 +268,17 @@ export async function updateOportunidadApi(
 /**
  * Cambiar estado de una oportunidad
  * Solo la ejecutiva que registró la oportunidad puede cambiar su estado.
+ * Al desestimar, `motivo` es obligatorio.
  */
 export async function cambiarEstadoApi(
   id: number | string,
-  estado: string
+  estado: string,
+  motivo?: string
 ): Promise<OportunidadApiResponse> {
   const response = await fetch(`${API_BASE}/api/oportunidades/${id}/estado`, {
     method: 'PATCH',
     headers: getAuthHeaders(),
-    body: JSON.stringify({ estado }),
+    body: JSON.stringify({ estado, motivo }),
   });
   if (!response.ok) {
     let errMsg = 'Error al cambiar estado';

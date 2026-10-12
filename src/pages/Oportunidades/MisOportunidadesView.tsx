@@ -1,4 +1,6 @@
 import React, { useState, useMemo } from 'react';
+import Swal from 'sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
 import { GoogleIcon } from '../../components/GoogleIcon';
 import { useAuth } from '../../context/AuthContext';
 import { isOportunidadOwner } from '../../utils/oportunidadUtils';
@@ -13,107 +15,8 @@ interface MisOportunidadesViewProps {
   onEstadoCambiado: (op: Oportunidad) => void;
 }
 
-/** Modal de confirmación con estilo corporativo plano */
-const ConfirmModal: React.FC<{
-  open: boolean;
-  title: string;
-  message: string;
-  confirmLabel: string;
-  confirmColor?: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-}> = ({ open, title, message, confirmLabel, confirmColor = '#dc2626', onConfirm, onCancel }) => {
-  if (!open) return null;
-  return (
-    <>
-      <div
-        onClick={onCancel}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(15, 23, 42, 0.45)',
-          backdropFilter: 'blur(3px)',
-          zIndex: 9999,
-        }}
-      />
-      <div
-        style={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          background: '#ffffff',
-          borderRadius: 4,
-          padding: 0,
-          width: 400,
-          maxWidth: '92vw',
-          zIndex: 10000,
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.15)',
-          border: '1px solid #e2e8f0',
-          overflow: 'hidden',
-        }}
-      >
-        <div style={{ padding: '24px 24px 18px', textAlign: 'center' }}>
-          <div
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 4,
-              background: `${confirmColor}15`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 14px',
-            }}
-          >
-            <GoogleIcon name="warning" size={24} color={confirmColor} />
-          </div>
-          <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px' }}>{title}</h3>
-          <p style={{ fontSize: '13px', color: '#64748b', margin: 0, lineHeight: 1.5 }}>{message}</p>
-        </div>
-        <div style={{ display: 'flex', gap: 0, borderTop: '1px solid #e2e8f0', background: '#f8fafc' }}>
-          <button
-            type="button"
-            onClick={onCancel}
-            style={{
-              flex: 1,
-              padding: '13px',
-              border: 'none',
-              background: 'transparent',
-              color: '#475569',
-              fontWeight: 700,
-              fontSize: '13px',
-              cursor: 'pointer',
-              borderRight: '1px solid #e2e8f0',
-            }}
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            style={{
-              flex: 1,
-              padding: '13px',
-              border: 'none',
-              background: confirmColor,
-              color: '#ffffff',
-              fontWeight: 700,
-              fontSize: '13px',
-              cursor: 'pointer',
-            }}
-          >
-            {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </>
-  );
-};
-
 const ESTADO_CONFIG: Record<string, { color: string; bg: string; icon: string; next: string | null }> = {
-  'En Licitación': { color: '#d97706', bg: '#fef3c7', icon: 'bolt', next: 'Cotizada' },
-  'Cotizada':      { color: '#2563eb', bg: '#eff6ff', icon: 'description', next: 'Adjudicada' },
+  'En Licitación': { color: '#d97706', bg: '#fef3c7', icon: 'bolt', next: 'Adjudicada' },
   'Adjudicada':    { color: '#059669', bg: '#ecfdf5', icon: 'verified', next: null },
   'Desestimada':   { color: '#dc2626', bg: '#fee2e2', icon: 'cancel', next: null },
   'OC_RECIBIDA':   { color: '#2563eb', bg: '#eff6ff', icon: 'receipt_long', next: null },
@@ -122,11 +25,11 @@ const ESTADO_CONFIG: Record<string, { color: string; bg: string; icon: string; n
   'ENTREGADA':     { color: '#7c3aed', bg: '#f5f3ff', icon: 'inventory', next: null },
 };
 
-const PIPELINE_ORDER = ['En Licitación', 'Cotizada', 'Adjudicada', 'Desestimada'];
+const PIPELINE_ORDER = ['En Licitación', 'Adjudicada', 'Desestimada'];
 
 const OC_STATES = ['OC_RECIBIDA', 'OC_ACEPTADA', 'OC_RECHAZADA', 'ENTREGADA'] as const;
 const OC_ACTIVAS = ['OC_RECIBIDA', 'OC_ACEPTADA'] as const;
-const ACTIVAS_STATES = ['En Licitación', 'Por Vencer', 'Cotizada'] as const;
+const ACTIVAS_STATES = ['En Licitación', 'Por Vencer'] as const;
 const GANADAS_STATES = ['Adjudicada', 'OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'] as const;
 const PERDIDAS_STATES = ['Desestimada', 'OC_RECHAZADA'] as const;
 
@@ -188,7 +91,6 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
   const [cambiandoId, setCambiandoId] = useState<number | string | null>(null);
   const [filtro, setFiltro] = useState<'todos' | 'activas' | 'ganadas' | 'perdidas'>('activas');
   const [vista, setVista] = useState<'pipeline' | 'lista' | 'oc'>('pipeline');
-  const [confirmDesestimar, setConfirmDesestimar] = useState<Oportunidad | null>(null);
 
   const misOportunidades = useMemo(() => {
     return oportunidades.filter((op) => isOportunidadOwner(op, empleado, userEmail));
@@ -235,7 +137,6 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
   const pipeline = useMemo(() => {
     const cols: Record<string, Oportunidad[]> = {
       'En Licitación': [],
-      'Cotizada': [],
       'Adjudicada': [],
       'Desestimada': [],
     };
@@ -252,16 +153,43 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
     montoTotal: misOportunidades.reduce((sum, op) => sum + (Number(op.limiteTotal) || 0), 0),
   }), [misOportunidades, ocPendientes]);
 
-  const handleCambiarEstado = async (op: Oportunidad, nuevoEstado: string) => {
+  const handleCambiarEstado = async (op: Oportunidad, nuevoEstado: string, motivo?: string) => {
     setCambiandoId(op.id);
     try {
-      const actualizada = await cambiarEstadoApi(op.id, nuevoEstado);
-      onEstadoCambiado({ ...op, estado: actualizada.estado as Oportunidad['estado'] });
+      const actualizada = await cambiarEstadoApi(op.id, nuevoEstado, motivo);
+      onEstadoCambiado({
+        ...op,
+        estado: actualizada.estado as Oportunidad['estado'],
+        motivoDesestimacion: actualizada.motivoDesestimacion ?? null,
+      });
     } catch (err: any) {
-      alert(err.message || 'Error al cambiar estado');
+      Swal.fire({
+        icon: 'error',
+        title: 'No se pudo cambiar el estado',
+        text: err.message || 'Error al cambiar estado',
+        confirmButtonColor: '#dc2626',
+      });
     } finally {
       setCambiandoId(null);
     }
+  };
+
+  const handleDesestimar = async (op: Oportunidad) => {
+    const { value, isConfirmed } = await Swal.fire({
+      title: 'Desestimar requerimiento',
+      html: `Indica el motivo por el cual se desestima <strong>${op.numeroRequerimiento}</strong>.`,
+      input: 'textarea',
+      inputPlaceholder: 'Ej. Precio no competitivo, el cliente ya no requiere el bien...',
+      inputAttributes: { 'aria-label': 'Motivo de desestimación', maxlength: '500' },
+      showCancelButton: true,
+      confirmButtonText: 'Sí, desestimar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#64748b',
+      inputValidator: (v) => (!v || !v.trim() ? 'El motivo es obligatorio para desestimar.' : undefined),
+    });
+    if (!isConfirmed || !value) return;
+    await handleCambiarEstado(op, 'Desestimada', value.trim());
   };
 
   const nombreEjecutiva = userEmail.split('@')[0].replace('.', ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -590,8 +518,8 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
                         op={op}
                         accent={roleAccent}
                         changing={cambiandoId === op.id}
-                        onChangeEstado={handleCambiarEstado}
-                        onConfirmDesestimar={setConfirmDesestimar}
+                         onChangeEstado={handleCambiarEstado}
+                         onConfirmDesestimar={handleDesestimar}
                         onEdit={onEdit}
                       />
                     ))
@@ -671,6 +599,7 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
                       </td>
                       <td style={{ padding: '13px 16px', textAlign: 'center' }}>
                         <span
+                          title={op.estado === 'Desestimada' && op.motivoDesestimacion ? `Motivo: ${op.motivoDesestimacion}` : undefined}
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -713,7 +642,7 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
                             <button
                               type="button"
                               disabled={cambiandoId === op.id}
-                              onClick={() => setConfirmDesestimar(op)}
+                              onClick={() => handleDesestimar(op)}
                               style={{
                                 padding: '6px 8px',
                                 borderRadius: 4,
@@ -869,21 +798,6 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
           </table>
         </div>
       )}
-
-      {/* Modal de confirmación para Desestimar */}
-      <ConfirmModal
-        open={confirmDesestimar !== null}
-        title="Marcar como Desestimada"
-        message={`¿Estás seguro de marcar "${confirmDesestimar?.numeroRequerimiento}" como Desestimada? Esta acción moverá la licitación al estado Desestimada.`}
-        confirmLabel="Sí, Desestimar"
-        onConfirm={() => {
-          if (confirmDesestimar) {
-            handleCambiarEstado(confirmDesestimar, 'Desestimada');
-            setConfirmDesestimar(null);
-          }
-        }}
-        onCancel={() => setConfirmDesestimar(null)}
-      />
     </div>
   );
 };
@@ -982,6 +896,22 @@ const OpCard: React.FC<{
           S/ {(Number(op.limiteTotal) || 0).toLocaleString('es-PE')}
         </span>
       </div>
+
+      {op.estado === 'Desestimada' && op.motivoDesestimacion && (
+        <div
+          style={{
+            fontSize: '11.5px',
+            color: '#b91c1c',
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: 4,
+            padding: '6px 8px',
+            lineHeight: 1.4,
+          }}
+        >
+          <strong>Motivo:</strong> {op.motivoDesestimacion}
+        </div>
+      )}
 
       {/* Acciones de la Tarjeta */}
       <div style={{ display: 'flex', gap: 6, paddingTop: 4 }}>

@@ -1266,12 +1266,6 @@
   border: 1px solid rgba(245, 158, 11, 0.25);
 }
 
-.reg-status-badge.cotizada {
-  background: rgba(16, 185, 129, 0.1);
-  color: #059669;
-  border: 1px solid rgba(16, 185, 129, 0.25);
-}
-
 /* ── Alertas de Éxito / Feedback / Error ─────────────── */
 .reg-toast-success {
   background: #ecfdf5;
@@ -2754,6 +2748,13 @@
 }
 
 /* ── SweetAlert2 Custom Styling ─────────────────────── */
+/* Swals disparados desde esta página deben quedar por encima del overlay
+   del modal de registro rápido (z-index 1200). Se acota con la clase de
+   contenedor en lugar de tocar el z-index global de SweetAlert2. */
+.reg-swal-on-top {
+  z-index: 3000 !important;
+}
+
 .reg-swal-modal {
   border-radius: 8px !important;
   font-family: inherit !important;

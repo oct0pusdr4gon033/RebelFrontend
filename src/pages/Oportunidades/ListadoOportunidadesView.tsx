@@ -51,7 +51,7 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
     empleado?.rolNombre === 'SysAdmin' ||
     empleado?.rolNombre === 'Ejecutivo(a) Master Ventas';
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'Todos' | 'En Licitación' | 'Cotizada' | 'Adjudicada' | 'Desestimada'>('Todos');
+  const [statusFilter, setStatusFilter] = useState<'Todos' | 'En Licitación' | 'Adjudicada' | 'Desestimada'>('Todos');
   const [ownerFilter, setOwnerFilter] = useState<'todos' | 'mios'>(esRolGestion ? 'todos' : 'mios');
   const [detalleDrawerOp, setDetalleDrawerOp] = useState<Oportunidad | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -75,8 +75,8 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
     return oportunidades.filter((op) => op.estado === 'En Licitación').length;
   }, [oportunidades]);
 
-  const totalCotizadas = useMemo(() => {
-    return oportunidades.filter((op) => op.estado === 'Cotizada' || op.estado === 'Adjudicada').length;
+  const totalAdjudicadas = useMemo(() => {
+    return oportunidades.filter((op) => op.estado === 'Adjudicada').length;
   }, [oportunidades]);
 
   // Filtrado + orden por defecto (más recientes primero)
@@ -150,9 +150,9 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
             <GoogleIcon name="verified_user" size={22} color="#059669" />
           </div>
           <div>
-            <div className="reg-kpi-label">Cotizadas / Adjudicadas</div>
-            <div className="reg-kpi-value">{totalCotizadas}</div>
-            <div className="reg-kpi-sub">Con propuesta presentada</div>
+            <div className="reg-kpi-label">Adjudicadas</div>
+            <div className="reg-kpi-value">{totalAdjudicadas}</div>
+            <div className="reg-kpi-sub">Con Buena Pro asignada</div>
           </div>
         </div>
 
@@ -260,7 +260,7 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
           {/* Fila Inferior: Chips de Estado y Conteo */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
             <div className="reg-filter-pills">
-              {(['Todos', 'En Licitación', 'Cotizada', 'Adjudicada', 'Desestimada'] as const).map((st) => (
+              {(['Todos', 'En Licitación', 'Adjudicada', 'Desestimada'] as const).map((st) => (
                 <button
                   key={st}
                   type="button"
