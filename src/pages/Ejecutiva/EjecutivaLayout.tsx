@@ -50,12 +50,6 @@ export const ejecutivaNavItems: NavItem[] = [
         path: '/ejecutiva/registro-oportunidad?tab=podio&tipo=ventas',
         badge: 'S/',
       },
-      {
-        id: 'subir-evidencia',
-        tabKey: 'subir-evidencia',
-        label: 'Subir Evidencia',
-        path: '/ejecutiva/registro-oportunidad?tab=subir-evidencia',
-      },
     ],
   },
   { icon: 'track_changes', label: 'Mis Metas', path: '/ejecutiva/metas', section: null },

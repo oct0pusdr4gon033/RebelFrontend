@@ -55,6 +55,13 @@ export function mapApiToOportunidad(op: any): Oportunidad {
       precioUnitarioOfertado: p.precioUnitarioOfertado ?? null,
       condicionesAdicionales: p.condicionesAdicionales ?? '',
       fichaTecnica: p.fichaTecnica ?? '',
+      proveedores: (p.proveedores ?? []).map((pv: any) => ({
+        id: pv.id,
+        nombreProveedor: pv.nombreProveedor ?? '',
+        cantidad: pv.cantidad ?? 0,
+        costoUnitario: pv.costoUnitario ?? 0,
+        costoEnvio: pv.costoEnvio ?? 0,
+      })),
     })),
     limiteTotal: op.limiteTotal,
     estado: (op.estado as Oportunidad['estado']) || 'Cotizada',

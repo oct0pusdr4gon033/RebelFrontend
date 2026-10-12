@@ -25,6 +25,18 @@ export interface EmpresaOption {
   nombreComercial?: string;
 }
 
+/** Proveedor y costos asignados a un ítem (N proveedores por ítem) */
+export interface ItemProveedor {
+  id: string | number;
+  nombreProveedor: string;
+  /** Cantidad del ítem asignada a este proveedor */
+  cantidad: number;
+  /** Costo unitario ofrecido por el proveedor */
+  costoUnitario: number;
+  /** Costo de envío independiente de este proveedor */
+  costoEnvio: number;
+}
+
 /** Ítem / producto individual dentro del requerimiento */
 export interface ProductoItem {
   id: string | number;
@@ -41,6 +53,8 @@ export interface ProductoItem {
   precioUnitarioOfertado?: number | null;
   condicionesAdicionales?: string;
   fichaTecnica?: string;
+  // ── Proveedores y costos por ítem (N por ítem) ──
+  proveedores?: ItemProveedor[];
 }
 
 /** Estado posible de una Oportunidad de Licitación */

@@ -41,6 +41,13 @@ export function getAuthHeaders(): HeadersInit {
   };
 }
 
+export interface ItemProveedorPayload {
+  nombreProveedor: string;
+  cantidad: number;
+  costoUnitario: number;
+  costoEnvio: number;
+}
+
 export interface ProductoItemPayload {
   id?: number;
   numeroParte: string;
@@ -55,6 +62,7 @@ export interface ProductoItemPayload {
   precioUnitarioOfertado?: number | null;
   condicionesAdicionales?: string | null;
   fichaTecnica?: string | null;
+  proveedores?: ItemProveedorPayload[];
 }
 
 export interface CrearOportunidadApiRequest {
@@ -74,6 +82,15 @@ export interface ActualizarOportunidadApiRequest {
   entidadConvocante?: string;
   marcaIds: number[];  // Backend: List<int>
   productos: ProductoItemPayload[];
+}
+
+export interface ItemProveedorApiResponse {
+  id: number;
+  nombreProveedor: string;
+  cantidad: number;
+  costoUnitario: number;
+  costoEnvio: number;
+  subtotal: number;
 }
 
 export interface OportunidadApiResponse {
@@ -102,6 +119,9 @@ export interface OportunidadApiResponse {
     precioUnitarioOfertado?: number | null;
     condicionesAdicionales?: string | null;
     fichaTecnica?: string | null;
+    proveedores?: ItemProveedorApiResponse[];
+    cantidadAsignada?: number;
+    costoTotalProveedores?: number;
   }[];
   limiteTotal: number;
   estado: string;
