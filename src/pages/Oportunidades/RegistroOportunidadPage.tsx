@@ -12,7 +12,7 @@ import {
 import { getMarcasApi } from '../../api/services/marca.service';
 import type { AcuerdoMarco } from '../../api/Dtos/AcuerdoMarco';
 import type { Marca } from '../../api/Dtos/Marca';
-import type { ProductoItem } from '../../api/Dtos/ProductoItem';
+import type { ProductoItem, ItemProveedor } from '../../api/Dtos/ProductoItem';
 import type { EmpresaOption } from '../../api/Dtos/Empresa';
 import type { RegistroOportunidadPageProps } from '../../props/RegistroOportunidad';
 import type { Oportunidad, OrdenCompra } from '../../types/oportunidades';
@@ -40,6 +40,7 @@ const nuevoItem = (limiteUnitario = 0): ProductoItem => ({
   precioUnitarioOfertado: null,
   condicionesAdicionales: '',
   fichaTecnica: '',
+  proveedores: [],
 });
 
 export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = ({
@@ -51,7 +52,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
   // Tab de navegación push button sincronizado con URL y Sidebar
   const tabParam = searchParams.get('tab');
   const activeTab: OportunidadTab =
-    tabParam === 'listar' || tabParam === 'podio' || tabParam === 'subir-evidencia' || tabParam === 'mis-oportunidades'
+    tabParam === 'listar' || tabParam === 'podio' || tabParam === 'mis-oportunidades'
       ? tabParam
       : 'registrar';
 
@@ -64,6 +65,9 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
   };
 
   const [preselectedEvidenciaOpId, setPreselectedEvidenciaOpId] = useState<string | number | null>(null);
+
+  // Modal único de "Registro Rápido" (campos mínimos + botón "Seguir completando")
+  const [isQuickModalOpen, setIsQuickModalOpen] = useState(false);
 
   // Modo Edición / Actualización
   const [editingId, setEditingId] = useState<string | number | null>(null);
@@ -89,7 +93,9 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
   const [selectedMarcas, setSelectedMarcas] = useState<Marca[]>([]);
   const [marcaSearch, setMarcaSearch] = useState('');
   const [isMarcaOpen, setIsMarcaOpen] = useState(false);
+  const [isQuickMarcaOpen, setIsQuickMarcaOpen] = useState(false);
   const marcaRef = useRef<HTMLDivElement>(null);
+  const quickMarcaRef = useRef<HTMLDivElement>(null);
 
   // 4. Ítems de productos (Editable)
   const [items, setItems] = useState<ProductoItem[]>([nuevoItem(70)]);
@@ -153,6 +159,13 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
             precioUnitarioOfertado: p.precioUnitarioOfertado ?? null,
             condicionesAdicionales: p.condicionesAdicionales ?? '',
             fichaTecnica: p.fichaTecnica ?? '',
+            proveedores: (p.proveedores ?? []).map((pv) => ({
+              id: pv.id,
+              nombreProveedor: pv.nombreProveedor,
+              cantidad: pv.cantidad,
+              costoUnitario: pv.costoUnitario,
+              costoEnvio: pv.costoEnvio,
+            })),
           })),
           limiteTotal: op.limiteTotal,
           estado: (op.estado as any) || 'En Licitación',
@@ -223,6 +236,9 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
       }
       if (marcaRef.current && !marcaRef.current.contains(e.target as Node)) {
         setIsMarcaOpen(false);
+      }
+      if (quickMarcaRef.current && !quickMarcaRef.current.contains(e.target as Node)) {
+        setIsQuickMarcaOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -320,12 +336,82 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
     );
   };
 
+  // ── Manejo de proveedores por ítem (N proveedores por ítem) ──
+  const handleAddProveedor = (itemId: string | number) => {
+    setItems((prev) =>
+      prev.map((it) =>
+        it.id === itemId
+          ? {
+              ...it,
+              proveedores: [
+                ...(it.proveedores ?? []),
+                {
+                  id: `prov-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                  nombreProveedor: '',
+                  cantidad: 1,
+                  costoUnitario: 0,
+                  costoEnvio: 0,
+                },
+              ],
+            }
+          : it
+      )
+    );
+  };
+
+  const handleUpdateProveedor = (
+    itemId: string | number,
+    provId: string | number,
+    field: keyof ItemProveedor,
+    val: any
+  ) => {
+    setItems((prev) =>
+      prev.map((it) =>
+        it.id === itemId
+          ? {
+              ...it,
+              proveedores: (it.proveedores ?? []).map((pv) =>
+                pv.id === provId ? { ...pv, [field]: val } : pv
+              ),
+            }
+          : it
+      )
+    );
+  };
+
+  const handleRemoveProveedor = (itemId: string | number, provId: string | number) => {
+    setItems((prev) =>
+      prev.map((it) =>
+        it.id === itemId
+          ? { ...it, proveedores: (it.proveedores ?? []).filter((pv) => pv.id !== provId) }
+          : it
+      )
+    );
+  };
+
+  // Resumen de asignación y costos de los proveedores de un ítem
+  const calcularProveedores = (it: ProductoItem) => {
+    const requerido = Number(it.cantidad) || 0;
+    const lista = it.proveedores ?? [];
+    const asignado = lista.reduce((a, pv) => a + (Number(pv.cantidad) || 0), 0);
+    const total = lista.reduce(
+      (a, pv) =>
+        a + (Number(pv.cantidad) || 0) * (Number(pv.costoUnitario) || 0) + (Number(pv.costoEnvio) || 0),
+      0
+    );
+    return { requerido, asignado, total, excede: asignado > requerido, falta: requerido - asignado };
+  };
+
   // Cálculo total del límite
   const totalCantidad = items.reduce((acc, it) => acc + (Number(it.cantidad) || 0), 0);
   const totalLimite = items.reduce(
     (acc, it) => acc + (Number(it.cantidad) || 0) * (Number(it.limiteUnitario) || 0),
     0
   );
+
+  // Total general de costos + envíos de proveedores de toda la oportunidad
+  const totalProveedoresGeneral = items.reduce((acc, it) => acc + calcularProveedores(it).total, 0);
+  const hayExcesoAsignacion = items.some((it) => calcularProveedores(it).excede);
 
   // Cálculo de tiempo restante de vencimiento
   const getVencimientoBadge = (dateStr: string) => {
@@ -388,8 +474,11 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
       return;
     }
     setPreselectedEvidenciaOpId(opId);
-    setActiveTab('subir-evidencia');
-    window.scrollTo({ top: 80, behavior: 'smooth' });
+    // Las evidencias ahora viven dentro del formulario de "Registrar oportunidad".
+    setActiveTab('registrar');
+    setTimeout(() => {
+      document.getElementById('reg-evidence-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
   };
 
   // Cancelar Modo Edición
@@ -415,6 +504,55 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
     numeroRequerimiento.trim().length > 0 &&
     selectedMarcas.length > 0;
 
+  // Validación preventiva en cliente: duplicado de la misma ejecutiva y ventana
+  // de prioridad del podio (5 min). Devuelve false si el registro debe bloquearse.
+  const validarRegistroPrevio = (reqUpper: string): boolean => {
+    const yaRegistrado = oportunidades.some(
+      (op) =>
+        op.numeroRequerimiento.trim().toUpperCase() === reqUpper &&
+        (op.creadoPorUsuarioId === empleado?.userId || !op.creadoPorUsuarioId)
+    );
+    if (yaRegistrado) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Requerimiento ya registrado',
+        text: `Ya has registrado previamente el requerimiento "${reqUpper}". Cada ejecutiva puede registrar solo una oportunidad por requerimiento.`,
+        confirmButtonColor: roleAccent || '#0284c7',
+        confirmButtonText: 'Entendido',
+        customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
+      });
+      return false;
+    }
+
+    // ── REGLA DE PRIORIDAD DEL PODIO (VENTANA DE 5 MINUTOS) ──
+    const registrosDelReq = oportunidades
+      .filter((op) => op.numeroRequerimiento.trim().toUpperCase() === reqUpper)
+      .map((op) => op.fechaRegistro)
+      .filter((f): f is string => !!f)
+      .map((f) => new Date(f).getTime())
+      .filter((t) => !Number.isNaN(t));
+
+    if (registrosDelReq.length > 0) {
+      const primerRegistro = Math.min(...registrosDelReq);
+      const antiguedadMs = Date.now() - primerRegistro;
+      const ventanaMs = 5 * 60 * 1000;
+      if (antiguedadMs < ventanaMs) {
+        const restanteSeg = Math.ceil((ventanaMs - antiguedadMs) / 1000);
+        const mine = formatFechaHoraPeru(new Date(primerRegistro));
+        Swal.fire({
+          icon: 'info',
+          title: 'Prioridad del Podio',
+          text: `El requerimiento "${reqUpper}" ya fue registrado por otra ejecutiva hace menos de 5 minutos y conserva la prioridad del podio (primero registrado: ${mine}). Puedes volver a intentarlo en ${restanteSeg} segundos.`,
+          confirmButtonColor: roleAccent || '#0284c7',
+          confirmButtonText: 'Entendido',
+          customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
+        });
+        return false;
+      }
+    }
+    return true;
+  };
+
   // Guardar (Crear o Actualizar)
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -422,53 +560,27 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
 
     const reqUpper = numeroRequerimiento.toUpperCase().trim();
 
-    // Validación preventiva en cliente para la misma ejecutiva
-    if (!editingId) {
-      const yaRegistrado = oportunidades.some(
-        (op) =>
-          op.numeroRequerimiento.trim().toUpperCase() === reqUpper &&
-          (op.creadoPorUsuarioId === empleado?.userId || !op.creadoPorUsuarioId)
-      );
-      if (yaRegistrado) {
-        Swal.fire({
-          icon: 'warning',
-          title: 'Requerimiento ya registrado',
-          text: `Ya has registrado previamente el requerimiento "${reqUpper}". Cada ejecutiva puede registrar solo una oportunidad por requerimiento.`,
-          confirmButtonColor: roleAccent || '#0284c7',
-          confirmButtonText: 'Entendido',
-          customClass: { popup: 'reg-swal-modal' },
-        });
-        return;
-      }
+    // Validación preventiva en cliente (duplicados y prioridad del podio)
+    if (!editingId && !validarRegistroPrevio(reqUpper)) return;
 
-      // ── REGLA DE PRIORIDAD DEL PODIO (VENTANA DE 5 MINUTOS) ──
-      // Si el requerimiento ya fue registrado (por cualquier ejecutiva) hace menos
-      // de 5 minutos, se bloquea el registro: el primero conserva la prioridad.
-      const registrosDelReq = oportunidades
-        .filter((op) => op.numeroRequerimiento.trim().toUpperCase() === reqUpper)
-        .map((op) => op.fechaRegistro)
-        .filter((f): f is string => !!f)
-        .map((f) => new Date(f).getTime())
-        .filter((t) => !Number.isNaN(t));
-
-      if (registrosDelReq.length > 0) {
-        const primerRegistro = Math.min(...registrosDelReq);
-        const antiguedadMs = Date.now() - primerRegistro;
-        const ventanaMs = 5 * 60 * 1000;
-        if (antiguedadMs < ventanaMs) {
-          const restanteSeg = Math.ceil((ventanaMs - antiguedadMs) / 1000);
-          const mine = formatFechaHoraPeru(new Date(primerRegistro));
-          Swal.fire({
-            icon: 'info',
-            title: 'Prioridad del Podio',
-            text: `El requerimiento "${reqUpper}" ya fue registrado por otra ejecutiva hace menos de 5 minutos y conserva la prioridad del podio (primero registrado: ${mine}). Puedes volver a intentarlo en ${restanteSeg} segundos.`,
-            confirmButtonColor: roleAccent || '#0284c7',
-            confirmButtonText: 'Entendido',
-            customClass: { popup: 'reg-swal-modal' },
-          });
-          return;
-        }
-      }
+    // Validación: la cantidad asignada a proveedores no puede exceder la requerida
+    if (hayExcesoAsignacion) {
+      const detalle = items
+        .filter((it) => calcularProveedores(it).excede)
+        .map((it) => {
+          const c = calcularProveedores(it);
+          return `${it.numeroParte || 'Ítem sin número'}: asignado ${c.asignado} de ${c.requerido}`;
+        })
+        .join(' • ');
+      Swal.fire({
+        icon: 'error',
+        title: 'Cantidad asignada excedida',
+        text: `La suma de cantidades de los proveedores no puede superar la cantidad requerida. ${detalle}`,
+        confirmButtonColor: roleAccent || '#0284c7',
+        confirmButtonText: 'Corregir',
+        customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
+      });
+      return;
     }
 
     isSubmittingRef.current = true;
@@ -477,6 +589,19 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
     const validItems = items.filter((it) => it.numeroParte.trim());
     const validTotalLimite = validItems.reduce((acc, it) => acc + (Number(it.cantidad) || 0) * (Number(it.limiteUnitario) || 0), 0);
 
+    if (editingId && validItems.length === 0) {
+      isSubmittingRef.current = false;
+      setLoading(false);
+      Swal.fire({
+        icon: 'info',
+        title: 'Agrega al menos un producto',
+        text: 'Para guardar el registro completo necesitas al menos un producto con N° de parte en la Sección 4.',
+        confirmButtonColor: roleAccent || '#0284c7',
+        confirmButtonText: 'Entendido',
+        customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
+      });
+      return;
+    }
 
     try {
       if (editingId) {
@@ -500,6 +625,14 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
               precioUnitarioOfertado: it.precioUnitarioOfertado != null ? Number(it.precioUnitarioOfertado) : null,
               condicionesAdicionales: it.condicionesAdicionales?.trim() || null,
               fichaTecnica: it.fichaTecnica?.trim() || null,
+              proveedores: (it.proveedores ?? [])
+                .filter((pv) => pv.nombreProveedor.trim())
+                .map((pv) => ({
+                  nombreProveedor: pv.nombreProveedor.trim(),
+                  cantidad: Number(pv.cantidad) || 0,
+                  costoUnitario: Number(pv.costoUnitario) || 0,
+                  costoEnvio: Number(pv.costoEnvio) || 0,
+                })),
             })),
           });
         } catch {
@@ -533,7 +666,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
           text: `La oportunidad "${numeroRequerimiento}" se ha actualizado con éxito.`,
           confirmButtonColor: roleAccent || '#0284c7',
           confirmButtonText: 'Aceptar',
-          customClass: { popup: 'reg-swal-modal' },
+          customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
         });
       } else {
         // ── MODO CREACIÓN ──
@@ -560,6 +693,14 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
               precioUnitarioOfertado: it.precioUnitarioOfertado != null ? Number(it.precioUnitarioOfertado) : null,
               condicionesAdicionales: it.condicionesAdicionales?.trim() || null,
               fichaTecnica: it.fichaTecnica?.trim() || null,
+              proveedores: (it.proveedores ?? [])
+                .filter((pv) => pv.nombreProveedor.trim())
+                .map((pv) => ({
+                  nombreProveedor: pv.nombreProveedor.trim(),
+                  cantidad: Number(pv.cantidad) || 0,
+                  costoUnitario: Number(pv.costoUnitario) || 0,
+                  costoEnvio: Number(pv.costoEnvio) || 0,
+                })),
             })),
           });
           if (res?.id) backendId = res.id;
@@ -576,7 +717,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
             text: apiError ?? 'No se pudo registrar en el servidor. Verifica que el backend esté activo e intenta nuevamente.',
             confirmButtonColor: '#dc2626',
             confirmButtonText: 'Cerrar',
-            customClass: { popup: 'reg-swal-modal' },
+            customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
           });
           return;
         }
@@ -595,7 +736,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
           fechaVencimiento,
           items: validItems,
           limiteTotal: validTotalLimite,
-          estado: 'Cotizada',
+          estado: 'En Licitación',
           creadoPor: empleado?.nombreCompleto || (empleado?.nombres ? `${empleado.nombres} ${empleado.apellidos}` : 'Ejecutiva'),
           creadoPorUsuarioId: empleado?.userId,
           createdAt: formatFechaHoraPeru(new Date()),
@@ -623,7 +764,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                 <strong style="color: #0f172a;">${horaExacta}</strong>
               </div>
               <div style="font-size: 12.5px; color: #065f46; margin-top: 12px; padding: 10px 12px; background: #ecfdf5; border-radius: 6px; border: 1px solid #a7f3d0;">
-                Prioridad de llegada asegurada. La oportunidad se registró en estado <strong>Cotizada</strong>. Recuerda adjuntar la cotización de la marca o tus evidencias en la pestaña <strong>Subir Evidencia</strong>.
+                Prioridad de llegada asegurada. La oportunidad se registró en estado <strong>En Licitación</strong>. Recuerda adjuntar la cotización de la marca o tus evidencias en la sección <strong>Evidencia / Cotización</strong>.
               </div>
             </div>
           `,
@@ -633,13 +774,106 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
           confirmButtonColor: roleAccent || '#0284c7',
           cancelButtonColor: '#64748b',
           reverseButtons: true,
-          customClass: { popup: 'reg-swal-modal' },
+          customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
         }).then((result) => {
           if (result.isConfirmed && backendId) {
             handleIrASubirEvidencia(backendId);
           }
         });
       }
+    } finally {
+      isSubmittingRef.current = false;
+      setLoading(false);
+    }
+  };
+
+  // Abrir el modal único de Registro Rápido
+  const handleAbrirRegistroRapido = () => {
+    setIsQuickModalOpen(true);
+  };
+
+  // "Seguir completando": guarda el borrador con los datos mínimos (Requerimiento +
+  // Marca) y deja el formulario completo cargado con esos datos para continuar.
+  const handleQuickContinue = async () => {
+    if (loading || isSubmittingRef.current) return;
+
+    const reqUpper = numeroRequerimiento.toUpperCase().trim();
+    if (reqUpper.length === 0 || selectedMarcas.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Datos obligatorios',
+        text: 'Ingresa el N° de requerimiento y selecciona al menos una marca para continuar.',
+        confirmButtonColor: roleAccent || '#0284c7',
+        confirmButtonText: 'Entendido',
+        customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
+      });
+      return;
+    }
+
+    if (!validarRegistroPrevio(reqUpper)) {
+      setIsQuickModalOpen(false);
+      return;
+    }
+
+    isSubmittingRef.current = true;
+    setLoading(true);
+    try {
+      const res = await createOportunidadApi({
+        numeroRequerimiento: reqUpper,
+        acuerdoMarcoId: null,
+        fechaVencimientoLicitacion: null,
+        empresaId: null,
+        marcaIds: selectedMarcas.map((m) => Number(m.id)),
+        productos: [],
+      });
+
+      const backendId = res?.id;
+      if (!backendId) throw new Error('No se pudo registrar en el servidor.');
+
+      const horaExacta = formatHoraPeru(new Date());
+      const nuevaOportunidad: Oportunidad = {
+        id: backendId,
+        numeroRequerimiento: reqUpper,
+        acuerdoMarco: null,
+        marcas: selectedMarcas,
+        fechaVencimiento: '',
+        items: [],
+        limiteTotal: 0,
+        estado: 'En Licitación',
+        creadoPor: empleado?.nombreCompleto || (empleado?.nombres ? `${empleado.nombres} ${empleado.apellidos}` : 'Ejecutiva'),
+        creadoPorUsuarioId: empleado?.userId,
+        createdAt: formatFechaHoraPeru(new Date()),
+        fechaRegistro: new Date().toISOString(),
+        horaRegistroExacta: horaExacta,
+        prioridadGanada: true,
+      };
+      setOportunidades((prev) => [nuevaOportunidad, ...prev]);
+
+      // Dejar la oportunidad cargada en el formulario para seguir completando
+      setEditingId(backendId);
+      setNumeroRequerimiento(reqUpper);
+      setIsQuickModalOpen(false);
+
+      Swal.fire({
+        icon: 'success',
+        title: '¡Borrador registrado!',
+        text: `La oportunidad "${reqUpper}" se guardó. Completa los demás datos y productos y pulsa "Guardar Cambios en Oportunidad".`,
+        confirmButtonColor: roleAccent || '#0284c7',
+        confirmButtonText: 'Seguir completando',
+        customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
+      }).then(() => {
+        document.getElementById('reg-section-2')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    } catch (err: any) {
+      console.error('Error al registrar rápido:', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'No se pudo registrar',
+        text: err?.message ?? 'Error al conectar con el servidor.',
+        confirmButtonColor: roleAccent || '#0284c7',
+        confirmButtonText: 'Entendido',
+        customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
+      });
     } finally {
       isSubmittingRef.current = false;
       setLoading(false);
@@ -668,9 +902,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                     ? 'table_chart'
                     : activeTab === 'podio'
                       ? 'emoji_events'
-                      : activeTab === 'subir-evidencia'
-                        ? 'upload_file'
-                        : 'bolt'
+                      : 'bolt'
                 }
                 size={28}
                 color={roleAccent}
@@ -683,27 +915,21 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                     ? 'Listado de Oportunidades'
                     : activeTab === 'podio'
                       ? 'Podio Comercial de Ventas'
-                      : activeTab === 'subir-evidencia'
-                        ? 'Subir Evidencia de Licitación'
-                        : 'Registro de Oportunidad de Licitación'}
+                      : 'Registro de Oportunidad de Licitación'}
                 </h1>
                 <span className="reg-pill-express">
                   {activeTab === 'listar'
                     ? `${oportunidades.length} Licitaciones`
                     : activeTab === 'podio'
                       ? 'Top Ranking'
-                      : activeTab === 'subir-evidencia'
-                        ? 'Constancias'
-                        : 'Registro Exprés'}
+                      : 'Registro Rápido'}
                 </span>
               </div>
               <p>
-                {activeTab === 'listar'
-                  ? 'Monitoreo en vivo de licitaciones, límites Perú Compras y estados comerciales'
-                  : activeTab === 'podio'
-                    ? 'Gamificación y ranking de rendimiento comercial del equipo de ventas'
-                    : activeTab === 'subir-evidencia'
-                      ? 'Certificación de constancias de cotización y actas de adjudicación Perú Compras'
+                  {activeTab === 'listar'
+                    ? 'Todas las oportunidades registradas'
+                    : activeTab === 'podio'
+                      ? 'Ranking comercial del equipo'
                       : 'Plataforma de Acuerdos Marco • Catálogo Perú Compras • Registro Rápido para Ejecutivas'}
               </p>
             </div>
@@ -854,36 +1080,30 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                 </div>
               </div>
 
-              {/* Botón en Sección 1 para Registro Rápido */}
+              {/* Botón en Sección 1 para Registro Rápido (abre el modal único) */}
               <div className="reg-quick-action-strip">
                 <button
                   type="button"
-                  onClick={handleSubmit}
-                  disabled={!isFormValid || loading}
+                  onClick={handleAbrirRegistroRapido}
+                  disabled={loading}
                   className="reg-btn-quick-action"
                   style={{
-                    background: isFormValid ? roleAccent : '#cbd5e1',
-                    cursor: isFormValid ? 'pointer' : 'not-allowed',
+                    background: roleAccent,
+                    cursor: loading ? 'not-allowed' : 'pointer',
                   }}
                 >
                   <GoogleIcon name="bolt" size={18} color="#ffffff" />
-                  <span>
-                    {loading
-                      ? 'Procesando...'
-                      : editingId
-                        ? 'Guardar Cambios Rápidos'
-                        : 'Registrar Oportunidad (Rápido)'}
-                  </span>
+                  <span>Registro rápido</span>
                 </button>
                 <span className="reg-quick-action-text">
                   <GoogleIcon name="schedule" size={15} color="#0284c7" />
-                  Gana prioridad de llegada inmediatamente con estos 2 datos obligatorios. Puedes completar los demás datos abajo cuando gustes.
+                  Abre una ventana con los datos mínimos. Pulsa "Seguir completando" para guardar el borrador y continuar en el formulario completo.
                 </span>
               </div>
             </div>
 
             {/* ── 2. SECCIÓN 2: DATOS DE LA CONVOCATORIA (OPCIONAL) ── */}
-            <div className="reg-flat-section">
+            <div className="reg-flat-section" id="reg-section-2">
               <div className="reg-flat-section__header">
                 <div className="reg-flat-section__title">
                   <span className="reg-flat-section__badge-num">2</span>
@@ -1214,6 +1434,119 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                       <span>Límite Subtotal del Ítem ({item.cantidad} unids &times; S/ {Number(item.limiteUnitario).toFixed(2)}):</span>
                       <strong>S/ {subtotal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                     </div>
+
+                    {/* ── Proveedores y costos del ítem (N proveedores por ítem) ── */}
+                    <div className="reg-prov-block">
+                      <div className="reg-prov-head">
+                        <div className="reg-prov-head__title">
+                          <GoogleIcon name="local_shipping" size={16} color={roleAccent} />
+                          <span>Proveedores y costos del ítem</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="reg-prov-add"
+                          onClick={() => handleAddProveedor(item.id)}
+                        >
+                          <GoogleIcon name="add" size={14} color={roleAccent} />
+                          <span>Agregar proveedor</span>
+                        </button>
+                      </div>
+
+                      {(() => {
+                        const resumen = calcularProveedores(item);
+                        const proveedores = item.proveedores ?? [];
+                        return (
+                          <>
+                            {proveedores.length === 0 ? (
+                              <p className="reg-prov-empty">
+                                Sin proveedores. Agrega uno o más para repartir la cantidad requerida con su costo y envío.
+                              </p>
+                            ) : (
+                              <div className="reg-prov-list">
+                                {proveedores.map((pv) => {
+                                  const subProv =
+                                    (Number(pv.cantidad) || 0) * (Number(pv.costoUnitario) || 0) +
+                                    (Number(pv.costoEnvio) || 0);
+                                  return (
+                                    <div className="reg-prov-row" key={pv.id}>
+                                      <input
+                                        type="text"
+                                        className="reg-prov-input reg-prov-input--name"
+                                        placeholder="Proveedor"
+                                        value={pv.nombreProveedor}
+                                        onChange={(e) =>
+                                          handleUpdateProveedor(item.id, pv.id, 'nombreProveedor', e.target.value)
+                                        }
+                                      />
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        className="reg-prov-input"
+                                        placeholder="Cant."
+                                        title="Cantidad asignada"
+                                        value={pv.cantidad}
+                                        onChange={(e) =>
+                                          handleUpdateProveedor(item.id, pv.id, 'cantidad', parseInt(e.target.value) || 0)
+                                        }
+                                      />
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        className="reg-prov-input"
+                                        placeholder="Costo S/"
+                                        title="Costo unitario"
+                                        value={pv.costoUnitario}
+                                        onChange={(e) =>
+                                          handleUpdateProveedor(item.id, pv.id, 'costoUnitario', parseFloat(e.target.value) || 0)
+                                        }
+                                      />
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        className="reg-prov-input"
+                                        placeholder="Envío S/"
+                                        title="Costo de envío"
+                                        value={pv.costoEnvio}
+                                        onChange={(e) =>
+                                          handleUpdateProveedor(item.id, pv.id, 'costoEnvio', parseFloat(e.target.value) || 0)
+                                        }
+                                      />
+                                      <span className="reg-prov-subtotal">
+                                        S/ {subProv.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        className="reg-prov-del"
+                                        title="Eliminar proveedor"
+                                        onClick={() => handleRemoveProveedor(item.id, pv.id)}
+                                      >
+                                        <GoogleIcon name="close" size={14} color="#ef4444" />
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            <div className={`reg-prov-foot ${resumen.excede ? 'is-excede' : resumen.falta > 0 ? 'is-falta' : 'is-ok'}`}>
+                              <span className="reg-prov-foot__asignado">
+                                Asignado <strong>{resumen.asignado}</strong> de <strong>{resumen.requerido}</strong>
+                                {resumen.excede
+                                  ? ` — se excede en ${resumen.asignado - resumen.requerido}`
+                                  : resumen.falta > 0
+                                    ? ` — falta asignar ${resumen.falta}`
+                                    : ' — completo'}
+                              </span>
+                              <span className="reg-prov-foot__total">
+                                Total proveedores: S/ {resumen.total.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
                   </div>
                 );
               })}
@@ -1273,6 +1606,23 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                     S/ {totalLimite.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </strong>
                 </div>
+
+                {totalProveedoresGeneral > 0 && (
+                  <div className="reg-summary-flat-item reg-summary-flat-item--highlight">
+                    <span className="reg-summary-flat-label">Total Proveedores (costo + envío)</span>
+                    <strong className="reg-summary-flat-amount">
+                      S/ {totalProveedoresGeneral.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </strong>
+                  </div>
+                )}
+
+                {hayExcesoAsignacion && (
+                  <div className="reg-summary-flat-item" style={{ gridColumn: '1 / -1' }}>
+                    <span className="reg-summary-flat-label" style={{ color: '#b91c1c' }}>
+                      La cantidad asignada a proveedores excede el requerimiento en uno o más ítems.
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Botones de acción final */}
@@ -1304,6 +1654,15 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
               </div>
             </div>
           </form>
+
+          {/* ── Sección embebida: Subir Evidencia (dentro de Registrar Oportunidad) ── */}
+          <div id="reg-evidence-section" className="reg-evidence-section">
+            <SubirEvidenciaView
+              oportunidades={oportunidades}
+              roleAccent={roleAccent}
+              preselectedOportunidadId={preselectedEvidenciaOpId}
+            />
+          </div>
         </>
       )}
 
@@ -1340,14 +1699,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
         />
       )}
 
-      {/* ── VISTA 4: SUBIR EVIDENCIA (Constancias de Cotización / Buena Pro) ── */}
-      {activeTab === 'subir-evidencia' && (
-        <SubirEvidenciaView
-          oportunidades={oportunidades}
-          roleAccent={roleAccent}
-          preselectedOportunidadId={preselectedEvidenciaOpId}
-        />
-      )}
+      {/* ── VISTA 4: SUBIR EVIDENCIA -> ahora embebida en "registrar" ── */}
 
 
       {/* Modal Buscador de Empresa */}
@@ -1359,6 +1711,134 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
             setIsEmpresaModalOpen(false);
           }}
         />
+      )}
+
+      {/* Modal único de "Registro Rápido": solo campos mínimos + botón "Seguir completando" */}
+      {isQuickModalOpen && (
+        <div className="reg-modal-overlay" onClick={() => setIsQuickModalOpen(false)}>
+          <div className="reg-modal reg-quick-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="reg-modal__header">
+              <div>
+                <h3>Registro rápido</h3>
+                <p>Gana prioridad de llegada con los 2 datos obligatorios. Luego sigues completando el resto.</p>
+              </div>
+              <button
+                type="button"
+                className="reg-modal__close"
+                onClick={() => setIsQuickModalOpen(false)}
+                title="Cerrar"
+              >
+                <GoogleIcon name="close" size={18} />
+              </button>
+            </div>
+
+            <div className="reg-modal__body">
+              <div className="reg-field">
+                <label>
+                  N° de Requerimiento <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="Ej. 2026-00123"
+                  value={numeroRequerimiento}
+                  onChange={(e) => setNumeroRequerimiento(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleQuickContinue();
+                    }
+                  }}
+                />
+              </div>
+
+              <div className="reg-field">
+                <label>
+                  Marcas participantes <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                {selectedMarcas.length > 0 && (
+                  <div className="reg-quick-marcas">
+                    {selectedMarcas.map((m) => (
+                      <span key={m.id} className="reg-quick-marca-chip">
+                        {m.nombre}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedMarcas((prev) => prev.filter((x) => x.id !== m.id))}
+                          title="Quitar"
+                        >
+                          <GoogleIcon name="close" size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="reg-marca-picker" ref={quickMarcaRef}>
+                  <input
+                    type="text"
+                    placeholder="Buscar marca del catálogo..."
+                    value={marcaSearch}
+                    onChange={(e) => {
+                      setMarcaSearch(e.target.value);
+                      setIsQuickMarcaOpen(true);
+                    }}
+                    onFocus={() => setIsQuickMarcaOpen(true)}
+                  />
+                  {isQuickMarcaOpen && (
+                    <div className="reg-marca-dropdown">
+                      {marcasCatalogo.length === 0 ? (
+                        <div className="reg-marca-option">Cargando marcas…</div>
+                      ) : (
+                        marcasCatalogo
+                          .filter((m) => m.nombre.toLowerCase().includes(marcaSearch.toLowerCase()))
+                          .slice(0, 40)
+                          .map((m) => {
+                            const activa = selectedMarcas.some((x) => x.id === m.id);
+                            return (
+                              <button
+                                type="button"
+                                key={m.id}
+                                className={`reg-marca-option ${activa ? 'is-active' : ''}`}
+                                onClick={() => {
+                                  setSelectedMarcas((prev) =>
+                                    activa ? prev.filter((x) => x.id !== m.id) : [...prev, m]
+                                  );
+                                  setMarcaSearch('');
+                                  setIsQuickMarcaOpen(false);
+                                }}
+                              >
+                                <span>{m.nombre}</span>
+                                {activa && <GoogleIcon name="check" size={15} color={roleAccent} />}
+                              </button>
+                            );
+                          })
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="reg-modal__actions">
+                <button
+                  type="button"
+                  className="reg-modal__cancel"
+                  onClick={() => setIsQuickModalOpen(false)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="reg-modal__confirm"
+                  onClick={handleQuickContinue}
+                  disabled={loading}
+                  style={{ background: loading ? '#cbd5e1' : roleAccent }}
+                >
+                  <GoogleIcon name="arrow_forward" size={16} color="#ffffff" />
+                  <span>{loading ? 'Guardando...' : 'Seguir completando'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

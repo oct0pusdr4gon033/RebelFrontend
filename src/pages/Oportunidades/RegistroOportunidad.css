@@ -287,6 +287,281 @@
   font-size: 14px;
 }
 
+/* ── Proveedores por ítem ── */
+.reg-prov-block {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+
+.reg-prov-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.reg-prov-head__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.reg-prov-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 1px dashed #94a3b8;
+  border-radius: 5px;
+  background: #ffffff;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.reg-prov-add:hover {
+  border-color: #0284c7;
+  color: #0284c7;
+  background: #f0f9ff;
+}
+
+.reg-prov-empty {
+  margin: 0;
+  font-size: 12.5px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.reg-prov-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reg-prov-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.6fr) 76px 104px 104px minmax(96px, auto) 30px;
+  align-items: center;
+  gap: 8px;
+}
+
+.reg-prov-input {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  font-size: 13px;
+  color: #0f172a;
+  background: #ffffff;
+}
+
+.reg-prov-input:focus {
+  outline: none;
+  border-color: #0284c7;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.12);
+}
+
+.reg-prov-subtotal {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.reg-prov-del {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.reg-prov-del:hover {
+  background: #fee2e2;
+}
+
+.reg-prov-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #cbd5e1;
+  font-size: 12.5px;
+}
+
+.reg-prov-foot__asignado {
+  color: #475569;
+}
+
+.reg-prov-foot__total {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.reg-prov-foot.is-ok .reg-prov-foot__asignado {
+  color: #059669;
+}
+
+.reg-prov-foot.is-falta .reg-prov-foot__asignado {
+  color: #d97706;
+}
+
+.reg-prov-foot.is-excede {
+  color: #b91c1c;
+}
+
+.reg-prov-foot.is-excede .reg-prov-foot__asignado,
+.reg-prov-foot.is-excede .reg-prov-foot__total {
+  color: #b91c1c;
+}
+
+/* ── Evidencia embebida dentro de Registrar ── */
+.reg-evidence-section {
+  margin-top: 28px;
+}
+
+/* ── Modal Registro Rápido ── */
+.reg-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.reg-quick-modal {
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.3);
+  padding: 22px;
+}
+
+.reg-quick-modal .reg-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.reg-quick-modal .reg-modal__header h3 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  color: #0f172a;
+}
+
+.reg-quick-modal .reg-modal__header p {
+  margin: 0;
+  font-size: 12.5px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.reg-quick-modal .reg-modal__header button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #475569;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.reg-quick-modal .reg-modal__header button:hover {
+  background: #e2e8f0;
+}
+
+.reg-quick-marca-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 6px 6px 0;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.reg-quick-marca-chip button {
+  display: inline-flex;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.reg-quick-modal .reg-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.reg-modal__cancel {
+  padding: 10px 18px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.reg-modal__cancel:hover {
+  background: #f8fafc;
+}
+
+.reg-modal__confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reg-modal__confirm:disabled {
+  cursor: not-allowed;
+}
+
 /* Resumen Flat */
 .reg-summary-flat-grid {
   display: grid;
@@ -989,12 +1264,6 @@
   background: rgba(245, 158, 11, 0.1);
   color: #d97706;
   border: 1px solid rgba(245, 158, 11, 0.25);
-}
-
-.reg-status-badge.cotizada {
-  background: rgba(16, 185, 129, 0.1);
-  color: #059669;
-  border: 1px solid rgba(16, 185, 129, 0.25);
 }
 
 /* ── Alertas de Éxito / Feedback / Error ─────────────── */
@@ -2479,6 +2748,13 @@
 }
 
 /* ── SweetAlert2 Custom Styling ─────────────────────── */
+/* Swals disparados desde esta página deben quedar por encima del overlay
+   del modal de registro rápido (z-index 1200). Se acota con la clase de
+   contenedor en lugar de tocar el z-index global de SweetAlert2. */
+.reg-swal-on-top {
+  z-index: 3000 !important;
+}
+
 .reg-swal-modal {
   border-radius: 8px !important;
   font-family: inherit !important;

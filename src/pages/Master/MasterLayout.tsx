@@ -50,12 +50,6 @@ export const masterNavItems: NavItem[] = [
         path: '/master/registro-oportunidad?tab=podio&tipo=ventas',
         badge: 'S/',
       },
-      {
-        id: 'subir-evidencia',
-        tabKey: 'subir-evidencia',
-        label: 'Subir Evidencia',
-        path: '/master/registro-oportunidad?tab=subir-evidencia',
-      },
     ],
   },
   { icon: 'track_changes', label: 'Mis Metas', path: '/master/metas', section: null },

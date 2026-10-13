@@ -27,11 +27,10 @@ interface ResolverOportunidadesPageProps {
   roleAccent?: string;
 }
 
-type TabEstado = 'todos' | 'pendientes' | 'adjudicadas' | 'desestimadas' | 'cotizadas' | 'en-licitacion';
+type TabEstado = 'todos' | 'pendientes' | 'adjudicadas' | 'desestimadas' | 'en-licitacion';
 
 const ESTADO_BADGE_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
   'En Licitación': { label: 'En Licitación', color: '#d97706', bg: '#fef3c7', icon: 'bolt' },
-  'Cotizada': { label: 'Cotizada', color: '#2563eb', bg: '#eff6ff', icon: 'description' },
   'Adjudicada': { label: 'Adjudicada', color: '#059669', bg: '#ecfdf5', icon: 'verified' },
   'Desestimada': { label: 'Desestimada', color: '#dc2626', bg: '#fee2e2', icon: 'cancel' },
   'Por Vencer': { label: 'Por Vencer', color: '#ea580c', bg: '#ffedd5', icon: 'timer' },
@@ -185,7 +184,7 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
       const count = opsSorted.length;
       const esDisputado = count > 1;
       const tieneGanador = !!ganadorOp;
-      const estaPendiente = !tieneGanador && opsSorted.some((o) => o.estado === 'En Licitación' || o.estado === 'Cotizada');
+      const estaPendiente = !tieneGanador && opsSorted.some((o) => o.estado === 'En Licitación');
       const montoTotal = Number(opsSorted[0]?.limiteTotal) || 0;
       const entidad = opsSorted[0]?.entidadConvocante || opsSorted[0]?.empresaRazonSocial || 'Entidad no especificada';
       const acuerdo = opsSorted[0]?.acuerdoMarco?.codigo || 'Acuerdo Marco';
@@ -371,7 +370,7 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
         (c) => c.estado === 'Adjudicada' || ['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(c.estado)
       );
       if (previoGanador) {
-        await cambiarEstadoApi(previoGanador.id, 'Desestimada');
+        await cambiarEstadoApi(previoGanador.id, 'Desestimada', 'Buena Pro reasignada a otra postulación del mismo requerimiento.');
       }
 
       // 2. Dictaminar la adjudicación al nuevo ganador
@@ -380,7 +379,7 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
       // 3. Desestimar al resto de postulaciones competidoras
       const promesasDesestimar = otrosCompetidores
         .filter((c) => c.id !== previoGanador?.id && c.estado !== 'Desestimada')
-        .map((c) => cambiarEstadoApi(c.id, 'Desestimada').catch((e) => console.warn(e)));
+        .map((c) => cambiarEstadoApi(c.id, 'Desestimada', 'No seleccionada — Buena Pro otorgada a otra postulación del requerimiento.').catch((e) => console.warn(e)));
       await Promise.all(promesasDesestimar);
 
       // Actualizar estado local inmediatamente
@@ -390,7 +389,7 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
             return { ...item, estado: 'Adjudicada' as const };
           }
           if (otrosCompetidores.some((o) => String(o.id) === String(item.id))) {
-            return { ...item, estado: 'Desestimada' as const };
+            return { ...item, estado: 'Desestimada' as const, motivoDesestimacion: 'No seleccionada — Buena Pro otorgada a otra postulación del requerimiento.' };
           }
           return item;
         })
@@ -507,7 +506,7 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
   // KPIs
   const kpis = useMemo(() => {
     const total = oportunidades.length;
-    const pendientes = oportunidades.filter((op) => op.estado === 'En Licitación' || op.estado === 'Cotizada');
+    const pendientes = oportunidades.filter((op) => op.estado === 'En Licitación');
     const adjudicadas = oportunidades.filter((op) =>
       op.estado === 'Adjudicada' || ['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(op.estado)
     );
@@ -536,14 +535,12 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
   const oportunidadesFiltradas = useMemo(() => {
     let result = oportunidades.filter((op) => {
       // 1. Filtro por Pestaña
-      if (activeTab === 'pendientes') {
-        if (op.estado !== 'En Licitación' && op.estado !== 'Cotizada') return false;
+        if (activeTab === 'pendientes') {
+        if (op.estado !== 'En Licitación') return false;
       } else if (activeTab === 'adjudicadas') {
         if (op.estado !== 'Adjudicada' && !['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(op.estado)) return false;
       } else if (activeTab === 'desestimadas') {
         if (op.estado !== 'Desestimada' && op.estado !== 'OC_RECHAZADA') return false;
-      } else if (activeTab === 'cotizadas') {
-        if (op.estado !== 'Cotizada') return false;
       } else if (activeTab === 'en-licitacion') {
         if (op.estado !== 'En Licitación') return false;
       }
@@ -603,14 +600,18 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
   }, [oportunidades, activeTab, filtroEjecutiva, filtroAcuerdo, busqueda, orden]);
 
   // Ejecutar cambio de estado en backend y frontend
-  const resolverEstado = async (op: Oportunidad, nuevoEstado: string, mensajeExito: string) => {
+  const resolverEstado = async (op: Oportunidad, nuevoEstado: string, mensajeExito: string, motivo?: string) => {
     setProcesandoResolucion(true);
     try {
-      const res = await cambiarEstadoApi(op.id, nuevoEstado);
+      const res = await cambiarEstadoApi(op.id, nuevoEstado, motivo);
       const estadoFinal = (res.estado || nuevoEstado) as Oportunidad['estado'];
 
       setOportunidades((prev) =>
-        prev.map((item) => (String(item.id) === String(op.id) ? { ...item, estado: estadoFinal } : item))
+        prev.map((item) =>
+          String(item.id) === String(op.id)
+            ? { ...item, estado: estadoFinal, motivoDesestimacion: res.motivoDesestimacion ?? null }
+            : item
+        )
       );
 
       Swal.fire({
@@ -658,7 +659,8 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
     resolverEstado(
       desestimarModalOp,
       'Desestimada',
-      `El requerimiento "${desestimarModalOp.numeroRequerimiento}" ha sido marcado como DESESTIMADO (${razon}).`
+      `El requerimiento "${desestimarModalOp.numeroRequerimiento}" ha sido marcado como DESESTIMADO (${razon}).`,
+      razon
     );
   };
 
@@ -751,7 +753,7 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
               <div className="res-kpi-card__data">
                 <span className="res-kpi-card__val">{kpis.pendientesCount}</span>
                 <span className="res-kpi-card__label">Pendientes por Resolver</span>
-                <span className="res-kpi-card__sub">En Licitación y Cotizadas</span>
+                <span className="res-kpi-card__sub">En Licitación</span>
               </div>
             </div>
 
@@ -823,15 +825,6 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
                 <GoogleIcon name="cancel" size={16} color={activeTab === 'desestimadas' ? '#dc2626' : '#64748b'} />
                 <span>Desestimadas</span>
                 <span className="res-tab-badge">{kpis.desestimadasCount}</span>
-              </button>
-
-              <button
-                type="button"
-                className={`res-tab-btn ${activeTab === 'cotizadas' ? 'active' : ''}`}
-                onClick={() => setActiveTab('cotizadas')}
-              >
-                <GoogleIcon name="description" size={16} color={activeTab === 'cotizadas' ? '#0284c7' : '#64748b'} />
-                <span>Cotizadas</span>
               </button>
 
               <button
@@ -1180,24 +1173,6 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
                                       <GoogleIcon name="emoji_events" size={16} color="#d97706" />
                                       <span>Ver Podio y Asignar Ganador</span>
                                     </button>
-
-                                    {op.estado === 'En Licitación' && (
-                                      <button
-                                        type="button"
-                                        className="res-menu-item"
-                                        onClick={() => {
-                                          setMenuAbiertoId(null);
-                                          resolverEstado(
-                                            op,
-                                            'Cotizada',
-                                            `El requerimiento "${op.numeroRequerimiento}" fue marcado como COTIZADO.`
-                                          );
-                                        }}
-                                      >
-                                        <GoogleIcon name="description" size={16} color="#2563eb" />
-                                        <span>Marcar como Cotizada</span>
-                                      </button>
-                                    )}
 
                                     {(op.estado === 'Desestimada' || op.estado === 'Adjudicada') && (
                                       <button

@@ -1,14 +1,13 @@
 import React from 'react';
 import { GoogleIcon } from '../../components/GoogleIcon';
 
-export type OportunidadTab = 'registrar' | 'mis-oportunidades' | 'listar' | 'podio' | 'subir-evidencia';
+export type OportunidadTab = 'registrar' | 'mis-oportunidades' | 'listar' | 'podio';
 
 interface OportunidadNavButtonsProps {
   activeTab: OportunidadTab;
   onTabChange: (tab: OportunidadTab) => void;
   roleAccent: string;
   totalOportunidades?: number;
-  totalEvidencias?: number;
 }
 
 export const OportunidadNavButtons: React.FC<OportunidadNavButtonsProps> = ({
@@ -16,7 +15,6 @@ export const OportunidadNavButtons: React.FC<OportunidadNavButtonsProps> = ({
   onTabChange,
   roleAccent,
   totalOportunidades = 0,
-  totalEvidencias = 0,
 }) => {
   const tabs: {
     id: OportunidadTab;
@@ -50,13 +48,6 @@ export const OportunidadNavButtons: React.FC<OportunidadNavButtonsProps> = ({
       icon: 'emoji_events',
       badge: 'Top Ventas',
       description: 'Ranking de Ejecutivas',
-    },
-    {
-      id: 'subir-evidencia',
-      label: 'Subir Evidencia',
-      icon: 'upload_file',
-      badge: totalEvidencias > 0 ? totalEvidencias : undefined,
-      description: 'Constancias Perú Compras',
     },
   ];
 

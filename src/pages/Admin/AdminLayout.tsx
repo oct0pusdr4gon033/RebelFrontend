@@ -37,6 +37,36 @@ export const adminNavItems: NavItem[] = [
   },
   { icon: 'handshake', label: 'Acuerdos Marco', path: '/admin/acuerdos', section: 'Comercial' },
   { icon: 'local_shipping', label: 'Seguimiento OC', path: '/admin/seguimiento-oc', section: 'Licitaciones' },
+  {
+    icon: 'payments',
+    label: 'Pagos',
+    path: '/admin/pagos',
+    section: 'Licitaciones',
+    pushButtons: [
+      {
+        id: 'historial-pagos',
+        tabKey: 'historial',
+        label: 'Historial de Pagos',
+        path: '/admin/pagos?tab=historial',
+        description: 'Ver todos los pagos registrados',
+      },
+      {
+        id: 'agregar-pago',
+        tabKey: 'registrar',
+        label: 'Agregar Pago',
+        path: '/admin/pagos?tab=registrar',
+        badge: 'Nuevo',
+        description: 'Vincular comprobante a OC',
+      },
+      {
+        id: 'resumen-oc',
+        tabKey: 'resumen-oc',
+        label: 'Liquidación por OC',
+        path: '/admin/pagos?tab=resumen-oc',
+        description: 'Consolidado de costos por OC',
+      },
+    ],
+  },
   { icon: 'corporate_fare', label: 'Empresas', path: '/admin/empresas', section: null },
   { icon: 'badge', label: 'Empleados', path: '/admin/empleados', section: 'Gestión' },
   { icon: 'domain', label: 'Mi Sede', path: '/admin/sede', section: null },
@@ -76,9 +106,9 @@ export function AdminDashboard() {
       <div className="dash__stats">
         {[
           { icon: 'gavel', value: 'Resolver', label: 'Licitaciones y Oportunidades', path: '/admin/resolver-oportunidades', highlight: true },
+          { icon: 'payments', value: 'Pagos OC', label: 'Fletes, Comisiones y Gastos', path: '/admin/pagos?tab=historial', highlight: true },
+          { icon: 'local_shipping', value: 'Seguimiento', label: 'Órdenes de Compra', path: '/admin/seguimiento-oc' },
           { icon: 'badge', value: '12', label: 'Empleados activos', path: '/admin/empresa/empleados' },
-          { icon: 'handshake', value: '8', label: 'Acuerdos marco', path: '/admin/acuerdos' },
-          { icon: 'corporate_fare', value: '5', label: 'Empresas registradas', path: '/admin/empresas' },
         ].map((s, i) => (
           <div
             key={i}
@@ -104,10 +134,10 @@ export function AdminDashboard() {
       <p className="dash__section-title">Acciones Rápidas</p>
       <div className="dash__actions-grid">
         {[
+          { icon: 'payments', title: 'Registrar Pago de OC', desc: 'Vincular flete, comisión o comprobante', path: '/admin/pagos?tab=registrar' },
           { icon: 'gavel', title: 'Resolver Oportunidades', desc: 'Dictaminar estado y adjudicación', path: '/admin/resolver-oportunidades' },
+          { icon: 'local_shipping', title: 'Seguimiento OC', desc: 'Estado y entregas de OC', path: '/admin/seguimiento-oc' },
           { icon: 'person_add', title: 'Nuevo Empleado', desc: 'Registrar al equipo', path: '/admin/empresa/empleados' },
-          { icon: 'handshake', title: 'Acuerdo Marco', desc: 'Crear nuevo acuerdo', path: '/admin/acuerdos' },
-          { icon: 'add_business', title: 'Nueva Empresa', desc: 'Registrar cliente', path: '/admin/empresas' },
         ].map((a, i) => (
           <button
             key={i}

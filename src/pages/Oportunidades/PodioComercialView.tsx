@@ -241,7 +241,7 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
 
       existing.totalOportunidades += 1;
       existing.totalCotizado += Number(op.limiteTotal) || 0;
-      if (op.estado === 'Cotizada' || op.estado === 'Adjudicada') {
+      if (op.estado === 'Adjudicada') {
         existing.licitacionesAdjudicadas += 1;
       }
       mapa.set(key, existing);

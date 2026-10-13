@@ -41,6 +41,13 @@ export function getAuthHeaders(): HeadersInit {
   };
 }
 
+export interface ItemProveedorPayload {
+  nombreProveedor: string;
+  cantidad: number;
+  costoUnitario: number;
+  costoEnvio: number;
+}
+
 export interface ProductoItemPayload {
   id?: number;
   numeroParte: string;
@@ -55,6 +62,7 @@ export interface ProductoItemPayload {
   precioUnitarioOfertado?: number | null;
   condicionesAdicionales?: string | null;
   fichaTecnica?: string | null;
+  proveedores?: ItemProveedorPayload[];
 }
 
 export interface CrearOportunidadApiRequest {
@@ -74,6 +82,15 @@ export interface ActualizarOportunidadApiRequest {
   entidadConvocante?: string;
   marcaIds: number[];  // Backend: List<int>
   productos: ProductoItemPayload[];
+}
+
+export interface ItemProveedorApiResponse {
+  id: number;
+  nombreProveedor: string;
+  cantidad: number;
+  costoUnitario: number;
+  costoEnvio: number;
+  subtotal: number;
 }
 
 export interface OportunidadApiResponse {
@@ -102,9 +119,13 @@ export interface OportunidadApiResponse {
     precioUnitarioOfertado?: number | null;
     condicionesAdicionales?: string | null;
     fichaTecnica?: string | null;
+    proveedores?: ItemProveedorApiResponse[];
+    cantidadAsignada?: number;
+    costoTotalProveedores?: number;
   }[];
   limiteTotal: number;
   estado: string;
+  motivoDesestimacion?: string | null;
   ordenCompra?: OrdenCompraApiResponse | null;
   creadoPorUsuarioId?: string;
   creadoPorNombre?: string;
@@ -247,15 +268,17 @@ export async function updateOportunidadApi(
 /**
  * Cambiar estado de una oportunidad
  * Solo la ejecutiva que registró la oportunidad puede cambiar su estado.
+ * Al desestimar, `motivo` es obligatorio.
  */
 export async function cambiarEstadoApi(
   id: number | string,
-  estado: string
+  estado: string,
+  motivo?: string
 ): Promise<OportunidadApiResponse> {
   const response = await fetch(`${API_BASE}/api/oportunidades/${id}/estado`, {
     method: 'PATCH',
     headers: getAuthHeaders(),
-    body: JSON.stringify({ estado }),
+    body: JSON.stringify({ estado, motivo }),
   });
   if (!response.ok) {
     let errMsg = 'Error al cambiar estado';

@@ -1,3 +1,12 @@
+/* ── Proveedor y costos asignados a un ítem (N proveedores por ítem) ── */
+export interface ItemProveedor {
+    id: string | number;
+    nombreProveedor: string;
+    cantidad: number;
+    costoUnitario: number;
+    costoEnvio: number;
+}
+
 /* ── Item de Producto dentro de la Oportunidad ── */
 export interface ProductoItem {
     id: string | number;
@@ -13,4 +22,6 @@ export interface ProductoItem {
     precioUnitarioOfertado?: number | null;
     condicionesAdicionales?: string;
     fichaTecnica?: string;
+    // ── Proveedores y costos por ítem (N por ítem) ──
+    proveedores?: ItemProveedor[];
 }
