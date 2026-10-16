@@ -10,7 +10,7 @@ import { getOportunidadesApi } from '../../../api/services/oportunidades.service
 import { mapApiToOportunidad } from '../../../hooks/useOportunidades';
 import type { Oportunidad } from '../../../types/oportunidades';
 import type { PagoOC } from '../../../types/pagos';
-import { obtenerPagos } from '../../../api/services/pagos.service';
+import { obtenerPagos, obtenerPagosApi } from '../../../api/services/pagos.service';
 import { HistorialPagosView } from './HistorialPagosView';
 import { RegistrarPagoView } from './RegistrarPagoView';
 import { ResumenLiquidacionOCView } from './ResumenLiquidacionOCView';
@@ -46,13 +46,19 @@ export const PagosPage: React.FC<PagosPageProps> = ({ roleAccent = '#2563eb' }) 
     }
   }, []);
 
-  const refrescarPagos = useCallback(() => {
-    setPagos(obtenerPagos());
+  const refrescarPagos = useCallback(async () => {
+    try {
+      const data = await obtenerPagosApi();
+      setPagos(data);
+    } catch {
+      setPagos(obtenerPagos());
+    }
   }, []);
 
   useEffect(() => {
     cargarOportunidades();
-  }, [cargarOportunidades]);
+    refrescarPagos();
+  }, [cargarOportunidades, refrescarPagos]);
 
   // Escuchar evento personalizado de actualización de pagos
   useEffect(() => {

@@ -53,6 +53,8 @@ namespace Domain.DTOs.Oportunidad
         [RegularExpression("^(En Licitación|Cotizada|Adjudicada|Desestimada)$",
             ErrorMessage = "Estado inválido. Valores permitidos: En Licitación, Cotizada, Adjudicada, Desestimada.")]
         public string Estado { get; set; } = string.Empty;
+
+        public string? Motivo { get; set; }
     }
 
     // ══════════════════════════════════════════════════════════════════════════

@@ -9,13 +9,9 @@ import { formatHoraExacta, formatDiferenciaTiempo } from '../../../utils/dateUti
 import type { Oportunidad } from '../../../types/oportunidades';
 import { DetalleOportunidadView } from '../../Oportunidades/DetalleOportunidadView';
 import { PodioRequerimientoModal } from '../../../components/Podio/PodioRequerimientoModal';
+import { DictamenBuenaProModal, type DictamenBuenaProConfirmPayload } from '../../../components/Podio/DictamenBuenaProModal';
 import '../../Oportunidades/RegistroOportunidad.css';
 import './ResolverOportunidades.css';
-
-// Iconos SVG corporativos para SweetAlert2 y Podio
-const SVG_TROPHY = `<svg width="26" height="26" viewBox="0 0 24 24" fill="#d97706" style="vertical-align: middle; display: inline-block;"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0 0 11 15.9V19H7v2h10v-2h-4v-3.1a5.01 5.01 0 0 0 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg>`;
-const SVG_CROWN = `<svg width="18" height="18" viewBox="0 0 24 24" fill="#15803d" style="vertical-align: middle; display: inline-block; margin-right: 6px;"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/></svg>`;
-const SVG_WARNING = `<svg width="18" height="18" viewBox="0 0 24 24" fill="#b45309" style="vertical-align: middle; display: inline-block; margin-right: 6px; flex-shrink: 0;"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>`;
 
 const SVG_EYE_ICON = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ verticalAlign: 'middle', display: 'inline-block', flexShrink: 0 }}>
@@ -30,7 +26,10 @@ interface ResolverOportunidadesPageProps {
 type TabEstado = 'todos' | 'pendientes' | 'adjudicadas' | 'desestimadas' | 'en-licitacion';
 
 const ESTADO_BADGE_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
-  'En Licitación': { label: 'En Licitación', color: '#d97706', bg: '#fef3c7', icon: 'bolt' },
+  'En Competencia': { label: 'En Competencia', color: '#2563eb', bg: '#eff6ff', icon: 'groups' },
+  'En Licitación': { label: 'En Competencia', color: '#2563eb', bg: '#eff6ff', icon: 'groups' },
+  'Asignación de Oportunidad': { label: 'Asignación de Oportunidad', color: '#059669', bg: '#ecfdf5', icon: 'workspace_premium' },
+  'Cotización': { label: 'Cotización (OCAM)', color: '#7c3aed', bg: '#f5f3ff', icon: 'receipt_long' },
   'Adjudicada': { label: 'Adjudicada', color: '#059669', bg: '#ecfdf5', icon: 'verified' },
   'Desestimada': { label: 'Desestimada', color: '#dc2626', bg: '#fee2e2', icon: 'cancel' },
   'Por Vencer': { label: 'Por Vencer', color: '#ea580c', bg: '#ffedd5', icon: 'timer' },
@@ -61,8 +60,10 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
   const [orden, setOrden] = useState<'vencimiento' | 'recientes' | 'monto'>('vencimiento');
 
   // Modales de resolución
-  const [adjudicarModalOp, setAdjudicarModalOp] = useState<Oportunidad | null>(null);
-  const [adjudicarNotas, setAdjudicarNotas] = useState<string>('');
+  const [dictamenModalData, setDictamenModalData] = useState<{
+    ganadorOp: Oportunidad;
+    otrosCompetidores: Oportunidad[];
+  } | null>(null);
   const [procesandoResolucion, setProcesandoResolucion] = useState<boolean>(false);
 
   const [desestimarModalOp, setDesestimarModalOp] = useState<Oportunidad | null>(null);
@@ -178,13 +179,17 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
       });
 
       const ganadorOp = opsSorted.find(
-        (o) => o.estado === 'Adjudicada' || ['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(o.estado)
+        (o) =>
+          o.estado === 'Asignación de Oportunidad' ||
+          o.estado === 'Cotización' ||
+          o.estado === 'Adjudicada' ||
+          ['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(o.estado)
       );
       const liderLlegada = opsSorted[0];
       const count = opsSorted.length;
       const esDisputado = count > 1;
       const tieneGanador = !!ganadorOp;
-      const estaPendiente = !tieneGanador && opsSorted.some((o) => o.estado === 'En Licitación');
+      const estaPendiente = !tieneGanador && opsSorted.some((o) => o.estado === 'En Competencia' || o.estado === 'En Licitación');
       const montoTotal = Number(opsSorted[0]?.limiteTotal) || 0;
       const entidad = opsSorted[0]?.entidadConvocante || opsSorted[0]?.empresaRazonSocial || 'Entidad no especificada';
       const acuerdo = opsSorted[0]?.acuerdoMarco?.codigo || 'Acuerdo Marco';
@@ -274,7 +279,11 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
         posicionActual = 1;
       }
 
-      const esGanador = op.estado === 'Adjudicada' || ['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(op.estado);
+      const esGanador =
+        op.estado === 'Asignación de Oportunidad' ||
+        op.estado === 'Cotización' ||
+        op.estado === 'Adjudicada' ||
+        ['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(op.estado);
       const esLiderLlegada = posicionActual === 1;
       const nombreGanador = op.creadoPor?.includes('@')
         ? op.creadoPor.split('@')[0].replace('.', ' ').replace(/\b\w/g, (c) => c.toUpperCase())
@@ -319,97 +328,100 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
     };
   }, [selectedReq, requerimientosInfo]);
 
-  // Dictaminar Buena Pro (Regla de Adjudicación Única) con SweetAlert Corporativo SVG
-  const handleAsignarGanador = async (ganadorOp: Oportunidad) => {
+  // Dictaminar Asignación de Buena Pro (Abre modal con casillas de comentarios individuales)
+  const handleAsignarGanador = (ganadorOp: Oportunidad) => {
     const req = (ganadorOp.numeroRequerimiento || '').trim().toUpperCase();
     const competidores = oportunidades.filter(
       (o) => (o.numeroRequerimiento || '').trim().toUpperCase() === req
     );
     const otrosCompetidores = competidores.filter((c) => String(c.id) !== String(ganadorOp.id));
-    const nombreGanador = ganadorOp.creadoPor || 'Ejecutiva';
-
-    const confirm = await Swal.fire({
-      title: `<div style="display:flex; align-items:center; justify-content:center; gap:8px;">${SVG_TROPHY}<span style="font-weight:800; color:#0f172a;">Asignar Buena Pro</span></div>`,
-      html: `
-        <div style="text-align: left; font-size: 13.5px; line-height: 1.5; color: #334155;">
-          <p style="margin-top: 4px;">¿Confirmas la asignación oficial de la <strong>BUENA PRO</strong> para este requerimiento a:</p>
-          <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 8px; padding: 12px; margin: 12px 0;">
-            <div style="font-weight: 800; color: #166534; font-size: 15px; display: flex; align-items: center;">
-              ${SVG_CROWN}
-              <span>${nombreGanador}</span>
-            </div>
-            <div style="color: #15803d; font-size: 12.5px; margin-top: 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <span>Requerimiento: <strong>${ganadorOp.numeroRequerimiento}</strong></span>
-              <span>&bull;</span>
-              <span>Límite Total: <strong>S/ ${Number(ganadorOp.limiteTotal).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</strong></span>
-            </div>
-          </div>
-          ${otrosCompetidores.length > 0
-          ? `<div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 12px; color: #92400e; font-size: 12px; margin-top: 10px; display: flex; align-items: flex-start;">
-                  ${SVG_WARNING}
-                  <span><strong>Regla de Adjudicación Única:</strong> Existen <strong>${otrosCompetidores.length}</strong> otra(s) postulación(es) competidora(s). Al confirmar, pasarán automáticamente a estado <strong>Desestimada</strong>.</span>
-                </div>`
-          : ''
-        }
-        </div>
-      `,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#059669',
-      cancelButtonColor: '#64748b',
-      confirmButtonText: 'Sí, Asignar Ganador',
-      cancelButtonText: 'Cancelar',
+    setDictamenModalData({
+      ganadorOp,
+      otrosCompetidores,
     });
+  };
 
-    if (!confirm.isConfirmed) return;
-
+  // Confirmar asignación de Buena Pro y desestimaciones individuales una por una
+  const handleConfirmarDictamenBuenaPro = async (payload: DictamenBuenaProConfirmPayload) => {
     setProcesandoResolucion(true);
     try {
-      // 1. Si otro competidor ya tenía la Buena Pro, desestimarlo primero para liberar la regla de adjudicación única en el backend
-      const previoGanador = otrosCompetidores.find(
-        (c) => c.estado === 'Adjudicada' || ['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(c.estado)
+      // 1. Si otro competidor ya tenía asignación o Buena Pro previa, desestimarlo primero
+      const previoGanador = dictamenModalData?.otrosCompetidores.find(
+        (c) =>
+          c.estado === 'Asignación de Oportunidad' ||
+          c.estado === 'Cotización' ||
+          c.estado === 'Adjudicada' ||
+          ['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(c.estado)
       );
       if (previoGanador) {
-        await cambiarEstadoApi(previoGanador.id, 'Desestimada', 'Buena Pro reasignada a otra postulación del mismo requerimiento.');
+        const itemPrevio = payload.desestimaciones.find((d) => String(d.oportunidadId) === String(previoGanador.id));
+        const motivoPrevio = itemPrevio ? `${itemPrevio.motivo}: ${itemPrevio.comentario}` : 'Reasignación de Buena Pro';
+        await cambiarEstadoApi(previoGanador.id, 'Desestimada', motivoPrevio);
       }
 
-      // 2. Dictaminar la adjudicación al nuevo ganador
-      await cambiarEstadoApi(ganadorOp.id, 'Adjudicada');
-
-      // 3. Desestimar al resto de postulaciones competidoras
-      const promesasDesestimar = otrosCompetidores
-        .filter((c) => c.id !== previoGanador?.id && c.estado !== 'Desestimada')
-        .map((c) => cambiarEstadoApi(c.id, 'Desestimada', 'No seleccionada — Buena Pro otorgada a otra postulación del requerimiento.').catch((e) => console.warn(e)));
+      // 2. Desestimar las otras oportunidades competidoras con su motivo individual uno por uno
+      const promesasDesestimar = payload.desestimaciones
+        .filter((d) => String(d.oportunidadId) !== String(previoGanador?.id))
+        .map((des) => {
+          const motivoCompleto = `${des.motivo}: ${des.comentario}`;
+          return cambiarEstadoApi(des.oportunidadId, 'Desestimada', motivoCompleto).catch((e) =>
+            console.warn(e)
+          );
+        });
       await Promise.all(promesasDesestimar);
 
-      // Actualizar estado local inmediatamente
+      // 3. Adjudicar la oportunidad ganadora con su comentario de asignación
+      await cambiarEstadoApi(payload.ganadorId, 'Adjudicada', payload.comentarioGanador);
+
+      // 4. Actualizar estado local inmediatamente
       setOportunidades((prev) =>
         prev.map((item) => {
-          if (String(item.id) === String(ganadorOp.id)) {
-            return { ...item, estado: 'Adjudicada' as const };
+          if (String(item.id) === String(payload.ganadorId)) {
+            return {
+              ...item,
+              estado: 'Adjudicada' as const,
+              motivoDesestimacion: null,
+            };
           }
-          if (otrosCompetidores.some((o) => String(o.id) === String(item.id))) {
-            return { ...item, estado: 'Desestimada' as const, motivoDesestimacion: 'No seleccionada — Buena Pro otorgada a otra postulación del requerimiento.' };
+          const des = payload.desestimaciones.find((d) => String(d.oportunidadId) === String(item.id));
+          if (des) {
+            return {
+              ...item,
+              estado: 'Desestimada' as const,
+              motivoDesestimacion: `${des.motivo}: ${des.comentario}`,
+            };
           }
           return item;
         })
       );
 
+      setDictamenModalData(null);
+      const nombreGanador = dictamenModalData?.ganadorOp.creadoPor || 'la vendedora seleccionada';
+
       Swal.fire({
         icon: 'success',
-        title: '¡Buena Pro Asignada!',
-        text: `La postulación de ${nombreGanador} ha sido Adjudicada con éxito.${otrosCompetidores.length > 0
-          ? ` Se marcaron ${otrosCompetidores.length} postulación(es) competidora(s) como Desestimadas.`
-          : ''
-          }`,
+        title: '¡Buena Pro Asignada con Éxito!',
+        html: `
+          <div style="text-align: left; font-size: 13.5px; color: #334155; line-height: 1.5;">
+            <p>Se confirmó la <strong>Buena Pro</strong> para <strong>${nombreGanador}</strong>.</p>
+            <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 10px; margin: 8px 0; font-size: 12.5px; color: #166534;">
+              <strong>Motivo de asignación:</strong> ${payload.comentarioGanador}
+            </div>
+            ${
+              payload.desestimaciones.length > 0
+                ? `<p style="font-size: 12px; color: #64748b; margin-top: 8px;">
+                    Se registraron los comentarios y motivos de desestimación para <strong>${payload.desestimaciones.length}</strong> otra(s) vendedora(s).
+                  </p>`
+                : ''
+            }
+          </div>
+        `,
         confirmButtonColor: '#059669',
-        timer: 3500,
-        timerProgressBar: true,
       });
     } catch (err: any) {
       Swal.fire({
         icon: 'error',
-        title: 'Error al dictaminar Buena Pro',
+        title: 'Error al asignar Buena Pro',
         text: err.message || 'Ocurrió un error al actualizar los estados en el servidor.',
         confirmButtonColor: '#dc2626',
       });
@@ -625,7 +637,6 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
       });
 
       // Cerrar modales
-      setAdjudicarModalOp(null);
       setDesestimarModalOp(null);
     } catch (err: any) {
       Swal.fire({
@@ -637,16 +648,6 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
     } finally {
       setProcesandoResolucion(false);
     }
-  };
-
-  // Confirmar Adjudicación
-  const handleConfirmarAdjudicar = () => {
-    if (!adjudicarModalOp) return;
-    resolverEstado(
-      adjudicarModalOp,
-      'Adjudicada',
-      `El requerimiento "${adjudicarModalOp.numeroRequerimiento}" ha sido declarado ADJUDICADO con éxito. Pasa al flujo de Orden de Compra.`
-    );
   };
 
   // Confirmar Desestimación
@@ -1106,10 +1107,7 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
                                 <button
                                   type="button"
                                   className="res-btn-adjudicar"
-                                  onClick={() => {
-                                    setAdjudicarModalOp(op);
-                                    setAdjudicarNotas('');
-                                  }}
+                                  onClick={() => handleAsignarGanador(op)}
                                   title="Dictaminar Buena Pro / Adjudicar Oportunidad"
                                 >
                                   <GoogleIcon name="verified" size={15} color="#ffffff" />
@@ -1772,105 +1770,15 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
         </div>
       )}
 
-          {/* ── Modal de Dictamen: ADJUDICAR OPORTUNIDAD ── */}
-          {adjudicarModalOp && (
-            <div className="res-modal-overlay">
-              <div className="res-modal">
-                <div className="res-modal__header">
-                  <h3>
-                    <GoogleIcon name="verified" size={22} color="#059669" />
-                    <span>Dictaminar Adjudicación</span>
-                  </h3>
-                  <button
-                    type="button"
-                    className="res-modal__close-btn"
-                    onClick={() => setAdjudicarModalOp(null)}
-                  >
-                    <GoogleIcon name="close" size={20} color="#64748b" />
-                  </button>
-                </div>
-
-                <div className="res-modal__body">
-                  <div className="res-modal__summary-box">
-                    <div className="res-modal__summary-row">
-                      <span className="res-modal__summary-label">Requerimiento:</span>
-                      <span className="res-modal__summary-val" style={{ color: '#2563eb' }}>
-                        {adjudicarModalOp.numeroRequerimiento}
-                      </span>
-                    </div>
-                    <div className="res-modal__summary-row">
-                      <span className="res-modal__summary-label">Entidad / Cliente:</span>
-                      <span className="res-modal__summary-val">
-                        {adjudicarModalOp.entidadConvocante || adjudicarModalOp.empresaRazonSocial || 'N/A'}
-                      </span>
-                    </div>
-                    <div className="res-modal__summary-row">
-                      <span className="res-modal__summary-label">Límite Total:</span>
-                      <span className="res-modal__summary-val" style={{ color: '#059669', fontSize: '1rem' }}>
-                        S/{' '}
-                        {Number(adjudicarModalOp.limiteTotal).toLocaleString('es-PE', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </span>
-                    </div>
-                    <div className="res-modal__summary-row">
-                      <span className="res-modal__summary-label">Ejecutiva Responsable:</span>
-                      <span className="res-modal__summary-val">{adjudicarModalOp.creadoPor}</span>
-                    </div>
-                  </div>
-
-                  <div className="res-modal__field">
-                    <label>Notas de Resolución / Número de Buena Pro (Opcional):</label>
-                    <textarea
-                      placeholder="Ej: Buena Pro otorgada en portal Perú Compras. En espera de emisión formal de Orden de Compra..."
-                      value={adjudicarNotas}
-                      onChange={(e) => setAdjudicarNotas(e.target.value)}
-                    />
-                  </div>
-
-                  <div
-                    style={{
-                      fontSize: '0.8rem',
-                      color: '#059669',
-                      background: '#ecfdf5',
-                      padding: '10px 14px',
-                      borderRadius: '6px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}
-                  >
-                    <GoogleIcon name="info" size={16} color="#059669" />
-                    <span>
-                      Al adjudicar, la oportunidad se marcará como <strong>Adjudicada</strong> y quedará lista para el
-                      registro de la Orden de Compra (OC).
-                    </span>
-                  </div>
-                </div>
-
-                <div className="res-modal__footer">
-                  <button
-                    type="button"
-                    className="res-btn-cancel"
-                    onClick={() => setAdjudicarModalOp(null)}
-                    disabled={procesandoResolucion}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    className="res-btn-confirm"
-                    style={{ background: '#059669' }}
-                    onClick={handleConfirmarAdjudicar}
-                    disabled={procesandoResolucion}
-                  >
-                    <GoogleIcon name="verified" size={16} color="#ffffff" />
-                    <span>{procesandoResolucion ? 'Dictaminando...' : 'Confirmar Adjudicación'}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
+          {/* ── Modal de Dictamen Oficial de Buena Pro con Comentarios Individuales ── */}
+          {dictamenModalData && (
+            <DictamenBuenaProModal
+              ganadorOp={dictamenModalData.ganadorOp}
+              otrosCompetidores={dictamenModalData.otrosCompetidores}
+              onClose={() => setDictamenModalData(null)}
+              onConfirm={handleConfirmarDictamenBuenaPro}
+              procesando={procesandoResolucion}
+            />
           )}
 
           {/* ── Modal de Dictamen: DESESTIMAR OPORTUNIDAD ── */}

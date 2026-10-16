@@ -5,6 +5,7 @@ import { GoogleIcon } from '../GoogleIcon';
 import type { Oportunidad } from '../../types/oportunidades';
 import { cambiarEstadoApi } from '../../api/services/oportunidades.service';
 import { formatFechaHoraPeru, formatHoraExacta, formatDiferenciaTiempo } from '../../utils/dateUtils';
+import { DictamenBuenaProModal, type DictamenBuenaProConfirmPayload } from './DictamenBuenaProModal';
 import './PodioRequerimientoModal.css';
 
 interface PodioRequerimientoModalProps {
@@ -25,6 +26,10 @@ export const PodioRequerimientoModal: React.FC<PodioRequerimientoModalProps> = (
   onVerDetalle,
 }) => {
   const [asignandoId, setAsignandoId] = useState<string | number | null>(null);
+  const [dictamenModalData, setDictamenModalData] = useState<{
+    ganadorOp: Oportunidad;
+    otrosCompetidores: Oportunidad[];
+  } | null>(null);
 
   // Filtrar postulaciones para este requerimiento y ordenar cronológicamente
   const competidores = useMemo(() => {
@@ -91,95 +96,79 @@ export const PodioRequerimientoModal: React.FC<PodioRequerimientoModalProps> = (
     });
   }, [competidores]);
 
-// Iconos SVG corporativos para SweetAlert2
-const SVG_TROPHY = `<svg width="26" height="26" viewBox="0 0 24 24" fill="#d97706" style="vertical-align: middle; display: inline-block;"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0 0 11 15.9V19H7v2h10v-2h-4v-3.1a5.01 5.01 0 0 0 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg>`;
-const SVG_CROWN = `<svg width="18" height="18" viewBox="0 0 24 24" fill="#15803d" style="vertical-align: middle; display: inline-block; margin-right: 6px;"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/></svg>`;
-const SVG_WARNING = `<svg width="18" height="18" viewBox="0 0 24 24" fill="#b45309" style="vertical-align: middle; display: inline-block; margin-right: 6px; flex-shrink: 0;"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>`;
-
-  // Asignar ganador y dictaminar Buena Pro
-  const handleAsignarGanador = async (ganadorOp: Oportunidad) => {
-    const nombreGanador = ganadorOp.creadoPor || 'Ejecutiva';
+  // Abrir modal de Dictamen de Buena Pro con casillas de comentarios individuales
+  const handleAsignarGanador = (ganadorOp: Oportunidad) => {
     const otrosCompetidores = competidores.filter((c) => String(c.id) !== String(ganadorOp.id));
-
-    const confirm = await Swal.fire({
-      title: `<div style="display:flex; align-items:center; justify-content:center; gap:8px;">${SVG_TROPHY}<span style="font-weight:800; color:#0f172a;">Asignar Buena Pro</span></div>`,
-      html: `
-        <div style="text-align: left; font-size: 13.5px; line-height: 1.5; color: #334155;">
-          <p style="margin-top: 4px;">¿Confirmas la asignación oficial de la <strong>BUENA PRO</strong> para este requerimiento a:</p>
-          <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 8px; padding: 12px; margin: 12px 0;">
-            <div style="font-weight: 800; color: #166534; font-size: 15px; display: flex; align-items: center;">
-              ${SVG_CROWN}
-              <span>${nombreGanador}</span>
-            </div>
-            <div style="color: #15803d; font-size: 12.5px; margin-top: 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <span>Requerimiento: <strong>${ganadorOp.numeroRequerimiento}</strong></span>
-              <span>&bull;</span>
-              <span>Límite Total: <strong>S/ ${Number(ganadorOp.limiteTotal).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</strong></span>
-            </div>
-          </div>
-          ${
-            otrosCompetidores.length > 0
-              ? `<div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 12px; color: #92400e; font-size: 12px; margin-top: 10px; display: flex; align-items: flex-start;">
-                  ${SVG_WARNING}
-                  <span><strong>Regla de Adjudicación Única:</strong> Existen <strong>${otrosCompetidores.length}</strong> otra(s) postulación(es) para este requerimiento. Al confirmar, pasarán automáticamente a estado <strong>Desestimada</strong>.</span>
-                </div>`
-              : ''
-          }
-        </div>
-      `,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#059669',
-      cancelButtonColor: '#64748b',
-      confirmButtonText: 'Sí, Asignar Ganador',
-      cancelButtonText: 'Cancelar',
+    setDictamenModalData({
+      ganadorOp,
+      otrosCompetidores,
     });
+  };
 
-    if (!confirm.isConfirmed) return;
-
-    setAsignandoId(ganadorOp.id);
+  // Confirmar asignación de Buena Pro y desestimaciones individuales una por una
+  const handleConfirmarDictamen = async (payload: DictamenBuenaProConfirmPayload) => {
+    setAsignandoId(payload.ganadorId);
     try {
-      // 1. Si otro competidor ya tenía la Buena Pro, desestimarlo primero para liberar la regla de Buena Pro única en el backend
-      const previoGanador = otrosCompetidores.find(
+      // 1. Si otro competidor ya tenía la Buena Pro, desestimarlo primero para liberar la regla en backend
+      const previoGanador = dictamenModalData?.otrosCompetidores.find(
         (c) => c.estado === 'Adjudicada' || ['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(c.estado)
       );
       if (previoGanador) {
-        await cambiarEstadoApi(previoGanador.id, 'Desestimada');
+        const itemPrevio = payload.desestimaciones.find((d) => String(d.oportunidadId) === String(previoGanador.id));
+        const motivoPrevio = itemPrevio ? `${itemPrevio.motivo}: ${itemPrevio.comentario}` : 'Reasignación de Buena Pro';
+        await cambiarEstadoApi(previoGanador.id, 'Desestimada', motivoPrevio);
       }
 
-      // 2. Adjudicar la oportunidad ganadora
-      await cambiarEstadoApi(ganadorOp.id, 'Adjudicada');
-
-      // 3. Desestimar las otras oportunidades competidoras
-      const promesasDesestimar = otrosCompetidores
-        .filter((c) => c.id !== previoGanador?.id && c.estado !== 'Desestimada')
-        .map((c) => cambiarEstadoApi(c.id, 'Desestimada').catch((e) => console.warn(e)));
+      // 2. Desestimar las otras oportunidades competidoras con su motivo individual uno por uno
+      const promesasDesestimar = payload.desestimaciones
+        .filter((d) => String(d.oportunidadId) !== String(previoGanador?.id))
+        .map((des) => {
+          const motivoCompleto = `${des.motivo}: ${des.comentario}`;
+          return cambiarEstadoApi(des.oportunidadId, 'Desestimada', motivoCompleto).catch((e) =>
+            console.warn(e)
+          );
+        });
       await Promise.all(promesasDesestimar);
 
-      // 3. Notificar lista actualizada
+      // 3. Adjudicar la oportunidad ganadora con su comentario de asignación
+      await cambiarEstadoApi(payload.ganadorId, 'Adjudicada', payload.comentarioGanador);
+
+      // 4. Notificar lista actualizada
       const listaActualizada = oportunidades.map((item) => {
-        if (String(item.id) === String(ganadorOp.id)) {
-          return { ...item, estado: 'Adjudicada' as const };
+        if (String(item.id) === String(payload.ganadorId)) {
+          return { ...item, estado: 'Adjudicada' as const, motivoDesestimacion: null };
         }
-        if (otrosCompetidores.some((o) => String(o.id) === String(item.id))) {
-          return { ...item, estado: 'Desestimada' as const };
+        const des = payload.desestimaciones.find((d) => String(d.oportunidadId) === String(item.id));
+        if (des) {
+          return { ...item, estado: 'Desestimada' as const, motivoDesestimacion: `${des.motivo}: ${des.comentario}` };
         }
         return item;
       });
 
       onOportunidadesActualizadas?.(listaActualizada);
+      setDictamenModalData(null);
+
+      const nombreGanador = dictamenModalData?.ganadorOp.creadoPor || 'la vendedora seleccionada';
 
       Swal.fire({
         icon: 'success',
         title: '¡Buena Pro Asignada!',
-        text: `La postulación de ${nombreGanador} ha sido Adjudicada con éxito.${
-          otrosCompetidores.length > 0
-            ? ` Se marcaron ${otrosCompetidores.length} postulación(es) competidora(s) como Desestimadas.`
-            : ''
-        }`,
+        html: `
+          <div style="text-align: left; font-size: 13.5px; color: #334155; line-height: 1.5;">
+            <p>La postulación de <strong>${nombreGanador}</strong> ha sido Adjudicada con Buena Pro.</p>
+            <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 10px; margin: 8px 0; font-size: 12.5px; color: #166534;">
+              <strong>Motivo de asignación:</strong> ${payload.comentarioGanador}
+            </div>
+            ${
+              payload.desestimaciones.length > 0
+                ? `<p style="font-size: 12px; color: #64748b; margin-top: 8px;">
+                    Se registraron los motivos individuales de desestimación para <strong>${payload.desestimaciones.length}</strong> otra(s) vendedora(s).
+                  </p>`
+                : ''
+            }
+          </div>
+        `,
         confirmButtonColor: '#059669',
-        timer: 3500,
-        timerProgressBar: true,
       });
     } catch (err: any) {
       Swal.fire({
@@ -473,6 +462,16 @@ const SVG_WARNING = `<svg width="18" height="18" viewBox="0 0 24 24" fill="#b453
           </button>
         </div>
       </div>
+
+      {dictamenModalData && (
+        <DictamenBuenaProModal
+          ganadorOp={dictamenModalData.ganadorOp}
+          otrosCompetidores={dictamenModalData.otrosCompetidores}
+          onClose={() => setDictamenModalData(null)}
+          onConfirm={handleConfirmarDictamen}
+          procesando={asignandoId !== null}
+        />
+      )}
     </div>
   );
 };

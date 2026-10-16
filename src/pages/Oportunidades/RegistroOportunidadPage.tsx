@@ -19,6 +19,7 @@ import type { Oportunidad, OrdenCompra } from '../../types/oportunidades';
 import { formatFechaHoraPeru, formatHoraPeru } from '../../utils/dateUtils';
 import './RegistroOportunidad.css';
 import { BuscadorEmpresaModal } from '../../components/BuscadorEmpresaModal/BuscadorEmpresaModal';
+import { PrecioInput, CantidadStepper } from '../../components/FormInputs/PrecioInput';
 import { useSearchParams } from 'react-router-dom';
 import type { OportunidadTab } from './OportunidadNavButtons';
 import { ListadoOportunidadesView } from './ListadoOportunidadesView';
@@ -134,11 +135,11 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
           numeroRequerimiento: op.numeroRequerimiento,
           acuerdoMarco: op.acuerdoMarcoId
             ? {
-                id: op.acuerdoMarcoId,
-                codigo: op.acuerdoMarcoCodigo || 'N/A',
-                descripcion: op.acuerdoMarcoDescripcion || '',
-                activo: true,
-              }
+              id: op.acuerdoMarcoId,
+              codigo: op.acuerdoMarcoCodigo || 'N/A',
+              descripcion: op.acuerdoMarcoDescripcion || '',
+              activo: true,
+            }
             : null,
           empresaId: op.empresaId,
           empresaRazonSocial: op.empresaRazonSocial,
@@ -171,29 +172,29 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
           estado: (op.estado as any) || 'En Licitación',
           ordenCompra: op.ordenCompra
             ? {
-                id: op.ordenCompra.id,
-                oportunidadId: op.ordenCompra.oportunidadId,
-                numeroOC: op.ordenCompra.numeroOC,
-                fechaEmisionOC: op.ordenCompra.fechaEmisionOC,
-                estadoOC: op.ordenCompra.estadoOC as OrdenCompra['estadoOC'],
-                motivoRechazo: op.ordenCompra.motivoRechazo,
-                fechaDecisionOC: op.ordenCompra.fechaDecisionOC,
-                costoInicial: op.ordenCompra.costoInicial,
-                costoRenegociado: op.ordenCompra.costoRenegociado,
-                margenAdicional: op.ordenCompra.margenAdicional,
-                fechaRenegociacion: op.ordenCompra.fechaRenegociacion,
-                fechaDespacho: op.ordenCompra.fechaDespacho,
-                transportista: op.ordenCompra.transportista,
-                noGuiaRemision: op.ordenCompra.noGuiaRemision,
-                fechaEntrega: op.ordenCompra.fechaEntrega,
-                nroOCAM: op.ordenCompra.nroOCAM,
-                nroExpediente: op.ordenCompra.nroExpediente,
-                unidad: op.ordenCompra.unidad,
-                codigoCIAF: op.ordenCompra.codigoCIAF,
-                montoOCAM: op.ordenCompra.montoOCAM,
-                fechaRegistro: op.ordenCompra.fechaRegistro,
-                fechaActualizacion: op.ordenCompra.fechaActualizacion,
-              }
+              id: op.ordenCompra.id,
+              oportunidadId: op.ordenCompra.oportunidadId,
+              numeroOC: op.ordenCompra.numeroOC,
+              fechaEmisionOC: op.ordenCompra.fechaEmisionOC,
+              estadoOC: op.ordenCompra.estadoOC as OrdenCompra['estadoOC'],
+              motivoRechazo: op.ordenCompra.motivoRechazo,
+              fechaDecisionOC: op.ordenCompra.fechaDecisionOC,
+              costoInicial: op.ordenCompra.costoInicial,
+              costoRenegociado: op.ordenCompra.costoRenegociado,
+              margenAdicional: op.ordenCompra.margenAdicional,
+              fechaRenegociacion: op.ordenCompra.fechaRenegociacion,
+              fechaDespacho: op.ordenCompra.fechaDespacho,
+              transportista: op.ordenCompra.transportista,
+              noGuiaRemision: op.ordenCompra.noGuiaRemision,
+              fechaEntrega: op.ordenCompra.fechaEntrega,
+              nroOCAM: op.ordenCompra.nroOCAM,
+              nroExpediente: op.ordenCompra.nroExpediente,
+              unidad: op.ordenCompra.unidad,
+              codigoCIAF: op.ordenCompra.codigoCIAF,
+              montoOCAM: op.ordenCompra.montoOCAM,
+              fechaRegistro: op.ordenCompra.fechaRegistro,
+              fechaActualizacion: op.ordenCompra.fechaActualizacion,
+            }
             : undefined,
           creadoPor: op.creadoPorNombre || 'Ejecutiva',
           creadoPorUsuarioId: op.creadoPorUsuarioId,
@@ -342,18 +343,18 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
       prev.map((it) =>
         it.id === itemId
           ? {
-              ...it,
-              proveedores: [
-                ...(it.proveedores ?? []),
-                {
-                  id: `prov-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-                  nombreProveedor: '',
-                  cantidad: 1,
-                  costoUnitario: 0,
-                  costoEnvio: 0,
-                },
-              ],
-            }
+            ...it,
+            proveedores: [
+              ...(it.proveedores ?? []),
+              {
+                id: `prov-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                nombreProveedor: '',
+                cantidad: 1,
+                costoUnitario: 0,
+                costoEnvio: 0,
+              },
+            ],
+          }
           : it
       )
     );
@@ -369,11 +370,11 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
       prev.map((it) =>
         it.id === itemId
           ? {
-              ...it,
-              proveedores: (it.proveedores ?? []).map((pv) =>
-                pv.id === provId ? { ...pv, [field]: val } : pv
-              ),
-            }
+            ...it,
+            proveedores: (it.proveedores ?? []).map((pv) =>
+              pv.id === provId ? { ...pv, [field]: val } : pv
+            ),
+          }
           : it
       )
     );
@@ -497,71 +498,99 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
   // Prevenir envíos dobles o clicks concurrentes en 0ms
   const isSubmittingRef = useRef(false);
 
-  // Validaciones para habilitar botón:
-  // Validaciones para habilitar botón:
   // Sección 1: Número de Requerimiento y al menos una Marca son obligatorios
   const isFormValid =
     numeroRequerimiento.trim().length > 0 &&
     selectedMarcas.length > 0;
 
-  // Validación preventiva en cliente: duplicado de la misma ejecutiva y ventana
-  // de prioridad del podio (5 min). Devuelve false si el registro debe bloquearse.
-  const validarRegistroPrevio = (reqUpper: string): boolean => {
-    const yaRegistrado = oportunidades.some(
-      (op) =>
-        op.numeroRequerimiento.trim().toUpperCase() === reqUpper &&
-        (op.creadoPorUsuarioId === empleado?.userId || !op.creadoPorUsuarioId)
-    );
-    if (yaRegistrado) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Requerimiento ya registrado',
-        text: `Ya has registrado previamente el requerimiento "${reqUpper}". Cada ejecutiva puede registrar solo una oportunidad por requerimiento.`,
-        confirmButtonColor: roleAccent || '#0284c7',
-        confirmButtonText: 'Entendido',
-        customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
-      });
-      return false;
-    }
 
-    // ── REGLA DE PRIORIDAD DEL PODIO (VENTANA DE 5 MINUTOS) ──
-    const registrosDelReq = oportunidades
-      .filter((op) => op.numeroRequerimiento.trim().toUpperCase() === reqUpper)
-      .map((op) => op.fechaRegistro)
-      .filter((f): f is string => !!f)
-      .map((f) => new Date(f).getTime())
-      .filter((t) => !Number.isNaN(t));
-
-    if (registrosDelReq.length > 0) {
-      const primerRegistro = Math.min(...registrosDelReq);
-      const antiguedadMs = Date.now() - primerRegistro;
-      const ventanaMs = 5 * 60 * 1000;
-      if (antiguedadMs < ventanaMs) {
-        const restanteSeg = Math.ceil((ventanaMs - antiguedadMs) / 1000);
-        const mine = formatFechaHoraPeru(new Date(primerRegistro));
-        Swal.fire({
-          icon: 'info',
-          title: 'Prioridad del Podio',
-          text: `El requerimiento "${reqUpper}" ya fue registrado por otra ejecutiva hace menos de 5 minutos y conserva la prioridad del podio (primero registrado: ${mine}). Puedes volver a intentarlo en ${restanteSeg} segundos.`,
-          confirmButtonColor: roleAccent || '#0284c7',
-          confirmButtonText: 'Entendido',
-          customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
-        });
-        return false;
-      }
-    }
-    return true;
-  };
-
-  // Guardar (Crear o Actualizar)
+  // Guardar (Crear Exprés o Guardar Completo)
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!isFormValid || loading || isSubmittingRef.current) return;
+    if (loading || isSubmittingRef.current) return;
 
-    const reqUpper = numeroRequerimiento.toUpperCase().trim();
+    // Si aún no se ha guardado expresamente, guiar al usuario a completar el Paso 1
+    if (!editingId) {
+      if (!isFormValid) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Paso 1 incompleto',
+          text: 'Ingresa el N° de Requerimiento y selecciona al menos una Marca para realizar el Guardado Exprés.',
+          confirmButtonColor: roleAccent || '#0284c7',
+        });
+        document.getElementById('req-number')?.focus();
+        return;
+      }
+      handleQuickContinue();
+      return;
+    }
 
-    // Validación preventiva en cliente (duplicados y prioridad del podio)
-    if (!editingId && !validarRegistroPrevio(reqUpper)) return;
+    // ── VALIDACIONES OBLIGATORIAS PARA EL GUARDADO COMPLETO ──
+    if (!selectedAcuerdo) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Acuerdo Marco requerido',
+        text: 'Por favor selecciona el Acuerdo Marco de la convocatoria en el Paso 2.',
+        confirmButtonColor: roleAccent || '#0284c7',
+      });
+      document.getElementById('reg-section-2')?.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+
+    if (!fechaVencimiento || !fechaVencimiento.trim()) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Fecha de vencimiento requerida',
+        text: 'Por favor ingresa la Fecha y Hora de Vencimiento oficial en el Paso 2.',
+        confirmButtonColor: roleAccent || '#0284c7',
+      });
+      document.getElementById('req-date')?.focus();
+      return;
+    }
+
+    if (!selectedEmpresa && !entidadConvocante.trim()) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Empresa o Entidad requerida',
+        text: 'Por favor busca una Empresa en BD o escribe la Entidad Solicitante en el Paso 3.',
+        confirmButtonColor: roleAccent || '#0284c7',
+      });
+      document.getElementById('reg-empresa-card')?.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+
+    const validItems = items.filter((it) => it.numeroParte.trim());
+    if (validItems.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Productos requeridos',
+        text: 'Debes registrar al menos un producto con Número de Parte, Cantidad y Límite unitario en el Paso 4.',
+        confirmButtonColor: roleAccent || '#0284c7',
+      });
+      document.getElementById('reg-section-productos')?.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+
+    for (const it of validItems) {
+      if (!it.cantidad || Number(it.cantidad) <= 0) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Cantidad inválida',
+          text: `El ítem con N° de parte "${it.numeroParte}" debe tener una cantidad mayor a 0.`,
+          confirmButtonColor: roleAccent || '#0284c7',
+        });
+        return;
+      }
+      if (it.limiteUnitario == null || Number(it.limiteUnitario) <= 0) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Límite unitario requerido',
+          text: `El ítem con N° de parte "${it.numeroParte}" debe tener un límite unitario mayor a 0.`,
+          confirmButtonColor: roleAccent || '#0284c7',
+        });
+        return;
+      }
+    }
 
     // Validación: la cantidad asignada a proveedores no puede exceder la requerida
     if (hayExcesoAsignacion) {
@@ -586,22 +615,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
     isSubmittingRef.current = true;
     setLoading(true);
 
-    const validItems = items.filter((it) => it.numeroParte.trim());
     const validTotalLimite = validItems.reduce((acc, it) => acc + (Number(it.cantidad) || 0) * (Number(it.limiteUnitario) || 0), 0);
-
-    if (editingId && validItems.length === 0) {
-      isSubmittingRef.current = false;
-      setLoading(false);
-      Swal.fire({
-        icon: 'info',
-        title: 'Agrega al menos un producto',
-        text: 'Para guardar el registro completo necesitas al menos un producto con N° de parte en la Sección 4.',
-        confirmButtonColor: roleAccent || '#0284c7',
-        confirmButtonText: 'Entendido',
-        customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
-      });
-      return;
-    }
 
     try {
       if (editingId) {
@@ -810,11 +824,6 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
       return;
     }
 
-    if (!validarRegistroPrevio(reqUpper)) {
-      setIsQuickModalOpen(false);
-      return;
-    }
-
     isSubmittingRef.current = true;
     setLoading(true);
     try {
@@ -851,15 +860,16 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
 
       // Dejar la oportunidad cargada en el formulario para seguir completando
       setEditingId(backendId);
+      setPreselectedEvidenciaOpId(backendId);
       setNumeroRequerimiento(reqUpper);
       setIsQuickModalOpen(false);
 
       Swal.fire({
         icon: 'success',
-        title: '¡Borrador registrado!',
-        text: `La oportunidad "${reqUpper}" se guardó. Completa los demás datos y productos y pulsa "Guardar Cambios en Oportunidad".`,
+        title: '¡Guardado Exprés Exitoso!',
+        text: `La oportunidad "${reqUpper}" ha sido registrada con prioridad ganada. Procede a completar los datos obligatorios a continuación (Acuerdo Marco, Vencimiento, Empresa, Productos) y adjunta las evidencias correspondientes.`,
         confirmButtonColor: roleAccent || '#0284c7',
-        confirmButtonText: 'Seguir completando',
+        confirmButtonText: 'Continuar con el registro',
         customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
       }).then(() => {
         document.getElementById('reg-section-2')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -926,11 +936,11 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                 </span>
               </div>
               <p>
-                  {activeTab === 'listar'
-                    ? 'Todas las oportunidades registradas'
-                    : activeTab === 'podio'
-                      ? 'Ranking comercial del equipo'
-                      : 'Plataforma de Acuerdos Marco • Catálogo Perú Compras • Registro Rápido para Ejecutivas'}
+                {activeTab === 'listar'
+                  ? 'Todas las oportunidades registradas'
+                  : activeTab === 'podio'
+                    ? 'Ranking comercial del equipo'
+                    : 'Plataforma de Acuerdos Marco • Catálogo Perú Compras • Registro Rápido para Ejecutivas'}
               </p>
             </div>
           </div>
@@ -968,9 +978,8 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
 
 
 
-          {/* ── Formulario de Registro en 2 Columnas ── */}
-          {/* ── Formulario Unificado (Sin bordes redondeados en divs) ── */}
-          <form onSubmit={handleSubmit} className="reg-unified-form">
+          {/* ── Formulario Unificado (Flujo en 2 Fases con Esquinas Rectas) ── */}
+          <div className="reg-unified-form">
             {/* ── 1. SECCIÓN 1: REQUERIMIENTO Y MARCA (OBLIGATORIO) ── */}
             <div className="reg-flat-section reg-flat-section--required">
               <div className="reg-flat-section__header">
@@ -1373,26 +1382,20 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                     <div className="reg-form-row">
                       <div className="reg-field">
                         <label>Cantidad <span className="required">*</span></label>
-                        <input
-                          type="number"
-                          min="1"
-                          placeholder="Ej. 10"
+                        <CantidadStepper
                           value={item.cantidad}
-                          onChange={(e) => handleUpdateItem(item.id, 'cantidad', Math.max(1, parseInt(e.target.value) || 0))}
+                          onChange={(val) => handleUpdateItem(item.id, 'cantidad', val)}
+                          min={1}
                         />
                       </div>
 
                       <div className="reg-field">
                         <label>Límite unitario (S/) <span className="required">*</span></label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0.01"
-                          placeholder="Ej. 70.00"
+                        <PrecioInput
                           value={item.limiteUnitario}
-                          onChange={(e) =>
-                            handleUpdateItem(item.id, 'limiteUnitario', parseFloat(e.target.value) || 0)
-                          }
+                          onChange={(val) => handleUpdateItem(item.id, 'limiteUnitario', val)}
+                          placeholder="0.00"
+                          min={0}
                         />
                       </div>
                     </div>
@@ -1479,40 +1482,50 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                                         }
                                       />
                                       <input
-                                        type="number"
-                                        min="0"
-                                        className="reg-prov-input"
+                                        type="text"
+                                        inputMode="numeric"
+                                        className="reg-prov-input reg-prov-input--num"
                                         placeholder="Cant."
                                         title="Cantidad asignada"
-                                        value={pv.cantidad}
-                                        onChange={(e) =>
-                                          handleUpdateProveedor(item.id, pv.id, 'cantidad', parseInt(e.target.value) || 0)
-                                        }
+                                        value={pv.cantidad === 0 ? '' : pv.cantidad}
+                                        onFocus={(e) => e.target.select()}
+                                        onChange={(e) => {
+                                          const raw = e.target.value.replace(/[^0-9]/g, '');
+                                          handleUpdateProveedor(item.id, pv.id, 'cantidad', raw ? parseInt(raw, 10) : 0);
+                                        }}
                                       />
-                                      <input
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        className="reg-prov-input"
-                                        placeholder="Costo S/"
-                                        title="Costo unitario"
-                                        value={pv.costoUnitario}
-                                        onChange={(e) =>
-                                          handleUpdateProveedor(item.id, pv.id, 'costoUnitario', parseFloat(e.target.value) || 0)
-                                        }
-                                      />
-                                      <input
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        className="reg-prov-input"
-                                        placeholder="Envío S/"
-                                        title="Costo de envío"
-                                        value={pv.costoEnvio}
-                                        onChange={(e) =>
-                                          handleUpdateProveedor(item.id, pv.id, 'costoEnvio', parseFloat(e.target.value) || 0)
-                                        }
-                                      />
+                                      <div className="reg-prov-currency-wrap" title="Costo unitario">
+                                        <span className="reg-prov-curr-sym">S/</span>
+                                        <input
+                                          type="text"
+                                          inputMode="decimal"
+                                          className="reg-prov-input reg-prov-input--price"
+                                          placeholder="0.00"
+                                          value={pv.costoUnitario === 0 ? '' : pv.costoUnitario}
+                                          onFocus={(e) => e.target.select()}
+                                          onChange={(e) => {
+                                            const raw = e.target.value.replace(',', '.').replace(/[^0-9.]/g, '');
+                                            const parsed = parseFloat(raw);
+                                            handleUpdateProveedor(item.id, pv.id, 'costoUnitario', !isNaN(parsed) ? parsed : 0);
+                                          }}
+                                        />
+                                      </div>
+                                      <div className="reg-prov-currency-wrap" title="Costo de envío">
+                                        <span className="reg-prov-curr-sym">S/</span>
+                                        <input
+                                          type="text"
+                                          inputMode="decimal"
+                                          className="reg-prov-input reg-prov-input--price"
+                                          placeholder="0.00"
+                                          value={pv.costoEnvio === 0 ? '' : pv.costoEnvio}
+                                          onFocus={(e) => e.target.select()}
+                                          onChange={(e) => {
+                                            const raw = e.target.value.replace(',', '.').replace(/[^0-9.]/g, '');
+                                            const parsed = parseFloat(raw);
+                                            handleUpdateProveedor(item.id, pv.id, 'costoEnvio', !isNaN(parsed) ? parsed : 0);
+                                          }}
+                                        />
+                                      </div>
                                       <span className="reg-prov-subtotal">
                                         S/ {subProv.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                       </span>
@@ -1552,17 +1565,66 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
               })}
             </div>
 
-            {/* ── 5. SECCIÓN 5: RESUMEN Y GUARDADO COMPLETO ── */}
-            <div className="reg-flat-section reg-flat-section--summary">
+            {/* ── 5. SECCIÓN 5: SUBIDA DE EVIDENCIAS E IMÁGENES DE COTIZACIÓN ── */}
+            <div className={`reg-flat-section ${!editingId ? 'reg-flat-section--locked' : ''}`} id="reg-evidence-section">
               <div className="reg-flat-section__header">
                 <div className="reg-flat-section__title">
                   <span className="reg-flat-section__badge-num">5</span>
                   <div>
-                    <h3>Resumen y Guardado Completo</h3>
-                    <span className="reg-flat-section__desc">Revisa el estado comercial y confirma todos los datos</span>
+                    <h3>Subida de Evidencias e Imágenes de Cotización</h3>
+                    <span className="reg-flat-section__desc">
+                      Adjunta capturas de pantalla, fichas técnicas o PDF de cotización de la marca
+                    </span>
                   </div>
                 </div>
+                {editingId ? (
+                  <span className="reg-flat-badge-opcional" style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }}>
+                    <GoogleIcon name="attachment" size={12} color="#047857" /> Habilitado
+                  </span>
+                ) : (
+                  <span className="reg-flat-badge-opcional" style={{ background: '#f1f5f9', color: '#64748b' }}>
+                    <GoogleIcon name="lock" size={12} color="#64748b" /> Bloqueado
+                  </span>
+                )}
               </div>
+
+              {!editingId ? (
+                <div className="reg-section-locked-notice">
+                  <GoogleIcon name="lock" size={16} color="#64748b" />
+                  <span>El módulo de imágenes y evidencias se habilitará automáticamente al realizar el <strong>Guardado Exprés</strong> en el Paso 1.</span>
+                </div>
+              ) : (
+                <div className="reg-evidence-embedded">
+                  <SubirEvidenciaView
+                    oportunidades={oportunidades}
+                    roleAccent={roleAccent}
+                    preselectedOportunidadId={editingId ?? preselectedEvidenciaOpId}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* ── 6. SECCIÓN 6: RESUMEN Y GUARDAR CAMBIOS ── */}
+            <div className={`reg-flat-section reg-flat-section--summary ${!editingId ? 'reg-flat-section--locked' : ''}`}>
+              <div className="reg-flat-section__header">
+                <div className="reg-flat-section__title">
+                  <span className="reg-flat-section__badge-num">6</span>
+                  <div>
+                    <h3>Resumen y Guardar Cambios</h3>
+                    <span className="reg-flat-section__desc">Revisa el estado comercial y confirma todos los datos para guardar</span>
+                  </div>
+                </div>
+                {editingId && (
+                  <span className="reg-flat-badge-obligatorio">Paso Final</span>
+                )}
+              </div>
+
+              {!editingId && (
+                <div className="reg-section-locked-notice">
+                  <GoogleIcon name="lock" size={16} color="#64748b" />
+                  <span>Realiza primero el <strong>Guardado Exprés</strong> en el Paso 1 para poder confirmar y guardar los cambios.</span>
+                </div>
+              )}
 
               <div className="reg-summary-flat-grid">
                 <div className="reg-summary-flat-item">
@@ -1628,21 +1690,22 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
               {/* Botones de acción final */}
               <div className="reg-final-actions-bar">
                 <button
-                  type="submit"
-                  disabled={!isFormValid || loading}
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={!editingId || loading}
                   className="reg-btn-submit-complete"
                   style={{
-                    background: isFormValid ? roleAccent : '#cbd5e1',
-                    cursor: isFormValid ? 'pointer' : 'not-allowed',
+                    background: editingId ? roleAccent : '#cbd5e1',
+                    cursor: editingId && !loading ? 'pointer' : 'not-allowed',
                   }}
                 >
-                  <GoogleIcon name={editingId ? 'save' : 'done_all'} size={20} color="#ffffff" />
+                  <GoogleIcon name={editingId ? 'save' : 'lock'} size={20} color="#ffffff" />
                   <span>
                     {loading
                       ? 'Guardando...'
                       : editingId
-                        ? 'Guardar Cambios en Oportunidad'
-                        : 'Guardar Oportunidad Completa'}
+                        ? 'Guardar Oportunidad Completa'
+                        : 'Primero realiza el Guardado Exprés (Paso 1)'}
                   </span>
                 </button>
 
@@ -1653,15 +1716,6 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                 )}
               </div>
             </div>
-          </form>
-
-          {/* ── Sección embebida: Subir Evidencia (dentro de Registrar Oportunidad) ── */}
-          <div id="reg-evidence-section" className="reg-evidence-section">
-            <SubirEvidenciaView
-              oportunidades={oportunidades}
-              roleAccent={roleAccent}
-              preselectedOportunidadId={preselectedEvidenciaOpId}
-            />
           </div>
         </>
       )}

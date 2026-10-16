@@ -6,6 +6,7 @@
 import type { PagoOC, RegistrarPagoInput, LiquidacionOC } from '../../types/pagos';
 import type { Oportunidad } from '../../types/oportunidades';
 import { subirImagenOportunidadApi } from './oportunidades.service';
+import { API_BASE } from '../../env/envoviment';
 
 const STORAGE_KEY = 'sales_rebel_pagos_v1';
 
@@ -194,10 +195,65 @@ function generarCodigoPago(pagosActuales: PagoOC[]): string {
   return `${prefijo}${String(siguiente).padStart(4, '0')}`;
 }
 
+/** Mapea el response DTO del backend .NET a PagoOC */
+function mapBackendDtoToPagoOC(dto: any): PagoOC {
+  return {
+    id: String(dto.id || dto.codigoPago),
+    codigoPago: dto.codigoPago,
+    oportunidadId: dto.oportunidadId,
+    ordenCompraId: dto.ordenCompraId,
+    numeroOC: dto.numeroOC,
+    numeroRequerimiento: dto.numeroRequerimiento,
+    empresaRazonSocial: dto.empresaRazonSocial,
+    entidadConvocante: dto.entidadConvocante,
+    concepto: dto.concepto,
+    conceptoPersonalizado: dto.conceptoPersonalizado,
+    monto: Number(dto.monto),
+    moneda: dto.moneda || 'PEN',
+    fechaPago: dto.fechaPago ? dto.fechaPago.slice(0, 10) : new Date().toISOString().slice(0, 10),
+    metodoPago: dto.metodoPago,
+    banco: dto.banco,
+    numeroOperacion: dto.numeroOperacion,
+    beneficiario: dto.beneficiario,
+    notas: dto.notas,
+    comprobante: {
+      nombreArchivo: dto.comprobante?.nombreArchivo || 'comprobante.jpg',
+      tamanoBytes: Number(dto.comprobante?.tamanoBytes) || 0,
+      tamanoFormateado: dto.comprobante?.tamanoFormateado || '0 B',
+      contentType: dto.comprobante?.contentType || 'image/jpeg',
+      dataUrl: dto.comprobante?.dataUrl || '',
+      backendImagenId: dto.comprobante?.backendImagenId,
+      backendUrl: dto.comprobante?.backendUrl,
+      fechaSubida: dto.comprobante?.fechaSubida || new Date().toISOString(),
+    },
+    registradoPor: dto.registradoPor || 'Usuario de Ventas',
+    registradoPorEmail: dto.registradoPorEmail,
+    fechaRegistro: dto.fechaRegistro || new Date().toISOString(),
+    estado: dto.estado || 'Registrado',
+  };
+}
+
+/** Obtiene pagos consultando el API backend con fallback a almacenamiento local */
+export async function obtenerPagosApi(): Promise<PagoOC[]> {
+  try {
+    const res = await fetch(`${API_BASE}/api/pagos`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        const mapeados = data.map(mapBackendDtoToPagoOC);
+        guardarPagos(mapeados);
+        return mapeados;
+      }
+    }
+  } catch (err) {
+    console.warn('Backend /api/pagos no accesible, usando almacenamiento local:', err);
+  }
+  return obtenerPagos();
+}
+
 /**
  * Registra un nuevo pago vinculado a una Orden de Compra.
- * Almacena la captura en Base64 para visualización garantizada y, si es posible,
- * la respalda en el backend a través del endpoint de evidencias.
+ * Realiza la petición POST a /api/pagos en el backend y mantiene respaldo local.
  */
 export async function registrarPago(
   input: RegistrarPagoInput,
@@ -210,7 +266,7 @@ export async function registrarPago(
   let backendImagenId: number | undefined;
   let backendUrl: string | undefined;
 
-  // Intento de respaldo en el backend si hay conectividad
+  // 1. Intento de respaldo de imagen en el backend
   try {
     const comentario = `Comprobante de Pago (${input.concepto}): ${input.moneda} ${input.monto.toFixed(2)} - Op #${input.numeroOperacion || 'S/N'}`;
     const respBackend = await subirImagenOportunidadApi(
@@ -224,9 +280,68 @@ export async function registrarPago(
       backendUrl = respBackend.url;
     }
   } catch {
-    // Si falla el backend, continuamos de forma transparente con el storage seguro en base64
+    // Continuar
   }
 
+  // 2. Intento de registro en el backend .NET (/api/pagos)
+  try {
+    const payload = {
+      oportunidadId: input.oportunidadId,
+      ordenCompraId: input.ordenCompraId,
+      numeroOC: input.numeroOC.trim(),
+      numeroRequerimiento: input.numeroRequerimiento.trim(),
+      empresaRazonSocial: input.empresaRazonSocial,
+      entidadConvocante: input.entidadConvocante,
+      concepto: input.concepto,
+      conceptoPersonalizado: input.conceptoPersonalizado?.trim(),
+      monto: Number(input.monto),
+      moneda: input.moneda,
+      fechaPago: input.fechaPago,
+      metodoPago: input.metodoPago,
+      banco: input.banco?.trim(),
+      numeroOperacion: input.numeroOperacion?.trim(),
+      beneficiario: input.beneficiario?.trim(),
+      notas: input.notas?.trim(),
+      comprobanteNombreArchivo: input.archivoComprobante.name,
+      comprobanteTamanoBytes: tamanoBytes,
+      comprobanteContentType: input.archivoComprobante.type || 'image/jpeg',
+      comprobanteDataUrl: dataUrl,
+      registradoPor: usuario?.nombreCompleto || 'Usuario de Ventas',
+      registradoPorEmail: usuario?.email || 'ventas@rebelqueen.com',
+    };
+
+    const res = await fetch(`${API_BASE}/api/pagos`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      const dataBackend = await res.json();
+      const pagoCreado = mapBackendDtoToPagoOC(dataBackend);
+      if (backendImagenId) {
+        pagoCreado.comprobante.backendImagenId = backendImagenId;
+        pagoCreado.comprobante.backendUrl = backendUrl;
+      }
+      const actuales = obtenerPagos().filter((p) => p.id !== pagoCreado.id && p.codigoPago !== pagoCreado.codigoPago);
+      guardarPagos([pagoCreado, ...actuales]);
+      return pagoCreado;
+    } else {
+      const errJson = await res.json().catch(() => ({}));
+      if (errJson.mensaje) {
+        throw new Error(errJson.mensaje);
+      }
+    }
+  } catch (err: any) {
+    if (err.message && err.message.includes('excede')) {
+      throw err;
+    }
+    console.warn('Servidor /api/pagos no disponible, guardando en persistencia local:', err);
+  }
+
+  // 3. Fallback a persistencia local garantizada
   const pagosActuales = obtenerPagos();
   const codigoPago = generarCodigoPago(pagosActuales);
 
@@ -259,8 +374,8 @@ export async function registrarPago(
       backendUrl,
       fechaSubida: new Date().toISOString(),
     },
-    registradoPor: usuario?.nombreCompleto || 'Administrador',
-    registradoPorEmail: usuario?.email || 'admin@rebelqueen.com',
+    registradoPor: usuario?.nombreCompleto || 'Usuario de Ventas',
+    registradoPorEmail: usuario?.email || 'ventas@rebelqueen.com',
     fechaRegistro: new Date().toISOString(),
     estado: 'Registrado',
   };
@@ -271,8 +386,12 @@ export async function registrarPago(
   return nuevoPago;
 }
 
-/** Elimina un pago por su ID */
+/** Elimina un pago por su ID sincronizando con el backend */
 export function eliminarPago(pagoId: string): boolean {
+  const numericId = parseInt(pagoId, 10);
+  if (!isNaN(numericId) && numericId > 0) {
+    fetch(`${API_BASE}/api/pagos/${numericId}`, { method: 'DELETE' }).catch(() => {});
+  }
   const pagos = obtenerPagos();
   const filtrados = pagos.filter((p) => p.id !== pagoId);
   if (filtrados.length !== pagos.length) {

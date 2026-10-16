@@ -32,22 +32,29 @@ export const SubirEvidenciaView: React.FC<SubirEvidenciaViewProps> = ({
 }) => {
   const { empleado } = useAuth();
 
-  // Filtrar exclusivamente los requerimientos registrados por el usuario en sesión
+  // Filtrar los requerimientos registrados por el usuario en sesión o el preseleccionado directamente
   const misOportunidades = useMemo(() => {
-    return oportunidades.filter((op) => isOportunidadOwner(op, empleado));
-  }, [oportunidades, empleado]);
+    return oportunidades.filter((op) => {
+      if (preselectedOportunidadId && String(op.id) === String(preselectedOportunidadId)) {
+        return true;
+      }
+      return isOportunidadOwner(op, empleado);
+    });
+  }, [oportunidades, empleado, preselectedOportunidadId]);
 
-  // Solo requerimientos en estado Activo (En Licitación)
+  // Solo requerimientos en estado Activo (En Licitación) o el preseleccionado
   const opcionesActivas = useMemo(() => {
-    return misOportunidades.filter((op) => ESTADOS_ACTIVOS.includes(op.estado));
-  }, [misOportunidades]);
+    return misOportunidades.filter((op) => {
+      if (preselectedOportunidadId && String(op.id) === String(preselectedOportunidadId)) {
+        return true;
+      }
+      return ESTADOS_ACTIVOS.includes(op.estado);
+    });
+  }, [misOportunidades, preselectedOportunidadId]);
 
   const [selectedOpId, setSelectedOpId] = useState<string | number>(() => {
     if (preselectedOportunidadId) {
-      const match = oportunidades.find((o) => String(o.id) === String(preselectedOportunidadId));
-      if (match && isOportunidadOwner(match, empleado) && ESTADOS_ACTIVOS.includes(match.estado)) {
-        return preselectedOportunidadId;
-      }
+      return preselectedOportunidadId;
     }
     const primeraActiva = opcionesActivas[0];
     return primeraActiva?.id ?? '';
@@ -55,18 +62,17 @@ export const SubirEvidenciaView: React.FC<SubirEvidenciaViewProps> = ({
 
   useEffect(() => {
     if (preselectedOportunidadId) {
-      const match = opcionesActivas.find((o) => String(o.id) === String(preselectedOportunidadId));
-      if (match) {
-        setSelectedOpId(preselectedOportunidadId);
-      } else if (opcionesActivas.length > 0) {
-        setSelectedOpId(opcionesActivas[0].id);
-      } else {
-        setSelectedOpId('');
-      }
-    } else if (opcionesActivas.length > 0 && !opcionesActivas.some((o) => String(o.id) === String(selectedOpId))) {
-      setSelectedOpId(opcionesActivas[0].id);
-    } else if (opcionesActivas.length === 0) {
-      setSelectedOpId('');
+      setSelectedOpId(preselectedOportunidadId);
+    } else {
+      setSelectedOpId((prev) => {
+        if (opcionesActivas.length > 0 && !opcionesActivas.some((o) => String(o.id) === String(prev))) {
+          return opcionesActivas[0].id;
+        }
+        if (opcionesActivas.length === 0) {
+          return '';
+        }
+        return prev;
+      });
     }
   }, [preselectedOportunidadId, opcionesActivas]);
 

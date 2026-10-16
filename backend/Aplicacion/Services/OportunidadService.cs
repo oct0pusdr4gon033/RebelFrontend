@@ -65,16 +65,6 @@ namespace Aplicacion.Services
 
             var reqUpper = dto.NumeroRequerimiento.Trim().ToUpper();
 
-            // Validar unicidad: la misma ejecutiva no puede registrar dos veces el mismo requerimiento
-            if (!string.IsNullOrEmpty(usuarioId))
-            {
-                var yaExiste = await _oportunidadRepository.ExisteParaUsuarioAsync(reqUpper, usuarioId);
-                if (yaExiste)
-                {
-                    throw new InvalidOperationException($"Ya has registrado previamente el requerimiento '{reqUpper}'. Cada ejecutiva solo puede registrar una oportunidad por requerimiento.");
-                }
-            }
-
             var oportunidad = new Oportunidad
             {
                 NumeroRequerimiento = reqUpper,

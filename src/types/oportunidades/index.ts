@@ -59,7 +59,10 @@ export interface ProductoItem {
 
 /** Estado posible de una Oportunidad de Licitación */
 export type EstadoOportunidad =
+  | 'En Competencia'
   | 'En Licitación'
+  | 'Asignación de Oportunidad'
+  | 'Cotización'
   | 'Por Vencer'
   | 'Adjudicada'
   | 'Desestimada'
@@ -95,6 +98,8 @@ export interface OrdenCompra {
   // ── Buena Pro / Adjudicación (Perú Compras) ──
   nroOCAM?: string | null;
   nroExpediente?: string | null;
+  nroFolio?: string | null;
+  archivoOCUrl?: string | null;
   unidad?: string | null;
   codigoCIAF?: string | null;
   montoOCAM?: number | null;
