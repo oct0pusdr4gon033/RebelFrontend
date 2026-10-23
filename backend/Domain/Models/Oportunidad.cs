@@ -40,6 +40,9 @@ namespace Domain.Models
         // Orden de Compra asociada (Bloque 2) cuando la oportunidad es adjudicada
         public virtual OrdenCompra? OrdenCompra { get; set; }
 
+        // Pagos registrados vinculados a la oportunidad y su OC
+        public virtual ICollection<PagoOC> Pagos { get; set; } = new List<PagoOC>();
+
         // Auditoría
         public string? CreadoPorUsuarioId { get; set; }
         public virtual AppUser? CreadoPorUsuario { get; set; }

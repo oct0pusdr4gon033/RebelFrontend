@@ -39,9 +39,8 @@ namespace Data.Configuration
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // Índice único compuesto para evitar registros duplicados de la misma ejecutiva en un requerimiento
+            // Índice compuesto no único para optimizar consultas por requerimiento y usuario
             builder.HasIndex(o => new { o.NumeroRequerimiento, o.CreadoPorUsuarioId })
-                .IsUnique()
                 .HasDatabaseName("IX_Oportunidades_NumeroRequerimiento_Usuario");
 
             // Relación con AppUser (Usuario que creó la oportunidad)

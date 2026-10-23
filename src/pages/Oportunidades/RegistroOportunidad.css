@@ -1,6 +1,71 @@
-/* ════════════════════════════════════════════════════
-   RegistroOportunidad.css — Sales Rebel & Perú Compras
-   ════════════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════════════════
+   ESTILO RECTILÍNEO MODERNO: ESQUINAS RECTAS SIN CURVAS (ZERO BORDER-RADIUS)
+   Todas las tarjetas, botones, inputs, badges, modales y dropzones a 90°
+   ═════════════════════════════════════════════════════════════════════════ */
+.reg-oportunidad,
+.reg-oportunidad *,
+.reg-oportunidad *::before,
+.reg-oportunidad *::after,
+.reg-unified-form,
+.reg-unified-form *,
+.reg-flat-section,
+.reg-flat-section *,
+.reg-hero,
+.reg-hero *,
+.evi-page,
+.evi-page *,
+.evi-card,
+.evi-card *,
+.evi-dropzone,
+.evi-dropzone *,
+.evi-file-card,
+.evi-file-card *,
+.evi-file-thumb,
+.evi-file-icon,
+.evi-tag,
+.evi-btn-submit,
+.evi-btn-ghost,
+.evi-btn-refresh,
+.evi-select,
+.evi-input,
+.evi-toast,
+.evi-empty,
+.evi-empty__icon,
+.evi-counter,
+.reg-item-flat-box,
+.reg-item-flat-box *,
+.reg-summary-flat-item,
+.reg-summary-flat-item *,
+.reg-combobox,
+.reg-combobox *,
+.reg-combobox__input,
+.reg-combobox__dropdown,
+.reg-combobox__item,
+.reg-modal,
+.reg-modal *,
+.reg-modal__card,
+.reg-modal__card *,
+.reg-brand-chip,
+.reg-status-badge,
+.reg-pill-express,
+.reg-flat-badge-obligatorio,
+.reg-flat-badge-opcional,
+.reg-btn-submit-complete,
+.reg-btn-quick-action,
+.reg-btn-new-express,
+.reg-btn-cancel-flat,
+.reg-btn-add-item-flat,
+.reg-quick-action-strip,
+.reg-quick-saved-strip,
+.reg-section-locked-notice,
+.reg-table-container,
+.reg-table,
+.reg-table th,
+.reg-table td,
+.reg-history-card,
+.reg-swal-modal {
+  border-radius: 0 !important;
+}
 
 .reg-oportunidad {
   display: flex;
@@ -14,7 +79,7 @@
 /* ── Banner Superior ─────────────────────────────── */
 .reg-hero {
   background: #ffffff;
-  border-radius: 4px;
+  border-radius: 0;
   padding: 24px 28px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -206,6 +271,80 @@
   gap: 6px;
   flex: 1;
   min-width: 260px;
+}
+
+/* ── Estados bloqueados y flujo guiado en 2 fases ── */
+.reg-flat-section--locked {
+  position: relative;
+  opacity: 0.72;
+  transition: opacity 0.2s ease;
+}
+
+.reg-flat-section--locked .reg-form-row,
+.reg-flat-section--locked .reg-item-flat-box {
+  pointer-events: none;
+  filter: grayscale(0.25);
+  opacity: 0.6;
+}
+
+.reg-section-locked-notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 18px;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 4px;
+  color: #92400e;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+.reg-quick-saved-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 16px 20px;
+  background: #f0fdf4;
+  border: 1.5px solid #86efac;
+  border-radius: 4px;
+  margin-top: 8px;
+}
+
+.reg-btn-new-express {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #ffffff;
+  border: 1px solid #16a34a;
+  color: #16a34a;
+  border-radius: 4px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.reg-btn-new-express:hover {
+  background: #dcfce7;
+}
+
+.reg-evidence-embedded {
+  margin-top: 4px;
+}
+
+.reg-evidence-embedded .evi-page {
+  gap: 16px;
+}
+
+.reg-evidence-embedded .evi-card {
+  border: 1px solid #e2e8f0;
+  box-shadow: none;
 }
 
 /* Items en formato plano */
@@ -718,6 +857,218 @@
   font-size: 11px;
   color: #64748b;
   margin-top: 2px;
+}
+
+/* ── Ocultar flechas nativas en inputs numéricos ── */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* ── Caja de Input de Precio Amigable (Currency Input) ── */
+.reg-price-box {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 6px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  position: relative;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  height: 42px;
+}
+
+.reg-price-box:hover {
+  border-color: #94a3b8;
+}
+
+.reg-price-box.is-focused {
+  border-color: var(--accent-color, #2563eb);
+  box-shadow: 0 0 0 3.5px var(--accent-bg, rgba(37, 99, 235, 0.12));
+  background: #ffffff;
+}
+
+.reg-price-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  background: #f1f5f9;
+  border-right: 1.5px solid #e2e8f0;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  user-select: none;
+  height: 100%;
+}
+
+.reg-price-input {
+  flex: 1;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0f172a;
+  padding: 8px 12px !important;
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+  height: 100%;
+}
+
+.reg-price-input::placeholder {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.reg-price-clear-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+  line-height: 1;
+  height: 100%;
+}
+
+.reg-price-clear-btn:hover {
+  color: #ef4444;
+}
+
+/* ── Stepper de Cantidad Amigable ── */
+.reg-stepper-box {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 6px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  height: 42px;
+}
+
+.reg-stepper-box:hover {
+  border-color: #94a3b8;
+}
+
+.reg-stepper-box.is-focused {
+  border-color: var(--accent-color, #2563eb);
+  box-shadow: 0 0 0 3.5px var(--accent-bg, rgba(37, 99, 235, 0.12));
+  background: #ffffff;
+}
+
+.reg-stepper-btn {
+  width: 40px;
+  height: 100%;
+  background: #f8fafc;
+  border: none;
+  color: #334155;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.reg-stepper-btn:hover:not(:disabled) {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.reg-stepper-btn:active:not(:disabled) {
+  background: #cbd5e1;
+}
+
+.reg-stepper-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.reg-stepper-btn--minus {
+  border-right: 1.5px solid #e2e8f0;
+}
+
+.reg-stepper-btn--plus {
+  border-left: 1.5px solid #e2e8f0;
+}
+
+.reg-stepper-input {
+  flex: 1;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #0f172a;
+  text-align: center;
+  padding: 0 8px !important;
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+  height: 100%;
+}
+
+/* ── Estilos para proveedores con moneda S/ ── */
+.reg-prov-currency-wrap {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  overflow: hidden;
+  height: 34px;
+}
+
+.reg-prov-currency-wrap:focus-within {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.12);
+}
+
+.reg-prov-curr-sym {
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 0 6px;
+  border-right: 1px solid #e2e8f0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  user-select: none;
+}
+
+.reg-prov-currency-wrap .reg-prov-input--price {
+  border: none !important;
+  box-shadow: none !important;
+  padding: 6px 8px !important;
+  height: 100%;
+  font-weight: 600;
+  font-size: 12.5px;
+  width: 100%;
+  outline: none;
+}
+
+.reg-prov-input--num {
+  text-align: center;
+  font-weight: 700;
 }
 
 /* ── Combobox de Búsqueda Interactiva (Searchable Select) ── */

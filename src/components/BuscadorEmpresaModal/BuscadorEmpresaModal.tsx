@@ -16,7 +16,7 @@ export const BuscadorEmpresaModal: React.FC<BuscadorEmpresaModalProps> = ({ onCl
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
-  const limit = 6; // Mostramos 6 registros por página en el modal
+  const limit = 5; // 5 registros por página para que se muestren completos sin cortes ni desbordes
 
   useEffect(() => {
     const fetchEmpresas = async () => {
@@ -92,9 +92,9 @@ export const BuscadorEmpresaModal: React.FC<BuscadorEmpresaModalProps> = ({ onCl
             <table className="empresa-modal-table">
               <thead>
                 <tr>
-                  <th>RUC</th>
+                  <th style={{ width: '135px' }}>RUC</th>
                   <th>Razón Social</th>
-                  <th style={{ width: '120px', textAlign: 'center' }}>Acción</th>
+                  <th style={{ width: '110px', textAlign: 'center' }}>Acción</th>
                 </tr>
               </thead>
               <tbody>
@@ -125,7 +125,7 @@ export const BuscadorEmpresaModal: React.FC<BuscadorEmpresaModalProps> = ({ onCl
                       }}
                     >
                       <td><span className="empresa-ruc">{emp.ruc}</span></td>
-                      <td><div className="empresa-name">{emp.razonSocial}</div></td>
+                      <td><div className="empresa-name" title={emp.razonSocial}>{emp.razonSocial}</div></td>
                       <td style={{ textAlign: 'center' }}>
                         <button 
                           className="empresa-modal-select-btn"

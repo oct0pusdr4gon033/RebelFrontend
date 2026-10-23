@@ -307,6 +307,8 @@ export interface RegistrarOCRequest {
   fechaEmisionOC?: string | null;
   nroOCAM?: string | null;
   nroExpediente?: string | null;
+  nroFolio?: string | null;
+  archivoOCUrl?: string | null;
   unidad?: string | null;
   codigoCIAF?: string | null;
   montoOCAM?: number | null;

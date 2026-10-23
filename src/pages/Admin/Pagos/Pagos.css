@@ -1682,3 +1682,27 @@
   font-weight: 600;
   font-size: 0.75rem;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ESTILOS RECTILÍNEOS (Esquinas rectas sin curvas según requerimiento de diseño)
+   ───────────────────────────────────────────────────────────────────────────── */
+.pagos-page *,
+.pagos-page,
+.pagos-header,
+.pagos-card,
+.pagos-btn,
+.pagos-input,
+.pagos-select,
+.pagos-textarea,
+.pagos-dropzone,
+.pagos-preview-card,
+.pagos-preview-card__img-wrap,
+.pagos-push-tabs,
+.pagos-push-btn,
+.pagos-status-pill,
+.pagos-oc-summary,
+.pagos-table-wrap,
+.pagos-table-filter,
+.pagos-header__icon-box {
+  border-radius: 0 !important;
+}

@@ -85,6 +85,8 @@ export function mapApiToOportunidad(op: any): Oportunidad {
           fechaEntrega: op.ordenCompra.fechaEntrega,
           nroOCAM: op.ordenCompra.nroOCAM,
           nroExpediente: op.ordenCompra.nroExpediente,
+          nroFolio: (op.ordenCompra as any).nroFolio ?? null,
+          archivoOCUrl: (op.ordenCompra as any).archivoOCUrl ?? null,
           unidad: op.ordenCompra.unidad,
           codigoCIAF: op.ordenCompra.codigoCIAF,
           montoOCAM: op.ordenCompra.montoOCAM,

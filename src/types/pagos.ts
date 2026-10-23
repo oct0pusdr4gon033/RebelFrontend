@@ -12,6 +12,26 @@ export type ConceptoPago =
   | 'Liquidación Final'
   | 'Otro';
 
+export interface ConceptoPagoItem {
+  id: number;
+  codigo: string;
+  nombre: string;
+  descripcion?: string;
+  icono?: string;
+  color?: string;
+  orden: number;
+  activo: boolean;
+}
+
+export interface ConceptoPagoComboItem {
+  value: number;
+  label: string;
+  codigo: string;
+  descripcion?: string;
+  icono?: string;
+  color?: string;
+}
+
 export type MetodoPago =
   | 'Transferencia Bancaria'
   | 'Depósito en Cuenta'

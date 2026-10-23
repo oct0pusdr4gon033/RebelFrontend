@@ -90,6 +90,10 @@ function App() {
               element={<SeguimientoOCView roleAccent="#2563eb" />}
             />
             <Route
+              path="seguimiento-oc/registrar"
+              element={<SeguimientoOCView roleAccent="#2563eb" />}
+            />
+            <Route
               path="pagos"
               element={<PagosPage roleAccent="#2563eb" />}
             />
@@ -134,6 +138,14 @@ function App() {
               element={<SeguimientoOCView roleAccent="#2563eb" />}
             />
             <Route
+              path="seguimiento-oc/registrar"
+              element={<SeguimientoOCView roleAccent="#2563eb" />}
+            />
+            <Route
+              path="pagos"
+              element={<PagosPage roleAccent="#2563eb" />}
+            />
+            <Route
               path="mi-cuenta"
               element={
                 <MiCuentaPage
@@ -163,6 +175,14 @@ function App() {
             <Route
               path="seguimiento-oc"
               element={<SeguimientoOCView roleAccent="#2563eb" />}
+            />
+            <Route
+              path="seguimiento-oc/registrar"
+              element={<SeguimientoOCView roleAccent="#2563eb" />}
+            />
+            <Route
+              path="pagos"
+              element={<PagosPage roleAccent="#2563eb" />}
             />
             <Route
               path="mi-cuenta"
