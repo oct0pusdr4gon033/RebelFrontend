@@ -37,11 +37,15 @@ namespace Domain.Models
         // "OC_RECIBIDA", "OC_ACEPTADA", "OC_RECHAZADA", "ENTREGADA"
         public string Estado { get; set; } = "En Licitación";
 
+        // Motivo obligatorio cuando el requerimiento pasa a "Desestimada"
+        public string? MotivoDesestimacion { get; set; }
+
+        // Indica si la oportunidad fue confirmada y es inmutable (solo editable por administrador)
+        public bool EstaBloqueada { get; set; } = false;
+
         // Orden de Compra asociada (Bloque 2) cuando la oportunidad es adjudicada
         public virtual OrdenCompra? OrdenCompra { get; set; }
-
-        // Pagos registrados vinculados a la oportunidad y su OC
-        public virtual ICollection<PagoOC> Pagos { get; set; } = new List<PagoOC>();
+        public virtual ICollection<Pago> Pagos { get; set; } = new List<Pago>();
 
         // Auditoría
         public string? CreadoPorUsuarioId { get; set; }

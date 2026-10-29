@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Sidebar, type NavItem } from '../../components/Sidebar';
-import { GoogleIcon } from '../../components/GoogleIcon';
+import { Sidebar, type NavItem } from '../../components/SideBar/Sidebar';
+import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
+import { OportunidadesDashboard } from '../../components/OportunidadesDashboard';
 import '../DashboardLayout.css';
 
 const ACCENT = '#2563eb';
@@ -55,11 +56,28 @@ export const ejecutivaNavItems: NavItem[] = [
   { icon: 'track_changes', label: 'Mis Metas', path: '/ejecutiva/metas', section: null },
   { icon: 'local_shipping', label: 'Seguimiento OC', path: '/ejecutiva/seguimiento-oc', section: 'Ventas' },
   { icon: 'payments', label: 'Solicitud de Pagos', path: '/ejecutiva/pagos', section: 'Ventas' },
-  { icon: 'folder_shared', label: 'Mi Cartera', path: '/ejecutiva/cartera', section: null },
-  { icon: 'add_shopping_cart', label: 'Nueva Venta', path: '/ejecutiva/nueva-venta', section: null },
-  { icon: 'leaderboard', label: 'Mi Ranking', path: '/ejecutiva/ranking', section: 'Rendimiento' },
-  { icon: 'bar_chart', label: 'Mis Reportes', path: '/ejecutiva/reportes', section: null },
-  { icon: 'notifications', label: 'Alertas', path: '/ejecutiva/alertas', section: null },
+  {
+    icon: 'import_contacts',
+    label: 'Agenda de Contactos',
+    path: '/ejecutiva/agenda-contactos',
+    section: 'Ventas',
+    pushButtons: [
+      {
+        id: 'ejec-agenda-registrar',
+        tabKey: 'registrar',
+        label: 'Registrar',
+        path: '/ejecutiva/agenda-contactos?tab=registrar',
+        description: 'Nuevo contacto de OCAM',
+      },
+      {
+        id: 'ejec-agenda-contactos',
+        tabKey: 'agenda',
+        label: 'Agenda',
+        path: '/ejecutiva/agenda-contactos?tab=agenda',
+        description: 'Directorio y filtros por OCAM',
+      },
+    ],
+  },
   { icon: 'person', label: 'Mi Cuenta', path: '/ejecutiva/mi-cuenta', section: 'Cuenta' },
 ];
 
@@ -85,25 +103,11 @@ export function EjecutivaDashboard() {
         </p>
       </div>
 
-      <p className="dash__section-title">Mi Rendimiento Hoy</p>
-      <div className="dash__stats">
-        {[
-          { icon: 'payments', value: 'S/ 8.2k', label: 'Ventas hoy' },
-          { icon: 'track_changes', value: '72%', label: 'Meta del mes' },
-          { icon: 'folder_shared', value: '14', label: 'Clientes activos' },
-          { icon: 'military_tech', value: '#5', label: 'Mi posición' },
-        ].map((s, i) => (
-          <div key={i} className="dash__stat-card" style={{ borderColor: i === 0 ? ACCENT_BORDER : undefined }}>
-            <div className="dash__stat-icon">
-              <GoogleIcon name={s.icon} size={24} color={i === 0 ? ACCENT : '#64748b'} />
-            </div>
-            <div className="dash__stat-value" style={{ color: i === 0 ? ACCENT : undefined }}>
-              {s.value}
-            </div>
-            <div className="dash__stat-label">{s.label}</div>
-          </div>
-        ))}
-      </div>
+      <OportunidadesDashboard
+        scope="personal"
+        detailPath="/ejecutiva/registro-oportunidad?tab=mis-oportunidades"
+        accent={ACCENT}
+      />
 
       <p className="dash__section-title">Acciones Rápidas</p>
       <div className="dash__actions-grid">

@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // src/types/pagos.ts
-// Tipos para el Módulo de Pagos vinculado a Órdenes de Compra (OC)
+// Tipos para el Módulo de Solicitudes de Pago vinculado a Órdenes de Compra (OC)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type ConceptoPago =
@@ -50,7 +50,14 @@ export type BancoPago =
   | 'Caja Arequipa / Piura / Huancayo'
   | 'Otro';
 
-export type EstadoPago = 'Registrado' | 'Conciliado' | 'Observado' | 'Anulado';
+export type EstadoPago =
+  | 'En Revisión'
+  | 'Completo'
+  | 'Pago Rechazado'
+  | 'Registrado'
+  | 'Conciliado'
+  | 'Observado'
+  | 'Anulado';
 
 export interface ComprobanteCaptura {
   nombreArchivo: string;
@@ -65,7 +72,7 @@ export interface ComprobanteCaptura {
 
 export interface PagoOC {
   id: string;
-  codigoPago: string; // ej: PAG-0001
+  codigoPago: string; // ej: PAG-2026-0001
   oportunidadId: number;
   ordenCompraId?: number;
   numeroOC: string;
@@ -75,18 +82,33 @@ export interface PagoOC {
   concepto: ConceptoPago;
   conceptoPersonalizado?: string;
   monto: number;
+  montoAjusteFlete?: number;
   moneda: 'PEN' | 'USD';
   fechaPago: string; // YYYY-MM-DD
+  /** Vencimiento de la Orden de Compra (YYYY-MM-DD) */
+  fechaVencimientoOC?: string;
   metodoPago: MetodoPago;
+  /** Entidad bancaria / financiera correspondiente a la cuenta donde van a depositar */
   banco?: string;
-  numeroOperacion?: string;
+  entidadCorrespondiente?: string;
+  /** Número de cuenta bancaria / CCI a la que van a depositar */
+  numeroCuentaBancaria?: string;
+  /** Nombre del titular de la cuenta a la que van a depositar */
+  titularCuenta?: string;
   beneficiario?: string;
+  /** Datos completados por el Usuario Administrador */
+  numeroOperacion?: string;
+  horaPago?: string; // ej: "14:30"
   notas?: string;
   comprobante: ComprobanteCaptura;
   registradoPor: string;
   registradoPorEmail?: string;
   fechaRegistro: string; // ISO
   estado: EstadoPago;
+  /** Justificación de corrección ingresada por la Administradora cuando es Pago Rechazado */
+  justificacionCorreccion?: string;
+  resueltoPorAdmin?: string;
+  fechaResolucionAdmin?: string;
 }
 
 export interface RegistrarPagoInput {
@@ -99,14 +121,47 @@ export interface RegistrarPagoInput {
   concepto: ConceptoPago;
   conceptoPersonalizado?: string;
   monto: number;
+  montoAjusteFlete?: number;
+  moneda: 'PEN' | 'USD';
+  fechaPago: string;
+  fechaVencimientoOC?: string;
+  metodoPago: MetodoPago;
+  banco?: string;
+  entidadCorrespondiente?: string;
+  numeroCuentaBancaria?: string;
+  titularCuenta?: string;
+  beneficiario?: string;
+  numeroOperacion?: string;
+  horaPago?: string;
+  notas?: string;
+  archivoComprobante?: File | null;
+  estado?: EstadoPago;
+}
+
+export interface ResolverPagoAdminInput {
+  estado: 'Completo' | 'En Revisión' | 'Pago Rechazado';
+  numeroOperacion?: string;
+  horaPago?: string;
+  justificacionCorreccion?: string;
+  archivoEvidencia?: File | null;
+  resueltoPorAdmin?: string;
+}
+
+export interface CorregirPagoInput {
+  fechaVencimientoOC?: string;
+  numeroCuentaBancaria: string;
+  entidadCorrespondiente: string;
+  banco?: string;
+  titularCuenta: string;
+  beneficiario?: string;
+  concepto: ConceptoPago;
+  conceptoPersonalizado?: string;
+  monto: number;
+  montoAjusteFlete?: number;
   moneda: 'PEN' | 'USD';
   fechaPago: string;
   metodoPago: MetodoPago;
-  banco?: string;
-  numeroOperacion?: string;
-  beneficiario?: string;
   notas?: string;
-  archivoComprobante: File;
 }
 
 export interface LiquidacionOC {
@@ -116,6 +171,8 @@ export interface LiquidacionOC {
   empresa: string;
   costoInicial?: number | null;
   costoRenegociado?: number | null;
+  totalAjusteFlete?: number;
+  techoConAjustes?: number;
   totalPagadoPEN: number;
   totalPagadoUSD: number;
   totalFlete: number;

@@ -12,17 +12,18 @@ import { SeguimientoOCView } from './pages/Oportunidades/SeguimientoOCView';
 import { EmpresaLayout, SedesPage, EmpleadosPage, UsuariosPage } from './pages/Admin/Empresa';
 import { ResolverOportunidadesPage } from './pages/Admin/ResolverOportunidades';
 import { PagosPage } from './pages/Admin/Pagos';
+import { AgendaContactosPage } from './pages/Contactos';
 import RolesPage from './pages/SysAdmin/RolesPage';
 import GlobalSessionGuard from './components/SessionModal/GlobalSessionGuard';
 
 function MiCuentaRedirect() {
   const { empleado } = useAuth();
-  const rol = empleado?.rolNombre;
+  const rol = empleado?.rolNombre?.trim().toLowerCase() ?? '';
 
-  if (rol === 'SysAdmin') return <Navigate to="/sysadmin/mi-cuenta" replace />;
-  if (rol === 'Administrador') return <Navigate to="/admin/mi-cuenta" replace />;
-  if (rol === 'Ejecutivo(a) Master Ventas') return <Navigate to="/master/mi-cuenta" replace />;
-  if (rol === 'Ejecutivo(a) Ventas') return <Navigate to="/ejecutiva/mi-cuenta" replace />;
+  if (rol.includes('sysadmin')) return <Navigate to="/sysadmin/mi-cuenta" replace />;
+  if (rol.includes('admin')) return <Navigate to="/admin/mi-cuenta" replace />;
+  if (rol.includes('master')) return <Navigate to="/master/mi-cuenta" replace />;
+  if (rol.includes('ejecutiv') || rol.includes('venta')) return <Navigate to="/ejecutiva/mi-cuenta" replace />;
 
   return <Navigate to="/login" replace />;
 }
@@ -98,6 +99,10 @@ function App() {
               element={<PagosPage roleAccent="#2563eb" />}
             />
             <Route
+              path="agenda-contactos"
+              element={<AgendaContactosPage roleAccent="#2563eb" />}
+            />
+            <Route
               path="mi-cuenta"
               element={
                 <MiCuentaPage
@@ -123,7 +128,7 @@ function App() {
           <Route
             path="/master"
             element={
-              <PrivateRoute allowedRoles={['Ejecutivo(a) Master Ventas']}>
+              <PrivateRoute allowedRoles={['Ejecutivo(a) Master Ventas', 'Ejecutiva Master Ventas', 'Master']}>
                 <MasterLayout />
               </PrivateRoute>
             }
@@ -146,6 +151,10 @@ function App() {
               element={<PagosPage roleAccent="#2563eb" />}
             />
             <Route
+              path="agenda-contactos"
+              element={<AgendaContactosPage roleAccent="#2563eb" />}
+            />
+            <Route
               path="mi-cuenta"
               element={
                 <MiCuentaPage
@@ -162,7 +171,7 @@ function App() {
           <Route
             path="/ejecutiva"
             element={
-              <PrivateRoute allowedRoles={['Ejecutivo(a) Ventas']}>
+              <PrivateRoute allowedRoles={['Ejecutivo(a) Ventas', 'Ejecutiva Ventas', 'Ejecutivo Ventas']}>
                 <EjecutivaLayout />
               </PrivateRoute>
             }
@@ -183,6 +192,10 @@ function App() {
             <Route
               path="pagos"
               element={<PagosPage roleAccent="#2563eb" />}
+            />
+            <Route
+              path="agenda-contactos"
+              element={<AgendaContactosPage roleAccent="#2563eb" />}
             />
             <Route
               path="mi-cuenta"

@@ -9,8 +9,10 @@ namespace Domain.Interfaces.Services
         Task<IEnumerable<PagoResponseDto>> ObtenerTodosAsync();
         Task<PagoResponseDto?> ObtenerPorIdAsync(int id);
         Task<IEnumerable<PagoResponseDto>> ObtenerPorOCAsync(string numeroOC);
-        Task<PagoResponseDto> RegistrarPagoAsync(RegistrarPagoDto dto, string? usuarioId = null);
-        Task<bool> EliminarPagoAsync(int id);
         Task<LiquidacionOCResponseDto> ObtenerLiquidacionPorOCAsync(string numeroOC);
+        Task<PagoResponseDto> RegistrarPagoAsync(RegistrarPagoDto dto, string? usuarioId = null);
+        Task<PagoResponseDto> ResolverPagoAdminAsync(int id, ResolverPagoAdminDto dto);
+        Task<PagoResponseDto> CorregirPagoAsync(int id, CorregirPagoDto dto);
+        Task<bool> EliminarPagoAsync(int id);
     }
 }

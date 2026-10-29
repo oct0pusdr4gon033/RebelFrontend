@@ -1,10 +1,11 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // src/pages/Admin/Pagos/ResumenLiquidacionOCView.tsx
 // Vista consolidada de pagos y liquidación financiera por cada Orden de Compra (OC)
+// Incluye Monto Base OC, Ajustes del Flete y Techo Total (OC + Ajustes del Flete)
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useState, useMemo } from 'react';
-import { GoogleIcon } from '../../../components/GoogleIcon';
+import { GoogleIcon } from '../../../components/GoogleIcon/GoogleIcon';
 import type { PagoOC } from '../../../types/pagos';
 import type { Oportunidad } from '../../../types/oportunidades';
 import { calcularLiquidacionesOC } from '../../../api/services/pagos.service';
@@ -52,13 +53,16 @@ export const ResumenLiquidacionOCView: React.FC<ResumenLiquidacionOCViewProps> =
       {/* Explicación y buscador */}
       <div className="pagos-liquidacion-banner">
         <div className="pagos-liquidacion-banner__info">
-          <div className="pagos-liquidacion-banner__icon" style={{ background: `${roleAccent}15`, color: roleAccent }}>
+          <div
+            className="pagos-liquidacion-banner__icon"
+            style={{ background: `${roleAccent}15`, color: roleAccent }}
+          >
             <GoogleIcon name="analytics" size={24} color={roleAccent} />
           </div>
           <div>
             <h3>Consolidado de Costos y Liquidación por Orden de Compra</h3>
             <p>
-              Revisa el acumulado de desembolsos en <strong>flete</strong>, <strong>comisiones</strong>, <strong>gastos varios</strong> y <strong>mercadería</strong> vinculados a cada OC.
+              Revisa el acumulado de pagos frente al <strong>Techo Total (Orden de Compra + Ajustes del Flete)</strong> y el control de flete de cada OC.
             </p>
           </div>
         </div>
@@ -87,9 +91,14 @@ export const ResumenLiquidacionOCView: React.FC<ResumenLiquidacionOCViewProps> =
           {filtradas.map((liq) => {
             const isExpanded = expandedOC === liq.numeroOC;
             const tienePagos = liq.conteoPagos > 0;
+            const montoBaseOC = liq.costoInicial || 0;
+            const techoConAjustes = liq.techoConAjustes ?? montoBaseOC + (liq.totalAjusteFlete || 0);
 
             return (
-              <div key={liq.numeroOC} className={`pagos-oc-card ${isExpanded ? 'pagos-oc-card--expanded' : ''}`}>
+              <div
+                key={liq.numeroOC}
+                className={`pagos-oc-card ${isExpanded ? 'pagos-oc-card--expanded' : ''}`}
+              >
                 {/* Cabecera de la OC */}
                 <div className="pagos-oc-card__header">
                   <div className="pagos-oc-card__identity">
@@ -109,7 +118,7 @@ export const ResumenLiquidacionOCView: React.FC<ResumenLiquidacionOCViewProps> =
                       onClick={() => onRegistrarPagoParaOC(liq.numeroOC)}
                     >
                       <GoogleIcon name="add_card" size={16} color="#fff" />
-                      <span>Agregar Pago a esta OC</span>
+                      <span>Solicitar Pago para esta OC</span>
                     </button>
                     {tienePagos && (
                       <button
@@ -127,129 +136,123 @@ export const ResumenLiquidacionOCView: React.FC<ResumenLiquidacionOCViewProps> =
                 {/* Métricas clave de la OC */}
                 <div className="pagos-oc-card__metrics-row">
                   <div className="pagos-oc-metric">
-                    <span className="label">Total Pagado (PEN)</span>
+                    <span className="label">Techo (OC + Ajustes Flete)</span>
+                    <strong className="value" style={{ color: '#059669' }}>
+                      S/{' '}
+                      {techoConAjustes.toLocaleString('es-PE', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </strong>
+                    <span className="sub">
+                      OC: S/ {montoBaseOC.toFixed(2)} + Ajuste Flete: S/{' '}
+                      {(liq.totalAjusteFlete || 0).toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="pagos-oc-metric">
+                    <span className="label">Total Solicitado / Pagado</span>
                     <strong className="value highlight">
-                      S/ {liq.totalPagadoPEN.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      S/{' '}
+                      {liq.totalPagadoPEN.toLocaleString('es-PE', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </strong>
-                    <span className="sub">{liq.conteoPagos} desembolso(s)</span>
+                    <span className="sub">{liq.conteoPagos} solicitud(es)</span>
                   </div>
 
                   <div className="pagos-oc-metric">
-                    <span className="label">Flete Acumulado</span>
+                    <span className="label">Flete Acumulado / Ajuste</span>
                     <strong className="value text-flete">
-                      S/ {liq.totalFlete.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      S/{' '}
+                      {liq.totalFlete.toLocaleString('es-PE', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </strong>
+                    <span className="sub">Tope Ajuste: S/ {(liq.totalAjusteFlete || 0).toFixed(2)}</span>
                   </div>
 
                   <div className="pagos-oc-metric">
-                    <span className="label">Comisiones</span>
-                    <strong className="value text-comision">
-                      S/ {liq.totalComision.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </strong>
-                  </div>
-
-                  <div className="pagos-oc-metric">
-                    <span className="label">Gastos Varios</span>
-                    <strong className="value text-gastos">
-                      S/ {liq.totalGastosVarios.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </strong>
-                  </div>
-
-                  <div className="pagos-oc-metric">
-                    <span className="label">Mercadería / Stock</span>
+                    <span className="label">Mercadería / Proveedor</span>
                     <strong className="value text-mercaderia">
-                      S/ {liq.totalMercaderia.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      S/{' '}
+                      {liq.totalMercaderia.toLocaleString('es-PE', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </strong>
+                  </div>
+
+                  <div className="pagos-oc-metric">
+                    <span className="label">Saldo Disponible OC</span>
+                    <strong className="value" style={{ color: '#1d4ed8' }}>
+                      S/{' '}
+                      {Math.max(0, techoConAjustes - liq.totalPagadoPEN).toLocaleString('es-PE', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </strong>
                   </div>
                 </div>
 
-                {/* Barra de Distribución Visual */}
-                {liq.totalPagadoPEN > 0 && (
-                  <div className="pagos-dist-bar-wrapper">
-                    <div className="pagos-dist-bar">
-                      {liq.totalFlete > 0 && (
-                        <div
-                          className="pagos-dist-seg pagos-dist-seg--flete"
-                          style={{ width: `${(liq.totalFlete / liq.totalPagadoPEN) * 100}%` }}
-                          title={`Flete: S/ ${liq.totalFlete.toFixed(2)} (${Math.round((liq.totalFlete / liq.totalPagadoPEN) * 100)}%)`}
-                        />
-                      )}
-                      {liq.totalComision > 0 && (
-                        <div
-                          className="pagos-dist-seg pagos-dist-seg--comision"
-                          style={{ width: `${(liq.totalComision / liq.totalPagadoPEN) * 100}%` }}
-                          title={`Comisión: S/ ${liq.totalComision.toFixed(2)} (${Math.round((liq.totalComision / liq.totalPagadoPEN) * 100)}%)`}
-                        />
-                      )}
-                      {liq.totalGastosVarios > 0 && (
-                        <div
-                          className="pagos-dist-seg pagos-dist-seg--gastos"
-                          style={{ width: `${(liq.totalGastosVarios / liq.totalPagadoPEN) * 100}%` }}
-                          title={`Gastos Varios: S/ ${liq.totalGastosVarios.toFixed(2)} (${Math.round((liq.totalGastosVarios / liq.totalPagadoPEN) * 100)}%)`}
-                        />
-                      )}
-                      {liq.totalMercaderia > 0 && (
-                        <div
-                          className="pagos-dist-seg pagos-dist-seg--mercaderia"
-                          style={{ width: `${(liq.totalMercaderia / liq.totalPagadoPEN) * 100}%` }}
-                          title={`Mercadería: S/ ${liq.totalMercaderia.toFixed(2)} (${Math.round((liq.totalMercaderia / liq.totalPagadoPEN) * 100)}%)`}
-                        />
-                      )}
-                    </div>
-                    <div className="pagos-dist-legend">
-                      <span className="dot dot--flete">Flete</span>
-                      <span className="dot dot--comision">Comisión</span>
-                      <span className="dot dot--gastos">Gastos Varios</span>
-                      <span className="dot dot--mercaderia">Mercadería</span>
-                    </div>
-                  </div>
-                )}
-
                 {/* Lista desplegada de pagos de esta OC */}
                 {isExpanded && tienePagos && (
                   <div className="pagos-oc-details-table-wrap">
-                    <h4>Desglose individual de pagos realizados</h4>
+                    <h4>Desglose individual de solicitudes de pago</h4>
                     <table className="pagos-subtable">
                       <thead>
                         <tr>
-                          <th>Voucher</th>
                           <th>Código</th>
                           <th>Concepto</th>
-                          <th>Fecha</th>
-                          <th>Método / Op</th>
-                          <th>Beneficiario</th>
+                          <th>Venc. OC</th>
+                          <th>Entidad & Cuenta Bancaria</th>
+                          <th>Titular de Cuenta</th>
+                          <th>N° Operación / Hora</th>
+                          <th>Estado</th>
                           <th>Monto</th>
-                          <th style={{ textAlign: 'center' }}>Captura</th>
+                          <th style={{ textAlign: 'center' }}>Detalle</th>
                         </tr>
                       </thead>
                       <tbody>
                         {liq.pagos.map((p) => (
                           <tr key={p.id}>
                             <td>
-                              <div
-                                className="pagos-subtable-thumb"
-                                onClick={() => setPagoParaVer(p)}
-                                title="Ver comprobante"
-                              >
-                                <img src={p.comprobante.dataUrl} alt={p.comprobante.nombreArchivo} />
-                              </div>
-                            </td>
-                            <td>
                               <strong>{p.codigoPago}</strong>
                             </td>
                             <td>
                               <span className="pagos-subtable-concept">{p.concepto}</span>
                             </td>
-                            <td>{p.fechaPago}</td>
+                            <td>{p.fechaVencimientoOC || p.fechaPago}</td>
                             <td>
-                              <span>{p.metodoPago}</span>
-                              {p.numeroOperacion && <small> · Op: {p.numeroOperacion}</small>}
+                              <strong>{p.entidadCorrespondiente || p.banco || '—'}</strong>
+                              {p.numeroCuentaBancaria && (
+                                <div style={{ fontSize: '11px', color: '#1d4ed8', fontFamily: 'monospace' }}>
+                                  Cta: {p.numeroCuentaBancaria}
+                                </div>
+                              )}
                             </td>
-                            <td>{p.beneficiario || '—'}</td>
+                            <td>{p.titularCuenta || p.beneficiario || '—'}</td>
+                            <td>
+                              {p.numeroOperacion ? (
+                                <span>
+                                  Op: {p.numeroOperacion} {p.horaPago ? `(${p.horaPago})` : ''}
+                                </span>
+                              ) : (
+                                <span style={{ color: '#94a3b8', fontSize: '11px' }}>Pendiente Admin</span>
+                              )}
+                            </td>
+                            <td>
+                              <strong>{p.estado}</strong>
+                            </td>
                             <td>
                               <strong>
                                 {p.moneda === 'PEN' ? 'S/' : '$'}{' '}
-                                {p.monto.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                {p.monto.toLocaleString('es-PE', {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
                               </strong>
                             </td>
                             <td style={{ textAlign: 'center' }}>
@@ -257,7 +260,7 @@ export const ResumenLiquidacionOCView: React.FC<ResumenLiquidacionOCViewProps> =
                                 type="button"
                                 className="pagos-action-btn"
                                 onClick={() => setPagoParaVer(p)}
-                                title="Ver captura en pantalla completa"
+                                title="Ver ficha completa"
                               >
                                 <GoogleIcon name="visibility" size={16} color="#2563eb" />
                               </button>

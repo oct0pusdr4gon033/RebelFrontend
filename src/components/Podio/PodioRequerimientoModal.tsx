@@ -1,21 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
-import { GoogleIcon } from '../GoogleIcon';
+import { GoogleIcon } from '../GoogleIcon/GoogleIcon';
 import type { Oportunidad } from '../../types/oportunidades';
 import { cambiarEstadoApi } from '../../api/services/oportunidades.service';
 import { formatFechaHoraPeru, formatHoraExacta, formatDiferenciaTiempo } from '../../utils/dateUtils';
-import { DictamenBuenaProModal, type DictamenBuenaProConfirmPayload } from './DictamenBuenaProModal';
+import { DictamenBuenaProModal } from './DictamenBuenaProModal';
+import type { DictamenBuenaProConfirmPayload } from './IDictamenBuenaProConfirmPayload';
 import './PodioRequerimientoModal.css';
-
-interface PodioRequerimientoModalProps {
-  numeroRequerimiento: string;
-  oportunidades: Oportunidad[];
-  roleAccent?: string;
-  onClose: () => void;
-  onOportunidadesActualizadas?: (ops: Oportunidad[]) => void;
-  onVerDetalle?: (op: Oportunidad) => void;
-}
+import type { PodioRequerimientoModalProps } from './PodioRequerimientoModalProps';
 
 export const PodioRequerimientoModal: React.FC<PodioRequerimientoModalProps> = ({
   numeroRequerimiento,
@@ -111,12 +104,20 @@ export const PodioRequerimientoModal: React.FC<PodioRequerimientoModalProps> = (
     try {
       // 1. Si otro competidor ya tenía la Buena Pro, desestimarlo primero para liberar la regla en backend
       const previoGanador = dictamenModalData?.otrosCompetidores.find(
-        (c) => c.estado === 'Adjudicada' || ['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(c.estado)
+        (c) =>
+          c.estado === 'Aceptada por el Administrador' ||
+          c.estado === 'Aceptada por Perú Compras' ||
+          c.estado === 'Adjudicada' ||
+          ['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(c.estado)
       );
       if (previoGanador) {
         const itemPrevio = payload.desestimaciones.find((d) => String(d.oportunidadId) === String(previoGanador.id));
         const motivoPrevio = itemPrevio ? `${itemPrevio.motivo}: ${itemPrevio.comentario}` : 'Reasignación de Buena Pro';
-        await cambiarEstadoApi(previoGanador.id, 'Desestimada', motivoPrevio);
+        const targetPrevio =
+          previoGanador.estado === 'Aceptada por el Administrador' || previoGanador.estado === 'Adjudicada'
+            ? 'Aceptada Desestimada'
+            : 'Desestimada';
+        await cambiarEstadoApi(previoGanador.id, targetPrevio, motivoPrevio);
       }
 
       // 2. Desestimar las otras oportunidades competidoras con su motivo individual uno por uno
@@ -131,12 +132,12 @@ export const PodioRequerimientoModal: React.FC<PodioRequerimientoModalProps> = (
       await Promise.all(promesasDesestimar);
 
       // 3. Adjudicar la oportunidad ganadora con su comentario de asignación
-      await cambiarEstadoApi(payload.ganadorId, 'Adjudicada', payload.comentarioGanador);
+      await cambiarEstadoApi(payload.ganadorId, 'Aceptada por el Administrador', payload.comentarioGanador);
 
       // 4. Notificar lista actualizada
       const listaActualizada = oportunidades.map((item) => {
         if (String(item.id) === String(payload.ganadorId)) {
-          return { ...item, estado: 'Adjudicada' as const, motivoDesestimacion: null };
+          return { ...item, estado: 'Aceptada por el Administrador' as const, motivoDesestimacion: null };
         }
         const des = payload.desestimaciones.find((d) => String(d.oportunidadId) === String(item.id));
         if (des) {
@@ -159,13 +160,12 @@ export const PodioRequerimientoModal: React.FC<PodioRequerimientoModalProps> = (
             <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 10px; margin: 8px 0; font-size: 12.5px; color: #166534;">
               <strong>Motivo de asignación:</strong> ${payload.comentarioGanador}
             </div>
-            ${
-              payload.desestimaciones.length > 0
-                ? `<p style="font-size: 12px; color: #64748b; margin-top: 8px;">
+            ${payload.desestimaciones.length > 0
+            ? `<p style="font-size: 12px; color: #64748b; margin-top: 8px;">
                     Se registraron los motivos individuales de desestimación para <strong>${payload.desestimaciones.length}</strong> otra(s) vendedora(s).
                   </p>`
-                : ''
-            }
+            : ''
+          }
           </div>
         `,
         confirmButtonColor: '#059669',
@@ -316,9 +316,8 @@ export const PodioRequerimientoModal: React.FC<PodioRequerimientoModalProps> = (
                   <div className="pod-card__header">
                     <span className={`pod-card__badge-pos ${posBadgeClass}`}>{posLabel}</span>
                     <span
-                      className={`pod-card__badge-time ${
-                        esLiderLlegada ? 'pod-card__badge-time--lead' : ''
-                      }`}
+                      className={`pod-card__badge-time ${esLiderLlegada ? 'pod-card__badge-time--lead' : ''
+                        }`}
                       title={op.horaRegistroExacta || op.createdAt}
                     >
                       {diferenciaTexto}
@@ -381,14 +380,14 @@ export const PodioRequerimientoModal: React.FC<PodioRequerimientoModalProps> = (
                             op.estado === 'Adjudicada'
                               ? '#ecfdf5'
                               : op.estado === 'Desestimada'
-                              ? '#fee2e2'
-                              : '#eff6ff',
+                                ? '#fee2e2'
+                                : '#eff6ff',
                           color:
                             op.estado === 'Adjudicada'
                               ? '#059669'
                               : op.estado === 'Desestimada'
-                              ? '#dc2626'
-                              : '#2563eb',
+                                ? '#dc2626'
+                                : '#2563eb',
                         }}
                       >
                         {op.estado}
@@ -436,7 +435,7 @@ export const PodioRequerimientoModal: React.FC<PodioRequerimientoModalProps> = (
                         }}
                       >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
-                          <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                          <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
                         </svg>
                         <span>Ver Oportunidad Registrada</span>
                       </button>

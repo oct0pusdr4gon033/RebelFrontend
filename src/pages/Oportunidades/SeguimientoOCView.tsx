@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { GoogleIcon } from '../../components/GoogleIcon';
+import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
 import { useAuth } from '../../context/AuthContext';
 import { isOportunidadOwner } from '../../utils/oportunidadUtils';
 import type { Oportunidad } from '../../types/oportunidades';
@@ -9,6 +9,7 @@ import { OCPanel, OC_ESTADO_CONFIG, OC_STATES, DetalleOCModal } from './OCPanel'
 import { formatFechaHoraPeru } from '../../utils/dateUtils';
 import { RegistrarOCScreen } from './RegistrarOCScreen';
 import { RegistrarPagoView } from '../Admin/Pagos/RegistrarPagoView';
+import { obtenerPoolDocumentosOC } from '../../utils/documentosPoolUtils';
 import './RegistroOportunidad.css';
 import './SeguimientoOC.css';
 
@@ -54,7 +55,8 @@ export const SeguimientoOCView: React.FC<SeguimientoOCProps> = ({ roleAccent = '
   const esAdminOC =
     empleado?.rolNombre === 'Administrador' ||
     empleado?.rolNombre === 'SysAdmin' ||
-    empleado?.rolNombre === 'Ejecutivo(a) Master Ventas';
+    empleado?.rolNombre === 'Ejecutivo(a) Master Ventas' ||
+    empleado?.rolNombre === 'Ejecutiva Master Ventas';
 
   const [oportunidades, setOportunidades] = useState<Oportunidad[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,11 +95,15 @@ export const SeguimientoOCView: React.FC<SeguimientoOCProps> = ({ roleAccent = '
     setOportunidades((prev) => prev.map((op) => (op.id === opActualizada.id ? opActualizada : op)));
   }, []);
 
-  // Oportunidades que entran al seguimiento OC: tienen OC o están Adjudicadas (por registrar)
+  // Oportunidades que entran al seguimiento OC: tienen OC o están Aceptadas por Perú Compras / Adjudicadas (listas para registrar OCAM)
   const conOC = useMemo(
     () =>
       oportunidades.filter(
-        (op) => op.ordenCompra || op.estado === 'Adjudicada' || OC_STATES.includes((op.estado as string) as any)
+        (op) =>
+          op.ordenCompra ||
+          op.estado === 'Aceptada por Perú Compras' ||
+          op.estado === 'Adjudicada' ||
+          OC_STATES.includes((op.estado as string) as any)
       ),
     [oportunidades]
   );
@@ -123,7 +129,11 @@ export const SeguimientoOCView: React.FC<SeguimientoOCProps> = ({ roleAccent = '
         lista = lista.filter((op) => op.estado === 'ENTREGADA');
         break;
       case 'por-registrar':
-        lista = lista.filter((op) => !op.ordenCompra && op.estado === 'Adjudicada');
+        lista = lista.filter(
+          (op) =>
+            !op.ordenCompra &&
+            (op.estado === 'Aceptada por Perú Compras' || op.estado === 'Adjudicada')
+        );
         break;
       default:
         break;
@@ -172,7 +182,11 @@ export const SeguimientoOCView: React.FC<SeguimientoOCProps> = ({ roleAccent = '
     const aceptadas = conOC.filter((op) => op.estado === 'OC_ACEPTADA').length;
     const rechazadas = conOC.filter((op) => op.estado === 'OC_RECHAZADA').length;
     const entregadas = conOC.filter((op) => op.estado === 'ENTREGADA').length;
-    const porRegistrar = conOC.filter((op) => !op.ordenCompra && op.estado === 'Adjudicada').length;
+    const porRegistrar = conOC.filter(
+      (op) =>
+        !op.ordenCompra &&
+        (op.estado === 'Aceptada por Perú Compras' || op.estado === 'Adjudicada')
+    ).length;
     const margen = conOC.reduce((acc, op) => acc + (Number(op.ordenCompra?.margenAdicional) || 0), 0);
     return { todas: conOC.length, activas, pendientes, aceptadas, rechazadas, entregadas, porRegistrar, margen };
   }, [conOC]);
@@ -354,6 +368,7 @@ export const SeguimientoOCView: React.FC<SeguimientoOCProps> = ({ roleAccent = '
             oportunidades={oportunidades}
             roleAccent={roleAccent}
             preselectedOC={ocIdentificador}
+            ocultarVoucher={!esAdminOC}
             onPagoRegistrado={(_nuevoPago) => {
               cargar();
               setOpParaSolicitarPago(null);
@@ -555,10 +570,10 @@ export const SeguimientoOCView: React.FC<SeguimientoOCProps> = ({ roleAccent = '
                   const fechaTexto = op.ordenCompra?.fechaEmisionOC
                     ? formatFechaHoraPeru(op.ordenCompra.fechaEmisionOC, { dateStyle: 'short' })
                     : op.ordenCompra?.fechaRegistro
-                    ? formatFechaHoraPeru(op.ordenCompra.fechaRegistro, { dateStyle: 'short' })
-                    : op.fechaRegistro
-                    ? formatFechaHoraPeru(op.fechaRegistro, { dateStyle: 'short' })
-                    : '—';
+                      ? formatFechaHoraPeru(op.ordenCompra.fechaRegistro, { dateStyle: 'short' })
+                      : op.fechaRegistro
+                        ? formatFechaHoraPeru(op.fechaRegistro, { dateStyle: 'short' })
+                        : '—';
 
                   return (
                     <tr key={op.id}>

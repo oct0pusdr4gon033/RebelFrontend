@@ -1,33 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
-import { GoogleIcon } from '../GoogleIcon';
+import { GoogleIcon } from '../GoogleIcon/GoogleIcon';
+import type { FotocheckCardProps } from './FotocheckCardProps';
 import './Fotocheck.css';
-
-export interface FotocheckData {
-  nombreCompleto: string;
-  nombres?: string;
-  apellidos?: string;
-  cargo: string;
-  rolNombre: string;
-  dni: string;
-  codigoEmpleado: string;
-  sedeNombre: string;
-  sedeUbicacion?: string;
-  sedeDireccion?: string;
-  email?: string;
-  telefono?: string;
-  fotoUrl?: string;
-  initials?: string;
-  fechaIngreso?: string;
-  empresaNombre?: string;
-  roleIcon?: string;
-  accentColor?: string;
-}
-
-interface FotocheckCardProps {
-  data: FotocheckData;
-  side?: 'front' | 'back';
-}
 
 export const FotocheckCard: React.FC<FotocheckCardProps> = ({ data, side = 'front' }) => {
   const [qrDataUrl, setQrDataUrl] = useState<string>('');

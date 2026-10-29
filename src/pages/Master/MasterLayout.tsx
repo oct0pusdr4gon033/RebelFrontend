@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Sidebar, type NavItem } from '../../components/Sidebar';
-import { GoogleIcon } from '../../components/GoogleIcon';
+import { Sidebar, type NavItem } from '../../components/SideBar/Sidebar';
+import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
 import '../DashboardLayout.css';
 
 const ACCENT = '#2563eb';
@@ -55,6 +55,28 @@ export const masterNavItems: NavItem[] = [
   { icon: 'track_changes', label: 'Mis Metas', path: '/master/metas', section: null },
   { icon: 'local_shipping', label: 'Seguimiento OC', path: '/master/seguimiento-oc', section: 'Ventas' },
   { icon: 'payments', label: 'Solicitud de Pagos', path: '/master/pagos', section: 'Ventas' },
+  {
+    icon: 'import_contacts',
+    label: 'Agenda de Contactos',
+    path: '/master/agenda-contactos',
+    section: 'Ventas',
+    pushButtons: [
+      {
+        id: 'master-agenda-registrar',
+        tabKey: 'registrar',
+        label: 'Registrar',
+        path: '/master/agenda-contactos?tab=registrar',
+        description: 'Nuevo contacto de OCAM',
+      },
+      {
+        id: 'master-agenda-contactos',
+        tabKey: 'agenda',
+        label: 'Agenda',
+        path: '/master/agenda-contactos?tab=agenda',
+        description: 'Directorio y filtros por OCAM',
+      },
+    ],
+  },
   { icon: 'folder_shared', label: 'Mi Cartera', path: '/master/cartera', section: null },
   { icon: 'group', label: 'Mi Equipo', path: '/master/equipo', section: 'Equipo' },
   { icon: 'leaderboard', label: 'Ranking Equipo', path: '/master/ranking', section: null },

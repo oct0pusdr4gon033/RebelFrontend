@@ -24,4 +24,10 @@ export interface ProductoItem {
     fichaTecnica?: string;
     // ── Proveedores y costos por ítem (N por ítem) ──
     proveedores?: ItemProveedor[];
+    // ── Ajuste de flete (requiere aprobación de la administradora) ──
+    ajusteFletePorcentaje?: number | null;
+    ajusteFleteSolicitadoPorcentaje?: number | null;
+    ajusteFleteMotivo?: string | null;
+    ajusteFleteEstado?: 'Pendiente' | 'Aprobado' | 'Rechazado' | null;
+    ajusteFleteComentarioAdmin?: string | null;
 }

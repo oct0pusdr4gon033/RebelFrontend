@@ -83,6 +83,13 @@ namespace Data.Repository
             return pago;
         }
 
+        public async Task<PagoOC> ActualizarAsync(PagoOC pago)
+        {
+            _context.Pagos.Update(pago);
+            await _context.SaveChangesAsync();
+            return pago;
+        }
+
         public async Task<bool> EliminarAsync(int id)
         {
             var pago = await _context.Pagos.FindAsync(id);

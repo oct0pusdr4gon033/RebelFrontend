@@ -1,13 +1,5 @@
-import type { EmpleadoDto } from '../../../../../api/Dtos/Empleado';
-import { GoogleIcon } from '../../../../../components/GoogleIcon';
-
-interface Props {
-  empleados: EmpleadoDto[];
-  loading: boolean;
-  onEdit: (empleado: EmpleadoDto) => void;
-  onDelete: (empleado: EmpleadoDto) => void;
-  onRestore: (empleado: EmpleadoDto) => void;
-}
+import { GoogleIcon } from '../../../../../components/GoogleIcon/GoogleIcon';
+import type { Props } from './Props';
 
 export default function EmpleadoTable({ empleados, loading, onEdit, onDelete, onRestore }: Props) {
   if (loading) {

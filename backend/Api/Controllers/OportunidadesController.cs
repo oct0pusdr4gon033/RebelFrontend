@@ -85,6 +85,7 @@ namespace Api.Controllers
         [HttpPut("{id:int}")]
         [ProducesResponseType(typeof(OportunidadResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<OportunidadResponseDto>> Update(int id, [FromBody] ActualizarOportunidadDto dto)
         {
@@ -93,12 +94,18 @@ namespace Api.Controllers
 
             try
             {
-                var actualizada = await _oportunidadService.ActualizarAsync(id, dto);
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var esAdmin = User.IsInRole("Administrador") || User.IsInRole("SysAdmin") || User.IsInRole("Admin") || User.Claims.Any(c => (c.Type == ClaimTypes.Role || c.Type == "role") && (c.Value == "Administrador" || c.Value == "SysAdmin" || c.Value == "Admin"));
+                var actualizada = await _oportunidadService.ActualizarAsync(id, dto, userId, esAdmin);
                 return Ok(actualizada);
             }
             catch (KeyNotFoundException ex)
             {
                 return NotFound(new { mensaje = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { mensaje = ex.Message });
             }
             catch (InvalidOperationException ex)
             {
@@ -254,6 +261,90 @@ namespace Api.Controllers
             catch (KeyNotFoundException ex)
             {
                 return NotFound(new { mensaje = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Solicita un ajuste de flete por producto debido a desfase en precios de Perú Compras.
+        /// La solicitud queda en estado "Pendiente" para revisión y aprobación del Administrador.
+        /// </summary>
+        [HttpPost("{id:int}/productos/{productoId:int}/ajuste-flete")]
+        [ProducesResponseType(typeof(OportunidadResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<OportunidadResponseDto>> SolicitarAjusteFlete(
+            int id,
+            int productoId,
+            [FromBody] SolicitarAjusteFleteDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+                var actualizada = await _oportunidadService.SolicitarAjusteFleteAsync(id, productoId, dto, userId);
+                return Ok(actualizada);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { mensaje = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { mensaje = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { mensaje = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { mensaje = "Error al solicitar el ajuste de flete.", detalle = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Aprueba o rechaza una solicitud de ajuste de flete por producto.
+        /// Solo permitido para administradores.
+        /// </summary>
+        [HttpPatch("{id:int}/productos/{productoId:int}/ajuste-flete")]
+        [ProducesResponseType(typeof(OportunidadResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<OportunidadResponseDto>> ResolverAjusteFlete(
+            int id,
+            int productoId,
+            [FromBody] ResolverAjusteFleteDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+                var esAdmin = User.IsInRole("Administrador") || User.IsInRole("SysAdmin") || User.IsInRole("Admin") || User.Claims.Any(c => (c.Type == ClaimTypes.Role || c.Type == "role") && (c.Value == "Administrador" || c.Value == "SysAdmin" || c.Value == "Admin"));
+
+                var actualizada = await _oportunidadService.ResolverAjusteFleteAsync(id, productoId, dto, userId, esAdmin);
+                return Ok(actualizada);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { mensaje = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { mensaje = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { mensaje = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { mensaje = "Error al resolver el ajuste de flete.", detalle = ex.Message });
             }
         }
 

@@ -9,7 +9,7 @@ import {
   restaurarEmpleado,
 } from '../../../../api/services/empleado.service';
 import { getSedes } from '../../../../api/services/sede.service';
-import { GoogleIcon } from '../../../../components/GoogleIcon';
+import { GoogleIcon } from '../../../../components/GoogleIcon/GoogleIcon';
 import EmpleadoTable from './components/EmpleadoTable';
 import EmpleadoFormModal from './components/EmpleadoFormModal';
 import '../EmpresaAdmin.css';

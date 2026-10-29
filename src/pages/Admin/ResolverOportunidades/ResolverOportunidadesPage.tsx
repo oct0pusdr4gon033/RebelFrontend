@@ -2,20 +2,21 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
-import { GoogleIcon } from '../../../components/GoogleIcon';
+import { GoogleIcon } from '../../../components/GoogleIcon/GoogleIcon';
 import { getOportunidadesApi, cambiarEstadoApi } from '../../../api/services/oportunidades.service';
 import { mapApiToOportunidad, getVencimientoBadge } from '../../../hooks/useOportunidades';
 import { formatHoraExacta, formatDiferenciaTiempo } from '../../../utils/dateUtils';
 import type { Oportunidad } from '../../../types/oportunidades';
 import { DetalleOportunidadView } from '../../Oportunidades/DetalleOportunidadView';
 import { PodioRequerimientoModal } from '../../../components/Podio/PodioRequerimientoModal';
-import { DictamenBuenaProModal, type DictamenBuenaProConfirmPayload } from '../../../components/Podio/DictamenBuenaProModal';
+import { DictamenBuenaProModal } from '../../../components/Podio/DictamenBuenaProModal';
+import type { DictamenBuenaProConfirmPayload } from '../../../components/Podio/IDictamenBuenaProConfirmPayload';
 import '../../Oportunidades/RegistroOportunidad.css';
 import './ResolverOportunidades.css';
 
 const SVG_EYE_ICON = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ verticalAlign: 'middle', display: 'inline-block', flexShrink: 0 }}>
-    <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+    <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
   </svg>
 );
 
@@ -23,7 +24,7 @@ interface ResolverOportunidadesPageProps {
   roleAccent?: string;
 }
 
-type TabEstado = 'todos' | 'pendientes' | 'adjudicadas' | 'desestimadas' | 'en-licitacion';
+type TabEstado = 'todos' | 'pendientes' | 'adjudicadas' | 'aceptadas-admin' | 'aceptadas-peru-compras' | 'desestimadas' | 'en-licitacion';
 
 const ESTADO_BADGE_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
   'En Competencia': { label: 'En Competencia', color: '#2563eb', bg: '#eff6ff', icon: 'groups' },
@@ -31,6 +32,9 @@ const ESTADO_BADGE_CONFIG: Record<string, { label: string; color: string; bg: st
   'Asignación de Oportunidad': { label: 'Asignación de Oportunidad', color: '#059669', bg: '#ecfdf5', icon: 'workspace_premium' },
   'Cotización': { label: 'Cotización (OCAM)', color: '#7c3aed', bg: '#f5f3ff', icon: 'receipt_long' },
   'Adjudicada': { label: 'Adjudicada', color: '#059669', bg: '#ecfdf5', icon: 'verified' },
+  'Aceptada por el Administrador': { label: 'Aceptada por Administrador', color: '#2563eb', bg: '#eff6ff', icon: 'how_to_reg' },
+  'Aceptada por Perú Compras': { label: 'Aceptada por Perú Compras', color: '#059669', bg: '#ecfdf5', icon: 'verified' },
+  'Aceptada Desestimada': { label: 'Aceptada Desestimada', color: '#b91c1c', bg: '#fef2f2', icon: 'unpublished' },
   'Desestimada': { label: 'Desestimada', color: '#dc2626', bg: '#fee2e2', icon: 'cancel' },
   'Por Vencer': { label: 'Por Vencer', color: '#ea580c', bg: '#ffedd5', icon: 'timer' },
   'OC_RECIBIDA': { label: 'OC Recibida', color: '#0284c7', bg: '#e0f2fe', icon: 'receipt_long' },
@@ -345,18 +349,24 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
   const handleConfirmarDictamenBuenaPro = async (payload: DictamenBuenaProConfirmPayload) => {
     setProcesandoResolucion(true);
     try {
-      // 1. Si otro competidor ya tenía asignación o Buena Pro previa, desestimarlo primero
+      // 1. Si otro competidor ya tenía asignación o Buena Pro previa, desestimarlo
       const previoGanador = dictamenModalData?.otrosCompetidores.find(
         (c) =>
           c.estado === 'Asignación de Oportunidad' ||
           c.estado === 'Cotización' ||
           c.estado === 'Adjudicada' ||
+          c.estado === 'Aceptada por el Administrador' ||
+          c.estado === 'Aceptada por Perú Compras' ||
           ['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(c.estado)
       );
       if (previoGanador) {
         const itemPrevio = payload.desestimaciones.find((d) => String(d.oportunidadId) === String(previoGanador.id));
         const motivoPrevio = itemPrevio ? `${itemPrevio.motivo}: ${itemPrevio.comentario}` : 'Reasignación de Buena Pro';
-        await cambiarEstadoApi(previoGanador.id, 'Desestimada', motivoPrevio);
+        const targetPrevio =
+          previoGanador.estado === 'Aceptada por el Administrador' || previoGanador.estado === 'Adjudicada'
+            ? 'Aceptada Desestimada'
+            : 'Desestimada';
+        await cambiarEstadoApi(previoGanador.id, targetPrevio, motivoPrevio);
       }
 
       // 2. Desestimar las otras oportunidades competidoras con su motivo individual uno por uno
@@ -370,8 +380,8 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
         });
       await Promise.all(promesasDesestimar);
 
-      // 3. Adjudicar la oportunidad ganadora con su comentario de asignación
-      await cambiarEstadoApi(payload.ganadorId, 'Adjudicada', payload.comentarioGanador);
+      // 3. Asignar la oportunidad ganadora como ACEPTADA POR EL ADMINISTRADOR (Buena Pro)
+      await cambiarEstadoApi(payload.ganadorId, 'Aceptada por el Administrador', payload.comentarioGanador);
 
       // 4. Actualizar estado local inmediatamente
       setOportunidades((prev) =>
@@ -379,15 +389,21 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
           if (String(item.id) === String(payload.ganadorId)) {
             return {
               ...item,
-              estado: 'Adjudicada' as const,
+              estado: 'Aceptada por el Administrador' as const,
               motivoDesestimacion: null,
             };
           }
           const des = payload.desestimaciones.find((d) => String(d.oportunidadId) === String(item.id));
           if (des) {
+            const esPrevio = previoGanador && String(previoGanador.id) === String(item.id);
+            const targetDes =
+              esPrevio &&
+                (previoGanador.estado === 'Aceptada por el Administrador' || previoGanador.estado === 'Adjudicada')
+                ? ('Aceptada Desestimada' as const)
+                : ('Desestimada' as const);
             return {
               ...item,
-              estado: 'Desestimada' as const,
+              estado: targetDes,
               motivoDesestimacion: `${des.motivo}: ${des.comentario}`,
             };
           }
@@ -407,13 +423,12 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
             <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 10px; margin: 8px 0; font-size: 12.5px; color: #166534;">
               <strong>Motivo de asignación:</strong> ${payload.comentarioGanador}
             </div>
-            ${
-              payload.desestimaciones.length > 0
-                ? `<p style="font-size: 12px; color: #64748b; margin-top: 8px;">
+            ${payload.desestimaciones.length > 0
+            ? `<p style="font-size: 12px; color: #64748b; margin-top: 8px;">
                     Se registraron los comentarios y motivos de desestimación para <strong>${payload.desestimaciones.length}</strong> otra(s) vendedora(s).
                   </p>`
-                : ''
-            }
+            : ''
+          }
           </div>
         `,
         confirmButtonColor: '#059669',
@@ -518,13 +533,27 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
   // KPIs
   const kpis = useMemo(() => {
     const total = oportunidades.length;
-    const pendientes = oportunidades.filter((op) => op.estado === 'En Licitación');
-    const adjudicadas = oportunidades.filter((op) =>
-      op.estado === 'Adjudicada' || ['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(op.estado)
+    const pendientes = oportunidades.filter((op) => op.estado === 'En Licitación' || op.estado === 'En Competencia');
+    const aceptadasAdmin = oportunidades.filter((op) => op.estado === 'Aceptada por el Administrador');
+    const aceptadasPeruCompras = oportunidades.filter((op) =>
+      op.estado === 'Aceptada por Perú Compras' || (op.estado as string) === 'Aceptada por Peru Compras' || ['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(op.estado)
     );
-    const desestimadas = oportunidades.filter((op) => op.estado === 'Desestimada' || op.estado === 'OC_RECHAZADA');
+    const adjudicadas = oportunidades.filter((op) =>
+      op.estado === 'Adjudicada' ||
+      op.estado === 'Aceptada por el Administrador' ||
+      op.estado === 'Aceptada por Perú Compras' ||
+      ['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(op.estado)
+    );
+    const desestimadas = oportunidades.filter((op) =>
+      op.estado === 'Desestimada' || op.estado === 'Aceptada Desestimada' || op.estado === 'OC_RECHAZADA'
+    );
     const urgentes = oportunidades.filter((op) => {
-      if (!op.fechaVencimiento || ['Adjudicada', 'Desestimada', 'ENTREGADA'].includes(op.estado)) return false;
+      if (
+        !op.fechaVencimiento ||
+        ['Adjudicada', 'Aceptada por el Administrador', 'Aceptada por Perú Compras', 'Desestimada', 'Aceptada Desestimada', 'ENTREGADA'].includes(op.estado)
+      ) {
+        return false;
+      }
       const diffMs = new Date(op.fechaVencimiento).getTime() - Date.now();
       return diffMs < 24 * 60 * 60 * 1000; // Vencida o vence en <24h
     });
@@ -535,6 +564,8 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
     return {
       total,
       pendientesCount: pendientes.length,
+      aceptadasAdminCount: aceptadasAdmin.length,
+      aceptadasPeruComprasCount: aceptadasPeruCompras.length,
       adjudicadasCount: adjudicadas.length,
       adjudicadasMonto: montoAdjudicado,
       desestimadasCount: desestimadas.length,
@@ -547,12 +578,21 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
   const oportunidadesFiltradas = useMemo(() => {
     let result = oportunidades.filter((op) => {
       // 1. Filtro por Pestaña
-        if (activeTab === 'pendientes') {
-        if (op.estado !== 'En Licitación') return false;
+      if (activeTab === 'pendientes') {
+        if (op.estado !== 'En Licitación' && op.estado !== 'En Competencia') return false;
       } else if (activeTab === 'adjudicadas') {
-        if (op.estado !== 'Adjudicada' && !['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(op.estado)) return false;
+        if (
+          op.estado !== 'Adjudicada' &&
+          op.estado !== 'Aceptada por el Administrador' &&
+          op.estado !== 'Aceptada por Perú Compras' &&
+          !['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(op.estado)
+        ) return false;
+      } else if (activeTab === 'aceptadas-admin') {
+        if (op.estado !== 'Aceptada por el Administrador') return false;
+      } else if (activeTab === 'aceptadas-peru-compras') {
+        if (op.estado !== 'Aceptada por Perú Compras' && !['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(op.estado)) return false;
       } else if (activeTab === 'desestimadas') {
-        if (op.estado !== 'Desestimada' && op.estado !== 'OC_RECHAZADA') return false;
+        if (op.estado !== 'Desestimada' && op.estado !== 'Aceptada Desestimada' && op.estado !== 'OC_RECHAZADA') return false;
       } else if (activeTab === 'en-licitacion') {
         if (op.estado !== 'En Licitación') return false;
       }
@@ -657,10 +697,18 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
       ? `${desestimarMotivo} — ${desestimarObservacion.trim()}`
       : desestimarMotivo;
 
+    // Regla de Negocio:
+    // Si la oportunidad fue Aceptada por el Administrador pero desestimada por Perú Compras -> 'Aceptada Desestimada'
+    // Si fue rechazada por el administrador directamente -> 'Desestimada'
+    const targetState: Oportunidad['estado'] =
+      desestimarModalOp.estado === 'Aceptada por el Administrador' || desestimarModalOp.estado === 'Adjudicada'
+        ? 'Aceptada Desestimada'
+        : 'Desestimada';
+
     resolverEstado(
       desestimarModalOp,
-      'Desestimada',
-      `El requerimiento "${desestimarModalOp.numeroRequerimiento}" ha sido marcado como DESESTIMADO (${razon}).`,
+      targetState,
+      `El requerimiento "${desestimarModalOp.numeroRequerimiento}" ha sido marcado como ${targetState.toUpperCase()} (${razon}).`,
       razon
     );
   };
@@ -814,8 +862,28 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
                 onClick={() => setActiveTab('adjudicadas')}
               >
                 <GoogleIcon name="verified" size={16} color={activeTab === 'adjudicadas' ? '#059669' : '#64748b'} />
-                <span>Adjudicadas</span>
+                <span>Todas Adjudicadas</span>
                 <span className="res-tab-badge">{kpis.adjudicadasCount}</span>
+              </button>
+
+              <button
+                type="button"
+                className={`res-tab-btn ${activeTab === 'aceptadas-admin' ? 'active' : ''}`}
+                onClick={() => setActiveTab('aceptadas-admin')}
+              >
+                <GoogleIcon name="how_to_reg" size={16} color={activeTab === 'aceptadas-admin' ? '#2563eb' : '#64748b'} />
+                <span>Aceptadas Admin</span>
+                <span className="res-tab-badge">{kpis.aceptadasAdminCount}</span>
+              </button>
+
+              <button
+                type="button"
+                className={`res-tab-btn ${activeTab === 'aceptadas-peru-compras' ? 'active' : ''}`}
+                onClick={() => setActiveTab('aceptadas-peru-compras')}
+              >
+                <GoogleIcon name="verified" size={16} color={activeTab === 'aceptadas-peru-compras' ? '#059669' : '#64748b'} />
+                <span>Aceptadas Perú Compras</span>
+                <span className="res-tab-badge">{kpis.aceptadasPeruComprasCount}</span>
               </button>
 
               <button
@@ -1244,8 +1312,8 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
                     const tag = r.tieneGanador
                       ? ' [CON BUENA PRO]'
                       : r.esDisputado
-                      ? ` [EN DISPUTA (${r.count})]`
-                      : ' [1 POSTULACIÓN]';
+                        ? ` [EN DISPUTA (${r.count})]`
+                        : ' [1 POSTULACIÓN]';
                     return (
                       <option key={r.req} value={r.req}>
                         {r.req} — {r.count} {r.count === 1 ? 'ejecutiva' : 'ejecutivas'}{tag}
@@ -1770,139 +1838,139 @@ export const ResolverOportunidadesPage: React.FC<ResolverOportunidadesPageProps>
         </div>
       )}
 
-          {/* ── Modal de Dictamen Oficial de Buena Pro con Comentarios Individuales ── */}
-          {dictamenModalData && (
-            <DictamenBuenaProModal
-              ganadorOp={dictamenModalData.ganadorOp}
-              otrosCompetidores={dictamenModalData.otrosCompetidores}
-              onClose={() => setDictamenModalData(null)}
-              onConfirm={handleConfirmarDictamenBuenaPro}
-              procesando={procesandoResolucion}
-            />
-          )}
+      {/* ── Modal de Dictamen Oficial de Buena Pro con Comentarios Individuales ── */}
+      {dictamenModalData && (
+        <DictamenBuenaProModal
+          ganadorOp={dictamenModalData.ganadorOp}
+          otrosCompetidores={dictamenModalData.otrosCompetidores}
+          onClose={() => setDictamenModalData(null)}
+          onConfirm={handleConfirmarDictamenBuenaPro}
+          procesando={procesandoResolucion}
+        />
+      )}
 
-          {/* ── Modal de Dictamen: DESESTIMAR OPORTUNIDAD ── */}
-          {desestimarModalOp && (
-            <div className="res-modal-overlay">
-              <div className="res-modal">
-                <div className="res-modal__header">
-                  <h3>
-                    <GoogleIcon name="cancel" size={22} color="#dc2626" />
-                    <span>Dictaminar Desestimación</span>
-                  </h3>
-                  <button
-                    type="button"
-                    className="res-modal__close-btn"
-                    onClick={() => setDesestimarModalOp(null)}
-                  >
-                    <GoogleIcon name="close" size={20} color="#64748b" />
-                  </button>
+      {/* ── Modal de Dictamen: DESESTIMAR OPORTUNIDAD ── */}
+      {desestimarModalOp && (
+        <div className="res-modal-overlay">
+          <div className="res-modal">
+            <div className="res-modal__header">
+              <h3>
+                <GoogleIcon name="cancel" size={22} color="#dc2626" />
+                <span>Dictaminar Desestimación</span>
+              </h3>
+              <button
+                type="button"
+                className="res-modal__close-btn"
+                onClick={() => setDesestimarModalOp(null)}
+              >
+                <GoogleIcon name="close" size={20} color="#64748b" />
+              </button>
+            </div>
+
+            <div className="res-modal__body">
+              <div className="res-modal__summary-box">
+                <div className="res-modal__summary-row">
+                  <span className="res-modal__summary-label">Requerimiento:</span>
+                  <span className="res-modal__summary-val" style={{ color: '#2563eb' }}>
+                    {desestimarModalOp.numeroRequerimiento}
+                  </span>
                 </div>
-
-                <div className="res-modal__body">
-                  <div className="res-modal__summary-box">
-                    <div className="res-modal__summary-row">
-                      <span className="res-modal__summary-label">Requerimiento:</span>
-                      <span className="res-modal__summary-val" style={{ color: '#2563eb' }}>
-                        {desestimarModalOp.numeroRequerimiento}
-                      </span>
-                    </div>
-                    <div className="res-modal__summary-row">
-                      <span className="res-modal__summary-label">Entidad:</span>
-                      <span className="res-modal__summary-val">
-                        {desestimarModalOp.entidadConvocante || desestimarModalOp.empresaRazonSocial || 'N/A'}
-                      </span>
-                    </div>
-                    <div className="res-modal__summary-row">
-                      <span className="res-modal__summary-label">Ejecutiva:</span>
-                      <span className="res-modal__summary-val">{desestimarModalOp.creadoPor}</span>
-                    </div>
-                  </div>
-
-                  <div className="res-modal__field">
-                    <label>Motivo Principal de Desestimación:</label>
-                    <select
-                      value={desestimarMotivo}
-                      onChange={(e) => setDesestimarMotivo(e.target.value)}
-                    >
-                      <option value="Precio no competitivo / Fuera de límite">Precio no competitivo / Fuera de límite</option>
-                      <option value="No cumple especificaciones técnicas">No cumple especificaciones técnicas</option>
-                      <option value="Cancelado o declarado desierto por la entidad">Cancelado o declarado desierto por la entidad</option>
-                      <option value="Plazo vencido sin cotizar">Plazo vencido sin cotizar</option>
-                      <option value="Falta de stock con mayoristas/marcas">Falta de stock con mayoristas/marcas</option>
-                      <option value="Otro motivo">Otro motivo</option>
-                    </select>
-                  </div>
-
-                  <div className="res-modal__field">
-                    <label>Observaciones Adicionales (Opcional):</label>
-                    <textarea
-                      placeholder="Detalla la razón por la que no se adjudicó este requerimiento..."
-                      value={desestimarObservacion}
-                      onChange={(e) => setDesestimarObservacion(e.target.value)}
-                    />
-                  </div>
+                <div className="res-modal__summary-row">
+                  <span className="res-modal__summary-label">Entidad:</span>
+                  <span className="res-modal__summary-val">
+                    {desestimarModalOp.entidadConvocante || desestimarModalOp.empresaRazonSocial || 'N/A'}
+                  </span>
                 </div>
-
-                <div className="res-modal__footer">
-                  <button
-                    type="button"
-                    className="res-btn-cancel"
-                    onClick={() => setDesestimarModalOp(null)}
-                    disabled={procesandoResolucion}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    className="res-btn-confirm"
-                    style={{ background: '#dc2626' }}
-                    onClick={handleConfirmarDesestimar}
-                    disabled={procesandoResolucion}
-                  >
-                    <GoogleIcon name="cancel" size={16} color="#ffffff" />
-                    <span>{procesandoResolucion ? 'Desestimando...' : 'Confirmar Desestimación'}</span>
-                  </button>
+                <div className="res-modal__summary-row">
+                  <span className="res-modal__summary-label">Ejecutiva:</span>
+                  <span className="res-modal__summary-val">{desestimarModalOp.creadoPor}</span>
                 </div>
               </div>
+
+              <div className="res-modal__field">
+                <label>Motivo Principal de Desestimación:</label>
+                <select
+                  value={desestimarMotivo}
+                  onChange={(e) => setDesestimarMotivo(e.target.value)}
+                >
+                  <option value="Precio no competitivo / Fuera de límite">Precio no competitivo / Fuera de límite</option>
+                  <option value="No cumple especificaciones técnicas">No cumple especificaciones técnicas</option>
+                  <option value="Cancelado o declarado desierto por la entidad">Cancelado o declarado desierto por la entidad</option>
+                  <option value="Plazo vencido sin cotizar">Plazo vencido sin cotizar</option>
+                  <option value="Falta de stock con mayoristas/marcas">Falta de stock con mayoristas/marcas</option>
+                  <option value="Otro motivo">Otro motivo</option>
+                </select>
+              </div>
+
+              <div className="res-modal__field">
+                <label>Observaciones Adicionales (Opcional):</label>
+                <textarea
+                  placeholder="Detalla la razón por la que no se adjudicó este requerimiento..."
+                  value={desestimarObservacion}
+                  onChange={(e) => setDesestimarObservacion(e.target.value)}
+                />
+              </div>
             </div>
-          )}
 
-          {/* ── Modal de Detalle Completo ── */}
-          {detalleModalOp && (
-            <DetalleOportunidadView
-              oportunidad={detalleModalOp}
-              todasOportunidades={oportunidades}
-              roleAccent={roleAccent}
-              onClose={() => setDetalleModalOp(null)}
-              onEdit={() => { }}
-              onSubirEvidencia={() => { }}
-              onEstadoCambiado={(opActualizada) => {
-                setOportunidades((prev) =>
-                  prev.map((o) => (String(o.id) === String(opActualizada.id) ? opActualizada : o))
-                );
-                setDetalleModalOp(opActualizada);
-              }}
-              onOportunidadesActualizadas={(nuevas) => setOportunidades(nuevas)}
-              getVencimientoBadge={getVencimientoBadge}
-            />
-          )}
-
-          {/* ── Modal de Podio de la Oportunidad ── */}
-          {podioModalReq && (
-            <PodioRequerimientoModal
-              numeroRequerimiento={podioModalReq}
-              oportunidades={oportunidades}
-              roleAccent={roleAccent}
-              onClose={() => setPodioModalReq(null)}
-              onOportunidadesActualizadas={(nuevas) => setOportunidades(nuevas)}
-              onVerDetalle={(opSeleccionada) => {
-                setPodioModalReq(null);
-                setDetalleModalOp(opSeleccionada);
-              }}
-            />
-          )}
+            <div className="res-modal__footer">
+              <button
+                type="button"
+                className="res-btn-cancel"
+                onClick={() => setDesestimarModalOp(null)}
+                disabled={procesandoResolucion}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="res-btn-confirm"
+                style={{ background: '#dc2626' }}
+                onClick={handleConfirmarDesestimar}
+                disabled={procesandoResolucion}
+              >
+                <GoogleIcon name="cancel" size={16} color="#ffffff" />
+                <span>{procesandoResolucion ? 'Desestimando...' : 'Confirmar Desestimación'}</span>
+              </button>
+            </div>
+          </div>
         </div>
-      );
+      )}
+
+      {/* ── Modal de Detalle Completo ── */}
+      {detalleModalOp && (
+        <DetalleOportunidadView
+          oportunidad={detalleModalOp}
+          todasOportunidades={oportunidades}
+          roleAccent={roleAccent}
+          onClose={() => setDetalleModalOp(null)}
+          onEdit={() => { }}
+          onSubirEvidencia={() => { }}
+          onEstadoCambiado={(opActualizada) => {
+            setOportunidades((prev) =>
+              prev.map((o) => (String(o.id) === String(opActualizada.id) ? opActualizada : o))
+            );
+            setDetalleModalOp(opActualizada);
+          }}
+          onOportunidadesActualizadas={(nuevas) => setOportunidades(nuevas)}
+          getVencimientoBadge={getVencimientoBadge}
+        />
+      )}
+
+      {/* ── Modal de Podio de la Oportunidad ── */}
+      {podioModalReq && (
+        <PodioRequerimientoModal
+          numeroRequerimiento={podioModalReq}
+          oportunidades={oportunidades}
+          roleAccent={roleAccent}
+          onClose={() => setPodioModalReq(null)}
+          onOportunidadesActualizadas={(nuevas) => setOportunidades(nuevas)}
+          onVerDetalle={(opSeleccionada) => {
+            setPodioModalReq(null);
+            setDetalleModalOp(opSeleccionada);
+          }}
+        />
+      )}
+    </div>
+  );
 };
-      export default ResolverOportunidadesPage;
+export default ResolverOportunidadesPage;

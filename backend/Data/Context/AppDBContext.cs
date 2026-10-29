@@ -28,6 +28,7 @@ namespace Data.Context
         public DbSet<OrdenCompra> OrdenesCompra { get; set; }
         public DbSet<OportunidadImagen> OportunidadImagenes { get; set; }
         public DbSet<PagoOC> Pagos { get; set; }
+        public DbSet<ContactoOCAM> ContactosOCAM { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -44,6 +45,7 @@ namespace Data.Context
             builder.ApplyConfiguration(new OrdenCompraConfiguration());
             builder.ApplyConfiguration(new OportunidadImagenConfiguration());
             builder.ApplyConfiguration(new PagoConfiguration());
+            builder.ApplyConfiguration(new ContactoConfiguration());
 
             // Convertidor universal para asegurar DateTimeKind.Utc en PostgreSQL / Npgsql
             foreach (var entityType in builder.Model.GetEntityTypes())

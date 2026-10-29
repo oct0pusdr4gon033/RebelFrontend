@@ -65,6 +65,31 @@ namespace Aplicacion.Services
 
             var reqUpper = dto.NumeroRequerimiento.Trim().ToUpper();
 
+            // ── REGLA DE PRIORIDAD DEL PODIO (VENTANA DE 5 MINUTOS) ──
+            // Si el requerimiento ya fue registrado (por cualquier ejecutiva) hace menos
+            // de 5 minutos, se BLOQUEA el nuevo registro: el primero conserva la prioridad.
+            var primerRegistro = await _oportunidadRepository.ObtenerPrimerRegistroAsync(reqUpper);
+            if (primerRegistro.HasValue)
+            {
+                var antiguedad = DateTime.UtcNow - primerRegistro.Value;
+                if (antiguedad < TimeSpan.FromMinutes(5))
+                {
+                    var restante = TimeSpan.FromMinutes(5) - antiguedad;
+                    var segundos = Math.Ceiling(restante.TotalSeconds);
+                    throw new InvalidOperationException(
+                        $"El requerimiento '{reqUpper}' ya fue registrado por otra ejecutiva hace menos de 5 minutos y conserva la prioridad del podio. Puedes registrar este requerimiento nuevamente en {segundos} segundos.");
+                }
+            }
+
+            // Validar unicidad removido: se permite registrar múltiples oportunidades por requerimiento
+
+            // ── REGLA DE NEGOCIO: OPORTUNIDAD INMUTABLE SI ESTÁ COMPLETA ──
+            var estaCompleta = (dto.AcuerdoMarcoId.HasValue && dto.AcuerdoMarcoId.Value > 0)
+                               && dto.FechaVencimientoLicitacion.HasValue
+                               && ((dto.EmpresaId.HasValue && dto.EmpresaId.Value > 0) || !string.IsNullOrWhiteSpace(dto.EntidadConvocante))
+                               && dto.MarcaIds != null && dto.MarcaIds.Any()
+                               && dto.Productos != null && dto.Productos.Any();
+
             var oportunidad = new Oportunidad
             {
                 NumeroRequerimiento = reqUpper,
@@ -76,7 +101,9 @@ namespace Aplicacion.Services
                 EntidadConvocante = dto.EntidadConvocante?.Trim(),
                 CreadoPorUsuarioId = usuarioId,
                 FechaRegistro = DateTime.UtcNow,
-                Estado = "En Licitación"
+                // Al registrarse la oportunidad entra al pipeline en estado En Licitación.
+                Estado = "En Licitación",
+                EstaBloqueada = estaCompleta
             };
 
             // 1. Asociar Marcas
@@ -108,11 +135,15 @@ namespace Aplicacion.Services
         /// 2. Empresa / Entidad Solicitante -> SE EDITA (se puede asociar o completar después del registro rápido).
         /// 3. Marcas y Productos/Límites del Requerimiento -> SE EDITAN.
         /// </summary>
-        public async Task<OportunidadResponseDto> ActualizarAsync(int id, ActualizarOportunidadDto dto)
+        public async Task<OportunidadResponseDto> ActualizarAsync(int id, ActualizarOportunidadDto dto, string? usuarioId = null, bool esAdmin = false)
         {
             var op = await _oportunidadRepository.ObtenerPorIdAsync(id);
             if (op == null)
                 throw new KeyNotFoundException($"Oportunidad con Id '{id}' no encontrada.");
+
+            // ── REGLA DE INMUTABILIDAD: Solo el Administrador puede editar una oportunidad bloqueada ──
+            if (op.EstaBloqueada && !esAdmin)
+                throw new InvalidOperationException("La oportunidad ya fue confirmada y es inmutable. No se puede editar excepto por un Administrador.");
 
             // ── PROTECCIÓN: LOS DATOS DE CONVOCATORIA PERÚ COMPRAS NO SE MODIFICAN ──
             // op.NumeroRequerimiento       -> INALTERADO
@@ -154,15 +185,83 @@ namespace Aplicacion.Services
                 });
             }
 
-            // ── EDICIÓN 3: ACTUALIZAR PRODUCTOS Y LÍMITES ──
-            op.Productos.Clear();
+            // ── EDICIÓN 3: ACTUALIZAR PRODUCTOS Y LÍMITES (Preservando Flete Aprobado) ──
+            var productosActualizados = new List<OportunidadProducto>();
             foreach (var p in dto.Productos)
             {
-                op.Productos.Add(MapearProducto(p, op.Id));
+                var prodExistente = p.Id.HasValue && p.Id.Value > 0
+                    ? op.Productos.FirstOrDefault(x => x.Id == p.Id.Value)
+                    : null;
+
+                if (prodExistente != null)
+                {
+                    prodExistente.NumeroParte = p.NumeroParte.Trim();
+                    prodExistente.Descripcion = p.Descripcion?.Trim();
+                    prodExistente.Cantidad = p.Cantidad;
+                    prodExistente.LimiteUnitario = p.LimiteUnitario;
+                    prodExistente.LimiteSubtotal = p.Cantidad * p.LimiteUnitario;
+                    prodExistente.FichaProducto = string.IsNullOrWhiteSpace(p.FichaProducto) ? null : p.FichaProducto.Trim();
+                    prodExistente.MarcaProducto = string.IsNullOrWhiteSpace(p.MarcaProducto) ? null : p.MarcaProducto.Trim();
+                    prodExistente.Moneda = string.IsNullOrWhiteSpace(p.Moneda) ? "PEN" : p.Moneda.Trim().ToUpperInvariant();
+                    prodExistente.PrecioUnitarioBase = p.PrecioUnitarioBase;
+                    prodExistente.PrecioUnitarioOfertado = p.PrecioUnitarioOfertado;
+                    prodExistente.CondicionesAdicionales = string.IsNullOrWhiteSpace(p.CondicionesAdicionales) ? null : p.CondicionesAdicionales.Trim();
+                    prodExistente.FichaTecnica = string.IsNullOrWhiteSpace(p.FichaTecnica) ? null : p.FichaTecnica.Trim();
+
+                    if (p.AjusteFleteSolicitadoPorcentaje.HasValue && p.AjusteFleteSolicitadoPorcentaje.Value > 0 && prodExistente.AjusteFleteEstado != "Aprobado")
+                    {
+                        prodExistente.AjusteFleteSolicitadoPorcentaje = p.AjusteFleteSolicitadoPorcentaje.Value;
+                        prodExistente.AjusteFleteMotivo = p.AjusteFleteMotivo?.Trim();
+                        prodExistente.AjusteFleteEstado = "Pendiente";
+                    }
+
+                    prodExistente.Proveedores.Clear();
+                    foreach (var pv in p.Proveedores.Where(x => !string.IsNullOrWhiteSpace(x.NombreProveedor)))
+                    {
+                        prodExistente.Proveedores.Add(new ItemProveedor
+                        {
+                            OportunidadProductoId = prodExistente.Id,
+                            NombreProveedor = pv.NombreProveedor.Trim(),
+                            Cantidad = pv.Cantidad,
+                            CostoUnitario = pv.CostoUnitario,
+                            CostoEnvio = pv.CostoEnvio
+                        });
+                    }
+
+                    productosActualizados.Add(prodExistente);
+                }
+                else
+                {
+                    productosActualizados.Add(MapearProducto(p, op.Id));
+                }
+            }
+
+            var idsConservados = productosActualizados.Where(x => x.Id > 0).Select(x => x.Id).ToHashSet();
+            var eliminados = op.Productos.Where(x => !idsConservados.Contains(x.Id)).ToList();
+            foreach (var rem in eliminados)
+            {
+                op.Productos.Remove(rem);
+            }
+
+            foreach (var prodNuevo in productosActualizados.Where(x => x.Id == 0))
+            {
+                op.Productos.Add(prodNuevo);
             }
 
             // Recalcular Límite Total de la Oportunidad
             op.LimiteTotal = op.Productos.Sum(p => p.LimiteSubtotal);
+
+            // Si ahora cuenta con todos los datos clave, pasa a ser inmutable
+            var ahoraCompleta = (op.AcuerdoMarcoId > 0)
+                                && op.FechaVencimientoLicitacion.HasValue
+                                && (op.EmpresaId.HasValue || !string.IsNullOrWhiteSpace(op.EntidadConvocante))
+                                && op.OportunidadMarcas.Any()
+                                && op.Productos.Any();
+            if (ahoraCompleta)
+            {
+                op.EstaBloqueada = true;
+            }
+
             op.FechaActualizacion = DateTime.UtcNow;
 
             await _oportunidadRepository.ActualizarAsync(op);
@@ -284,22 +383,41 @@ namespace Aplicacion.Services
         /// Mapea un ítem del DTO a la entidad, calculando el subtotal y normalizando
         /// los datos opcionales de la proforma Perú Compras.
         /// </summary>
-        private static OportunidadProducto MapearProducto(ProductoItemDto p, int oportunidadId = 0) => new OportunidadProducto
+        private static OportunidadProducto MapearProducto(ProductoItemDto p, int oportunidadId = 0)
         {
-            OportunidadId = oportunidadId,
-            NumeroParte = p.NumeroParte.Trim(),
-            Descripcion = p.Descripcion?.Trim(),
-            Cantidad = p.Cantidad,
-            LimiteUnitario = p.LimiteUnitario,
-            LimiteSubtotal = p.Cantidad * p.LimiteUnitario,
-            FichaProducto = string.IsNullOrWhiteSpace(p.FichaProducto) ? null : p.FichaProducto.Trim(),
-            MarcaProducto = string.IsNullOrWhiteSpace(p.MarcaProducto) ? null : p.MarcaProducto.Trim(),
-            Moneda = string.IsNullOrWhiteSpace(p.Moneda) ? "PEN" : p.Moneda.Trim().ToUpperInvariant(),
-            PrecioUnitarioBase = p.PrecioUnitarioBase,
-            PrecioUnitarioOfertado = p.PrecioUnitarioOfertado,
-            CondicionesAdicionales = string.IsNullOrWhiteSpace(p.CondicionesAdicionales) ? null : p.CondicionesAdicionales.Trim(),
-            FichaTecnica = string.IsNullOrWhiteSpace(p.FichaTecnica) ? null : p.FichaTecnica.Trim(),
-        };
+            var tieneSolicitudFlete = p.AjusteFleteSolicitadoPorcentaje.HasValue && p.AjusteFleteSolicitadoPorcentaje.Value > 0;
+            return new OportunidadProducto
+            {
+                OportunidadId = oportunidadId,
+                NumeroParte = p.NumeroParte.Trim(),
+                Descripcion = p.Descripcion?.Trim(),
+                Cantidad = p.Cantidad,
+                LimiteUnitario = p.LimiteUnitario,
+                LimiteSubtotal = p.Cantidad * p.LimiteUnitario,
+                FichaProducto = string.IsNullOrWhiteSpace(p.FichaProducto) ? null : p.FichaProducto.Trim(),
+                MarcaProducto = string.IsNullOrWhiteSpace(p.MarcaProducto) ? null : p.MarcaProducto.Trim(),
+                Moneda = string.IsNullOrWhiteSpace(p.Moneda) ? "PEN" : p.Moneda.Trim().ToUpperInvariant(),
+                PrecioUnitarioBase = p.PrecioUnitarioBase,
+                PrecioUnitarioOfertado = p.PrecioUnitarioOfertado,
+                CondicionesAdicionales = string.IsNullOrWhiteSpace(p.CondicionesAdicionales) ? null : p.CondicionesAdicionales.Trim(),
+                FichaTecnica = string.IsNullOrWhiteSpace(p.FichaTecnica) ? null : p.FichaTecnica.Trim(),
+                AjusteFletePorcentaje = null,
+                AjusteFleteSolicitadoPorcentaje = tieneSolicitudFlete ? p.AjusteFleteSolicitadoPorcentaje : null,
+                AjusteFleteMotivo = tieneSolicitudFlete ? p.AjusteFleteMotivo?.Trim() : null,
+                AjusteFleteEstado = tieneSolicitudFlete ? "Pendiente" : "Sin Ajuste",
+                AjusteFleteComentarioAdmin = null,
+                Proveedores = p.Proveedores
+                    .Where(pv => !string.IsNullOrWhiteSpace(pv.NombreProveedor))
+                    .Select(pv => new ItemProveedor
+                    {
+                        NombreProveedor = pv.NombreProveedor.Trim(),
+                        Cantidad = pv.Cantidad,
+                        CostoUnitario = pv.CostoUnitario,
+                        CostoEnvio = pv.CostoEnvio
+                    })
+                    .ToList(),
+            };
+        }
 
         public async Task<OportunidadResponseDto> CambiarEstadoAsync(int id, CambiarEstadoDto dto, string usuarioId, bool esAdmin = false)
         {
@@ -309,36 +427,131 @@ namespace Aplicacion.Services
             if (!esAdmin && op.CreadoPorUsuarioId != usuarioId)
                 throw new UnauthorizedAccessException("Solo la ejecutiva que registró la oportunidad o un administrador pueden resolver o cambiar su estado.");
 
+            var estadoReq = dto.Estado.Trim();
+            if (estadoReq.Equals("Aceptada por Peru Compras", StringComparison.OrdinalIgnoreCase)) estadoReq = "Aceptada por Perú Compras";
+            if (estadoReq.Equals("En Licitacion", StringComparison.OrdinalIgnoreCase)) estadoReq = "En Licitación";
+            if (estadoReq.Equals("Cotizacion", StringComparison.OrdinalIgnoreCase)) estadoReq = "Cotización";
+            if (estadoReq.Equals("Aceptada", StringComparison.OrdinalIgnoreCase)) estadoReq = "Aceptada por el Administrador";
+
             if (!esAdmin)
             {
-            var transicionesPermitidas = new Dictionary<string, string[]>
-            {
-                ["En Licitación"] = new[] { "Cotizada", "Desestimada" },
-                ["Cotizada"] = new[] { "Adjudicada", "Desestimada" },
-            };
+                var transicionesPermitidas = new Dictionary<string, string[]>
+                {
+                    ["En Licitación"] = new[] { "Cotizada", "Cotización", "Adjudicada", "Aceptada", "Aceptada por el Administrador", "Aceptada por Perú Compras", "Aceptada Desestimada", "Desestimada" },
+                    ["En Licitacion"] = new[] { "Cotizada", "Cotización", "Adjudicada", "Aceptada", "Aceptada por el Administrador", "Aceptada por Perú Compras", "Aceptada Desestimada", "Desestimada" },
+                    ["En Competencia"] = new[] { "Cotizada", "Cotización", "Adjudicada", "Aceptada", "Aceptada por el Administrador", "Aceptada por Perú Compras", "Aceptada Desestimada", "Desestimada" },
+                    ["Asignación de Oportunidad"] = new[] { "Cotizada", "Cotización", "Adjudicada", "Aceptada", "Aceptada por el Administrador", "Aceptada por Perú Compras", "Aceptada Desestimada", "Desestimada", "En Licitación" },
+                    ["Por Vencer"] = new[] { "Cotizada", "Cotización", "Adjudicada", "Aceptada", "Aceptada por el Administrador", "Aceptada por Perú Compras", "Aceptada Desestimada", "Desestimada", "En Licitación" },
+                    ["Cotizada"] = new[] { "Adjudicada", "Aceptada", "Aceptada por el Administrador", "Aceptada por Perú Compras", "Aceptada Desestimada", "Desestimada", "En Licitación" },
+                    ["Cotización"] = new[] { "Adjudicada", "Aceptada", "Aceptada por el Administrador", "Aceptada por Perú Compras", "Aceptada Desestimada", "Desestimada", "En Licitación" },
+                    ["Adjudicada"] = new[] { "Aceptada por Perú Compras", "Aceptada Desestimada", "Desestimada", "En Licitación" },
+                    ["Aceptada"] = new[] { "Aceptada por Perú Compras", "Aceptada Desestimada", "Desestimada", "En Licitación" },
+                    ["Aceptada por el Administrador"] = new[] { "Aceptada por Perú Compras", "Aceptada Desestimada", "Desestimada", "En Licitación" },
+                    ["Aceptada por Perú Compras"] = new[] { "Cotización", "OC_RECIBIDA", "Aceptada Desestimada", "Desestimada", "En Licitación" },
+                    ["Aceptada Desestimada"] = new[] { "En Licitación" },
+                    ["Desestimada"] = new[] { "En Licitación" },
+                };
 
-            if (!transicionesPermitidas.TryGetValue(op.Estado, out var permitidos)
-                || !permitidos.Contains(dto.Estado))
-            {
-                throw new InvalidOperationException(
-                    $"No se puede cambiar de \"{op.Estado}\" a \"{dto.Estado}\".");
+                if (!transicionesPermitidas.TryGetValue(op.Estado, out var permitidos)
+                    || !permitidos.Contains(estadoReq))
+                {
+                    throw new InvalidOperationException(
+                        $"No se puede cambiar de \"{op.Estado}\" a \"{estadoReq}\".");
+                }
             }
+
+            // ── MOTIVO OBLIGATORIO AL DESESTIMAR ──
+            if (estadoReq == "Desestimada" || estadoReq == "Aceptada Desestimada")
+            {
+                if (string.IsNullOrWhiteSpace(dto.Motivo))
+                {
+                    throw new InvalidOperationException(
+                        "Debes indicar el motivo por el cual se desestima el requerimiento.");
+                }
             }
 
             // ── REGLA DE NEGOCIO ESTRICTA: BUENA PRO ÚNICA POR REQUERIMIENTO ──
-            // Si se intenta adjudicar ("Adjudicada") y ya existe otra postulación para el mismo
-            // requerimiento con Buena Pro asignada, se rechaza la solicitud.
-            if (dto.Estado == "Adjudicada")
+            // Si se intenta adjudicar ("Adjudicada", "Aceptada por el Administrador", "Aceptada por Perú Compras")
+            // y ya existe otra postulación para el mismo requerimiento con Buena Pro asignada, se rechaza la solicitud.
+            if (estadoReq == "Adjudicada" || estadoReq == "Aceptada" || estadoReq == "Aceptada por el Administrador" || estadoReq == "Aceptada por Perú Compras")
             {
                 var yaTieneBuenaPro = await _oportunidadRepository.ExisteBuenaProAsync(op.NumeroRequerimiento, op.Id);
                 if (yaTieneBuenaPro)
                 {
                     throw new InvalidOperationException(
-                        $"El requerimiento '{op.NumeroRequerimiento}' ya cuenta con una postulación adjudicada con Buena Pro. No se puede adjudicar más de una Buena Pro por requerimiento.");
+                        $"El requerimiento \x27{op.NumeroRequerimiento}\x27 ya cuenta con una postulación adjudicada con Buena Pro. No se puede adjudicar más de una Buena Pro por requerimiento.");
                 }
             }
 
-            op.Estado = dto.Estado;
+            // Si el Administrador reabre o regresa la oportunidad a "En Licitación", se desbloquea
+            if (esAdmin && (estadoReq.Equals("En Licitación", StringComparison.OrdinalIgnoreCase) || estadoReq.Equals("En Licitacion", StringComparison.OrdinalIgnoreCase)))
+            {
+                op.EstaBloqueada = false;
+            }
+
+            op.Estado = estadoReq;
+            op.MotivoDesestimacion = (estadoReq == "Desestimada" || estadoReq == "Aceptada Desestimada") ? dto.Motivo?.Trim() : null;
+            op.FechaActualizacion = DateTime.UtcNow;
+            await _oportunidadRepository.ActualizarAsync(op);
+
+            return (await ObtenerPorIdAsync(op.Id))!;
+        }
+
+        // ── AJUSTE DE FLETE POR PRODUCTO (APROBACIÓN DE ADMINISTRADOR) ──
+        public async Task<OportunidadResponseDto> SolicitarAjusteFleteAsync(int oportunidadId, int productoId, SolicitarAjusteFleteDto dto, string usuarioId)
+        {
+            var op = await _oportunidadRepository.ObtenerPorIdAsync(oportunidadId)
+                ?? throw new KeyNotFoundException($"Oportunidad {oportunidadId} no encontrada.");
+
+            var prod = op.Productos.FirstOrDefault(p => p.Id == productoId)
+                ?? throw new KeyNotFoundException($"Producto {productoId} no encontrado en la oportunidad {oportunidadId}.");
+
+            if (dto.Porcentaje <= 0 || dto.Porcentaje > 100)
+                throw new InvalidOperationException("El porcentaje de flete solicitado debe estar entre 0.01% y 100%.");
+
+            if (string.IsNullOrWhiteSpace(dto.Motivo))
+                throw new InvalidOperationException("El motivo de la solicitud de flete es obligatorio.");
+
+            prod.AjusteFleteSolicitadoPorcentaje = dto.Porcentaje;
+            prod.AjusteFleteMotivo = dto.Motivo.Trim();
+            prod.AjusteFleteEstado = "Pendiente";
+            prod.AjusteFleteComentarioAdmin = null;
+
+            op.FechaActualizacion = DateTime.UtcNow;
+            await _oportunidadRepository.ActualizarAsync(op);
+
+            return (await ObtenerPorIdAsync(op.Id))!;
+        }
+
+        public async Task<OportunidadResponseDto> ResolverAjusteFleteAsync(int oportunidadId, int productoId, ResolverAjusteFleteDto dto, string usuarioId, bool esAdmin)
+        {
+            if (!esAdmin)
+                throw new UnauthorizedAccessException("Solo el Administrador puede aprobar o rechazar el ajuste de flete.");
+
+            var op = await _oportunidadRepository.ObtenerPorIdAsync(oportunidadId)
+                ?? throw new KeyNotFoundException($"Oportunidad {oportunidadId} no encontrada.");
+
+            var prod = op.Productos.FirstOrDefault(p => p.Id == productoId)
+                ?? throw new KeyNotFoundException($"Producto {productoId} no encontrado en la oportunidad {oportunidadId}.");
+
+            if (prod.AjusteFleteEstado != "Pendiente" && prod.AjusteFleteSolicitadoPorcentaje == null)
+                throw new InvalidOperationException("Este producto no tiene una solicitud de ajuste de flete pendiente.");
+
+            if (dto.Aprobado)
+            {
+                prod.AjusteFletePorcentaje = prod.AjusteFleteSolicitadoPorcentaje ?? 0;
+                prod.AjusteFleteEstado = "Aprobado";
+                prod.AjusteFleteComentarioAdmin = string.IsNullOrWhiteSpace(dto.Comentario) ? "Aprobado por el Administrador" : dto.Comentario.Trim();
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(dto.Comentario))
+                    throw new InvalidOperationException("Debe ingresar un comentario obligatorio al rechazar la solicitud de flete.");
+
+                prod.AjusteFleteEstado = "Rechazado";
+                prod.AjusteFleteComentarioAdmin = dto.Comentario.Trim();
+            }
+
             op.FechaActualizacion = DateTime.UtcNow;
             await _oportunidadRepository.ActualizarAsync(op);
 
@@ -377,9 +590,22 @@ namespace Aplicacion.Services
         {
             var op = await ValidarOportunidadYPropietarioAsync(id, usuarioId, _oportunidadRepository);
 
-            if (op.Estado != "Adjudicada")
+            var estadoNorm = (op.Estado ?? string.Empty).Trim();
+            var esAceptadaPeruCompras = estadoNorm.Equals("Aceptada por Perú Compras", StringComparison.OrdinalIgnoreCase)
+                                     || estadoNorm.Equals("Aceptada por Peru Compras", StringComparison.OrdinalIgnoreCase)
+                                     || estadoNorm.Equals("Adjudicada", StringComparison.OrdinalIgnoreCase);
+
+            if (!esAceptadaPeruCompras)
+            {
+                if (estadoNorm.Equals("Aceptada por el Administrador", StringComparison.OrdinalIgnoreCase) || estadoNorm.Equals("Aceptada", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        $"La Orden de Compra Oficial (OCAM) solo puede registrarse cuando la oportunidad haya sido aceptada por Perú Compras con el documento oficial correspondiente. Estado actual: \"{op.Estado}\". Primero debe adjuntarse el documento oficial de Perú Compras.");
+                }
+
                 throw new InvalidOperationException(
-                    $"La OC solo puede registrarse sobre una oportunidad ADJUDICADA. Estado actual: \"{op.Estado}\".");
+                    $"El registro de Orden de Compra Oficial (OCAM) solo se puede generar cuando la oportunidad sea \"Aceptada por Perú Compras\". Estado actual: \"{op.Estado}\".");
+            }
 
             if (op.OrdenCompra != null)
                 throw new InvalidOperationException("Esta oportunidad ya tiene una Orden de Compra registrada.");
@@ -397,7 +623,13 @@ namespace Aplicacion.Services
                 FechaEmisionOC = dto.FechaEmisionOC.HasValue
                     ? (dto.FechaEmisionOC.Value.Kind == DateTimeKind.Utc ? dto.FechaEmisionOC.Value : DateTime.SpecifyKind(dto.FechaEmisionOC.Value, DateTimeKind.Utc))
                     : null,
-                EstadoOC = "OC_RECIBIDA"
+                EstadoOC = "OC_RECIBIDA",
+                // ── Datos de la Buena Pro / Adjudicación (Perú Compras) ──
+                NroOCAM = string.IsNullOrWhiteSpace(dto.NroOCAM) ? null : dto.NroOCAM.Trim(),
+                NroExpediente = string.IsNullOrWhiteSpace(dto.NroExpediente) ? null : dto.NroExpediente.Trim(),
+                Unidad = string.IsNullOrWhiteSpace(dto.Unidad) ? null : dto.Unidad.Trim(),
+                CodigoCIAF = string.IsNullOrWhiteSpace(dto.CodigoCIAF) ? null : dto.CodigoCIAF.Trim(),
+                MontoOCAM = dto.MontoOCAM
             };
 
             op.Estado = "OC_RECIBIDA";
@@ -411,10 +643,16 @@ namespace Aplicacion.Services
         /// BLOQUE 2 – Hito 2: Acepta o rechaza la OC (Día 7.º hábil).
         /// Transición: OC_RECIBIDA → OC_ACEPTADA | OC_RECHAZADA.
         /// El motivo es obligatorio al rechazar.
+        /// SOLO el rol Admin/Master (quien resuelve las licitaciones) decide la OC;
+        /// la ejecutiva propietaria solo registra los datos de la buena pro.
         /// </summary>
-        public async Task<OportunidadResponseDto> CambiarEstadoOCAsync(int id, CambiarEstadoOCDto dto, string usuarioId)
+        public async Task<OportunidadResponseDto> CambiarEstadoOCAsync(int id, CambiarEstadoOCDto dto, string usuarioId, bool esAdmin = false)
         {
-            var op = await ValidarOportunidadYPropietarioAsync(id, usuarioId, _oportunidadRepository);
+            if (!esAdmin)
+                throw new UnauthorizedAccessException("Solo el rol Admin/Master puede aceptar o rechazar la Orden de Compra.");
+
+            var op = await _oportunidadRepository.ObtenerPorIdAsync(id)
+                ?? throw new KeyNotFoundException($"Oportunidad {id} no encontrada.");
 
             if (op.OrdenCompra == null)
                 throw new InvalidOperationException("Primero debe registrar la Orden de Compra.");
@@ -516,6 +754,8 @@ namespace Aplicacion.Services
                 OportunidadId = i.OportunidadId,
                 NumeroRequerimiento = op.NumeroRequerimiento,
                 TipoEvidencia = i.TipoEvidencia,
+                TipoEvidenciaId = i.TipoEvidenciaId,
+                NombreTipo = i.TipoEvidenciaRef?.Nombre,
                 NombreArchivo = i.NombreArchivo,
                 ContentType = i.ContentType,
                 TamanoBytes = i.TamanoBytes,
@@ -552,23 +792,55 @@ namespace Aplicacion.Services
             if (archivoStream == null || archivoStream.Length == 0)
                 throw new InvalidOperationException("No se ha enviado ningún archivo de imagen.");
 
-            // VALIDACIÓN ESTRICTA: SOLO IMÁGENES (PNG, JPG, JPEG, WEBP)
+            // ── TYPE OF EVIDENCE: auto-asignación sin combo de tipos ──
+            // Si el archivo es PDF se asume cotización de la marca; las capturas/imágenes
+            // se registran como "Captura de Evidencia" por defecto.
+            var extensionArchivo = Path.GetExtension(nombreArchivo).ToLowerInvariant();
+            var esPdf = extensionArchivo == ".pdf"
+                || (!string.IsNullOrWhiteSpace(contentType) && contentType.ToLowerInvariant().Contains("application/pdf"));
+
+            var tipoName = string.IsNullOrWhiteSpace(dto.TipoEvidencia)
+                ? (esPdf ? "Cotización de Marca" : "Captura de Evidencia")
+                : dto.TipoEvidencia.Trim();
+
+            var tipos = await _oportunidadRepository.ObtenerTiposEvidenciaAsync();
+            var tipo = tipos.FirstOrDefault(t => t.Nombre.Equals(tipoName, StringComparison.OrdinalIgnoreCase));
+
+            if (tipo == null && dto.TipoEvidenciaId.HasValue)
+            {
+                tipo = tipos.FirstOrDefault(t => t.Id == dto.TipoEvidenciaId.Value);
+                tipoName = tipo?.Nombre ?? tipoName;
+            }
+
+            var nombreTipo = tipo?.Nombre ?? tipoName;
+            var esCotizacionMarca = nombreTipo.Equals("Cotización de Marca", StringComparison.OrdinalIgnoreCase);
+
+            // VALIDACIÓN DE FORMATO: imágenes siempre; PDF solo para "Cotización de Marca"
             var allowedMimeTypes = new[] { "image/jpeg", "image/png", "image/webp", "image/jpg" };
-            var extension = Path.GetExtension(nombreArchivo).ToLowerInvariant();
             var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
 
+            if (esCotizacionMarca)
+            {
+                allowedMimeTypes = allowedMimeTypes.Append("application/pdf").ToArray();
+                allowedExtensions = allowedExtensions.Append(".pdf").ToArray();
+            }
+
+            var extension = Path.GetExtension(nombreArchivo).ToLowerInvariant();
             var mimeValid = !string.IsNullOrWhiteSpace(contentType) && allowedMimeTypes.Contains(contentType.ToLowerInvariant());
             var extValid = allowedExtensions.Contains(extension);
 
             if (!mimeValid && !extValid)
             {
-                throw new InvalidOperationException("Solo se permiten subir imágenes (JPG, PNG, WEBP). Los documentos PDF u otros formatos no están permitidos en esta sección.");
+                throw new InvalidOperationException(
+                    esCotizacionMarca
+                        ? "Para la cotización de la marca solo se permiten archivos PDF (o imágenes JPG, PNG, WEBP)."
+                        : "Solo se permiten subir imágenes (JPG, PNG, WEBP). Los documentos PDF u otros formatos no están permitidos en esta sección.");
             }
 
             // Límite de tamaño: 25 MB
             if (archivoStream.Length > 25 * 1024 * 1024)
             {
-                throw new InvalidOperationException("El tamaño máximo permitido para la imagen es de 25 MB.");
+                throw new InvalidOperationException("El tamaño máximo permitido para el archivo es de 25 MB.");
             }
 
             byte[] bytes;
@@ -586,13 +858,15 @@ namespace Aplicacion.Services
             {
                 ".png" => "image/png",
                 ".webp" => "image/webp",
+                ".pdf" => "application/pdf",
                 _ => "image/jpeg"
             });
 
             var imagen = new OportunidadImagen
             {
                 OportunidadId = oportunidadId,
-                TipoEvidencia = string.IsNullOrWhiteSpace(dto.TipoEvidencia) ? "Captura de Evidencia" : dto.TipoEvidencia.Trim(),
+                TipoEvidencia = nombreTipo,
+                TipoEvidenciaId = tipo?.Id,
                 NombreArchivo = Path.GetFileName(nombreArchivo),
                 ContentType = cleanContentType,
                 TamanoBytes = bytes.Length,
@@ -612,6 +886,8 @@ namespace Aplicacion.Services
                 OportunidadId = creada.OportunidadId,
                 NumeroRequerimiento = op.NumeroRequerimiento,
                 TipoEvidencia = creada.TipoEvidencia,
+                TipoEvidenciaId = creada.TipoEvidenciaId,
+                NombreTipo = creada.TipoEvidenciaRef?.Nombre,
                 NombreArchivo = creada.NombreArchivo,
                 ContentType = creada.ContentType,
                 TamanoBytes = creada.TamanoBytes,
@@ -653,6 +929,8 @@ namespace Aplicacion.Services
                 EntidadConvocante = op.EntidadConvocante,
                 LimiteTotal = op.LimiteTotal,
                 Estado = op.Estado,
+                EstaBloqueada = op.EstaBloqueada,
+                MotivoDesestimacion = op.MotivoDesestimacion,
                 CreadoPorUsuarioId = op.CreadoPorUsuarioId,
                 CreadoPorNombre = op.CreadoPorUsuario?.UserName,
                 FechaRegistro = op.FechaRegistro,
@@ -668,6 +946,8 @@ namespace Aplicacion.Services
                     OportunidadId = i.OportunidadId,
                     NumeroRequerimiento = op.NumeroRequerimiento,
                     TipoEvidencia = i.TipoEvidencia,
+                    TipoEvidenciaId = i.TipoEvidenciaId,
+                    NombreTipo = i.TipoEvidenciaRef?.Nombre,
                     NombreArchivo = i.NombreArchivo,
                     ContentType = i.ContentType,
                     TamanoBytes = i.TamanoBytes,
@@ -692,7 +972,23 @@ namespace Aplicacion.Services
                     PrecioUnitarioBase = p.PrecioUnitarioBase,
                     PrecioUnitarioOfertado = p.PrecioUnitarioOfertado,
                     CondicionesAdicionales = p.CondicionesAdicionales,
-                    FichaTecnica = p.FichaTecnica
+                    FichaTecnica = p.FichaTecnica,
+                    AjusteFletePorcentaje = p.AjusteFletePorcentaje,
+                    AjusteFleteSolicitadoPorcentaje = p.AjusteFleteSolicitadoPorcentaje,
+                    AjusteFleteMotivo = p.AjusteFleteMotivo,
+                    AjusteFleteEstado = p.AjusteFleteEstado,
+                    AjusteFleteComentarioAdmin = p.AjusteFleteComentarioAdmin,
+                    Proveedores = p.Proveedores.Select(pv => new ItemProveedorResponseDto
+                    {
+                        Id = pv.Id,
+                        NombreProveedor = pv.NombreProveedor,
+                        Cantidad = pv.Cantidad,
+                        CostoUnitario = pv.CostoUnitario,
+                        CostoEnvio = pv.CostoEnvio,
+                        Subtotal = pv.Cantidad * pv.CostoUnitario + pv.CostoEnvio
+                    }).ToList(),
+                    CantidadAsignada = p.Proveedores.Sum(pv => pv.Cantidad),
+                    CostoTotalProveedores = p.Proveedores.Sum(pv => pv.Cantidad * pv.CostoUnitario + pv.CostoEnvio)
                 }).ToList(),
                 OrdenCompra = op.OrdenCompra == null ? null : new OrdenCompraResponseDto
                 {
@@ -711,6 +1007,11 @@ namespace Aplicacion.Services
                     Transportista = op.OrdenCompra.Transportista,
                     NoGuiaRemision = op.OrdenCompra.NoGuiaRemision,
                     FechaEntrega = op.OrdenCompra.FechaEntrega,
+                    NroOCAM = op.OrdenCompra.NroOCAM,
+                    NroExpediente = op.OrdenCompra.NroExpediente,
+                    Unidad = op.OrdenCompra.Unidad,
+                    CodigoCIAF = op.OrdenCompra.CodigoCIAF,
+                    MontoOCAM = op.OrdenCompra.MontoOCAM,
                     FechaRegistro = op.OrdenCompra.FechaRegistro,
                     FechaActualizacion = op.OrdenCompra.FechaActualizacion
                 }

@@ -89,6 +89,7 @@ builder.Services.AddScoped<IAcuerdoMarcoRepository, AcuerdoMarcoRepository>();
 builder.Services.AddScoped<IEmpresaRepository, EmpresaRepository>();
 builder.Services.AddScoped<ISedeRepository, SedeRepository>();
 builder.Services.AddScoped<IPagoRepository, PagoRepository>();
+builder.Services.AddScoped<IContactoRepository, ContactoRepository>();
 
 // Servicios de infraestructura y aplicación
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
@@ -98,6 +99,7 @@ builder.Services.AddScoped<ISedeService, SedeService>();
 builder.Services.AddScoped<IEmpleadoService, EmpleadoService>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IPagoService, PagoService>();
+builder.Services.AddScoped<IContactoService, ContactoService>();
 
 // ── 6. Controladores y OpenAPI ────────────────────────────────────────────────
 builder.Services.AddControllers();

@@ -1,14 +1,11 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { GoogleIcon } from '../../../components/GoogleIcon';
+import { GoogleIcon } from '../../../components/GoogleIcon/GoogleIcon';
 import './EmpresaAdmin.css';
+import { TABS } from './Tabs';
 
 const ACCENT = '#3b5bdb';
 
-const TABS = [
-  { icon: 'domain', label: 'Sedes',    path: 'sedes' },
-  { icon: 'badge',  label: 'Empleados', path: 'empleados' },
-  { icon: 'manage_accounts', label: 'Usuarios del Sistema', path: 'usuarios' },
-];
+
 
 export default function EmpresaLayout() {
   return (

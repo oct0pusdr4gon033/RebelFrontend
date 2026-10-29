@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { GoogleIcon } from '../../components/GoogleIcon';
+import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
 import type { Oportunidad, TipoPodio } from '../../types/oportunidades';
 import type { EjecutivaRanking } from '../../models/EjecutivaRanking.model';
 import { formatHoraExacta, formatDiferenciaTiempo } from '../../utils/dateUtils';
@@ -134,7 +134,13 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
           tasaEfectividad: esPrimerLugar ? 100 : 0,
           reqsGanadosPrimero: esPrimerLugar ? 1 : 0,
           tiempoPromedioMinutos: 0,
-          licitacionesAdjudicadas: op.estado === 'Adjudicada' ? 1 : 0,
+          licitacionesAdjudicadas:
+            op.estado === 'Adjudicada' ||
+              op.estado === 'Aceptada por el Administrador' ||
+              op.estado === 'Aceptada por Perú Compras' ||
+              ['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(op.estado)
+              ? 1
+              : 0,
           ticketPromedio: Number(op.limiteTotal) || 0,
           horaRegistro: formatHoraExacta(op.fechaRegistro),
           diferenciaTiempo: diferenciaTexto,
@@ -241,7 +247,12 @@ export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
 
       existing.totalOportunidades += 1;
       existing.totalCotizado += Number(op.limiteTotal) || 0;
-      if (op.estado === 'Adjudicada') {
+      if (
+        op.estado === 'Adjudicada' ||
+        op.estado === 'Aceptada por el Administrador' ||
+        op.estado === 'Aceptada por Perú Compras' ||
+        ['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(op.estado)
+      ) {
         existing.licitacionesAdjudicadas += 1;
       }
       mapa.set(key, existing);

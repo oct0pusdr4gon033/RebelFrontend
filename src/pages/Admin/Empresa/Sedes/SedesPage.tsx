@@ -7,7 +7,7 @@ import {
   deleteSede,
   restaurarSede,
 } from '../../../../api/services/sede.service';
-import { GoogleIcon } from '../../../../components/GoogleIcon';
+import { GoogleIcon } from '../../../../components/GoogleIcon/GoogleIcon';
 import SedeTable from './components/SedeTable';
 import SedeFormModal from './components/SedeFormModal';
 import '../../Empresa/EmpresaAdmin.css';

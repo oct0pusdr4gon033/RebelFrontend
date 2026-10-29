@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Sidebar, type NavItem } from '../../components/Sidebar';
-import { GoogleIcon } from '../../components/GoogleIcon';
+import { Sidebar, type NavItem } from '../../components/SideBar/Sidebar';
+import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
+import { OportunidadesDashboard } from '../../components/OportunidadesDashboard';
+import { CampanaAlertasOportunidades } from '../../components/AlertasOportunidades/CampanaAlertasOportunidades';
 import '../DashboardLayout.css';
 
 const ACCENT = '#2563eb';
@@ -37,6 +39,28 @@ export const adminNavItems: NavItem[] = [
   },
   { icon: 'handshake', label: 'Acuerdos Marco', path: '/admin/acuerdos', section: 'Comercial' },
   { icon: 'local_shipping', label: 'Seguimiento OC', path: '/admin/seguimiento-oc', section: 'Licitaciones' },
+  {
+    icon: 'import_contacts',
+    label: 'Agenda de Contactos',
+    path: '/admin/agenda-contactos',
+    section: 'Licitaciones',
+    pushButtons: [
+      {
+        id: 'agenda-registrar',
+        tabKey: 'registrar',
+        label: 'Registrar',
+        path: '/admin/agenda-contactos?tab=registrar',
+        description: 'Nuevo contacto de OCAM',
+      },
+      {
+        id: 'agenda-contactos',
+        tabKey: 'agenda',
+        label: 'Agenda',
+        path: '/admin/agenda-contactos?tab=agenda',
+        description: 'Directorio y filtros por OCAM',
+      },
+    ],
+  },
   {
     icon: 'payments',
     label: 'Pagos',
@@ -101,6 +125,12 @@ export function AdminDashboard() {
           Gestiona el equipo, las sedes, los acuerdos comerciales y la resolución de licitaciones públicas. Tienes acceso completo a la operación de tu área.
         </p>
       </div>
+
+      <OportunidadesDashboard
+        scope="sistema"
+        detailPath="/admin/resolver-oportunidades?tab=bandeja"
+        accent={ACCENT}
+      />
 
       <p className="dash__section-title">Resumen Operativo</p>
       <div className="dash__stats">
@@ -190,7 +220,8 @@ export default function AdminLayout() {
             </button>
             <span className="dash__header-title">Panel Administrativo</span>
           </div>
-          <div className="dash__header-right">
+          <div className="dash__header-right" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <CampanaAlertasOportunidades accent={ACCENT} />
             <span
               className="dash__header-badge"
               style={{
