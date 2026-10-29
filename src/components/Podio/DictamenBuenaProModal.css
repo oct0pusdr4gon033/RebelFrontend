@@ -3,6 +3,10 @@
    Modal premium para asignar Buena Pro con comentarios individuales uno a uno
    ══════════════════════════════════════════════════════════════════════════ */
 
+.swal2-container {
+  z-index: 1000000 !important;
+}
+
 .dictamen-modal-overlay {
   position: fixed;
   inset: 0;

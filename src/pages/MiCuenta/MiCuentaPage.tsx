@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { GoogleIcon } from '../../components/GoogleIcon';
+import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
 import { FotocheckModal, type FotocheckData } from '../../components/Fotocheck';
 import './MiCuentaPage.css';
 import type { MiCuentaPageProps } from '../../props/MiCuentaPageProps';
@@ -26,7 +26,19 @@ const ROL_PRIVILEGIOS: Record<string, string[]> = {
     'Monitoreo del podio comercial y métricas de efectividad',
     'Seguimiento prioritario de órdenes de compra (OC) y cotizaciones',
   ],
+  'Ejecutiva Master Ventas': [
+    'Registro y edición de oportunidades de licitación en tiempo real',
+    'Supervisión y asignación de requerimientos del equipo comercial',
+    'Monitoreo del podio comercial y métricas de efectividad',
+    'Seguimiento prioritario de órdenes de compra (OC) y cotizaciones',
+  ],
   'Ejecutivo(a) Ventas': [
+    'Registro ágil de oportunidades y requerimientos comerciales',
+    'Gestión y seguimiento de cotizaciones y márgenes propios',
+    'Seguimiento en tiempo real de órdenes de compra (OC)',
+    'Participación en el ranking y podio comercial de ventas',
+  ],
+  'Ejecutiva Ventas': [
     'Registro ágil de oportunidades y requerimientos comerciales',
     'Gestión y seguimiento de cotizaciones y márgenes propios',
     'Seguimiento en tiempo real de órdenes de compra (OC)',

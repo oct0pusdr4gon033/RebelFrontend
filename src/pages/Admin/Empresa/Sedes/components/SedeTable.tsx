@@ -1,5 +1,5 @@
 import type { SedeDto } from '../../../../../api/Dtos/Sede';
-import { GoogleIcon } from '../../../../../components/GoogleIcon';
+import { GoogleIcon } from '../../../../../components/GoogleIcon/GoogleIcon';
 
 interface Props {
   sedes: SedeDto[];

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { GoogleIcon } from '../../components/GoogleIcon';
+import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
 import { useAuth } from '../../context/AuthContext';
 import { isOportunidadOwner } from '../../utils/oportunidadUtils';
 import type { Oportunidad, VencimientoBadge, Marca } from '../../types/oportunidades';
@@ -37,6 +37,28 @@ interface ListadoOportunidadesViewProps {
   getVencimientoBadge: (fechaIso: string) => VencimientoBadge | null;
 }
 
+const ESTADO_BADGE_STYLE: Record<string, { label: string; color: string; bg: string; icon: string }> = {
+  'En Licitación': { label: 'En Licitación', color: '#d97706', bg: '#fef3c7', icon: 'bolt' },
+  'En Competencia': { label: 'En Competencia', color: '#2563eb', bg: '#eff6ff', icon: 'groups' },
+  'Adjudicada': { label: 'Adjudicada', color: '#059669', bg: '#ecfdf5', icon: 'verified' },
+  'Aceptada por el Administrador': { label: 'Aceptada por Administrador', color: '#2563eb', bg: '#eff6ff', icon: 'how_to_reg' },
+  'Aceptada por Perú Compras': { label: 'Aceptada por Perú Compras', color: '#059669', bg: '#ecfdf5', icon: 'verified' },
+  'Aceptada Desestimada': { label: 'Aceptada Desestimada', color: '#b91c1c', bg: '#fef2f2', icon: 'unpublished' },
+  'Desestimada': { label: 'Desestimada', color: '#dc2626', bg: '#fee2e2', icon: 'cancel' },
+  'OC_RECIBIDA': { label: 'OC Recibida', color: '#0284c7', bg: '#e0f2fe', icon: 'receipt_long' },
+  'OC_ACEPTADA': { label: 'OC Aceptada', color: '#059669', bg: '#ecfdf5', icon: 'thumb_up' },
+  'OC_RECHAZADA': { label: 'OC Rechazada', color: '#dc2626', bg: '#fee2e2', icon: 'thumb_down' },
+  'ENTREGADA': { label: 'Entregada', color: '#7c3aed', bg: '#f5f3ff', icon: 'inventory' },
+};
+
+type StatusFilterType =
+  | 'Todos'
+  | 'En Licitación'
+  | 'Aceptada Admin'
+  | 'Aceptada Perú Compras'
+  | 'Aceptada Desestimada'
+  | 'Desestimada';
+
 export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> = ({
   oportunidades,
   roleAccent,
@@ -49,9 +71,10 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
   const esRolGestion =
     empleado?.rolNombre === 'Administrador' ||
     empleado?.rolNombre === 'SysAdmin' ||
-    empleado?.rolNombre === 'Ejecutivo(a) Master Ventas';
+    empleado?.rolNombre === 'Ejecutivo(a) Master Ventas' ||
+    empleado?.rolNombre === 'Ejecutiva Master Ventas';
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'Todos' | 'En Licitación' | 'Adjudicada' | 'Desestimada'>('Todos');
+  const [statusFilter, setStatusFilter] = useState<StatusFilterType>('Todos');
   const [ownerFilter, setOwnerFilter] = useState<'todos' | 'mios'>(esRolGestion ? 'todos' : 'mios');
   const [detalleDrawerOp, setDetalleDrawerOp] = useState<Oportunidad | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -72,11 +95,16 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
   }, [oportunidades]);
 
   const totalEnLicitacion = useMemo(() => {
-    return oportunidades.filter((op) => op.estado === 'En Licitación').length;
+    return oportunidades.filter((op) => op.estado === 'En Licitación' || op.estado === 'En Competencia').length;
   }, [oportunidades]);
 
   const totalAdjudicadas = useMemo(() => {
-    return oportunidades.filter((op) => op.estado === 'Adjudicada').length;
+    return oportunidades.filter((op) =>
+      op.estado === 'Aceptada por el Administrador' ||
+      op.estado === 'Aceptada por Perú Compras' ||
+      op.estado === 'Adjudicada' ||
+      ['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(op.estado)
+    ).length;
   }, [oportunidades]);
 
   // Filtrado + orden por defecto (más recientes primero)
@@ -87,7 +115,19 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
         return false;
       }
 
-      const matchesStatus = statusFilter === 'Todos' || op.estado === statusFilter;
+      let matchesStatus = true;
+      if (statusFilter === 'En Licitación') {
+        matchesStatus = op.estado === 'En Licitación' || op.estado === 'En Competencia';
+      } else if (statusFilter === 'Aceptada Admin') {
+        matchesStatus = op.estado === 'Aceptada por el Administrador' || op.estado === 'Adjudicada';
+      } else if (statusFilter === 'Aceptada Perú Compras') {
+        matchesStatus = op.estado === 'Aceptada por Perú Compras' || ['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(op.estado);
+      } else if (statusFilter === 'Aceptada Desestimada') {
+        matchesStatus = op.estado === 'Aceptada Desestimada';
+      } else if (statusFilter === 'Desestimada') {
+        matchesStatus = op.estado === 'Desestimada' || op.estado === 'OC_RECHAZADA';
+      }
+
       const term = searchTerm.toLowerCase().trim();
       if (!term) return matchesStatus;
 
@@ -209,50 +249,50 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
                   gap: 4,
                 }}
               >
-              <button
-                type="button"
-                onClick={() => setOwnerFilter('todos')}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '7px 14px',
-                  borderRadius: '7px',
-                  fontSize: '12.5px',
-                  fontWeight: 700,
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.18s ease',
-                  background: ownerFilter === 'todos' ? '#ffffff' : 'transparent',
-                  color: ownerFilter === 'todos' ? '#0f172a' : '#64748b',
-                  boxShadow: ownerFilter === 'todos' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
-                }}
-              >
-                <GoogleIcon name="groups" size={16} color={ownerFilter === 'todos' ? roleAccent : '#64748b'} />
-                <span>Todos ({oportunidades.length})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setOwnerFilter('mios')}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '7px 14px',
-                  borderRadius: '7px',
-                  fontSize: '12.5px',
-                  fontWeight: 700,
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.18s ease',
-                  background: ownerFilter === 'mios' ? roleAccent : 'transparent',
-                  color: ownerFilter === 'mios' ? '#ffffff' : '#64748b',
-                  boxShadow: ownerFilter === 'mios' ? `0 2px 8px ${roleAccent}40` : 'none',
-                }}
-              >
-                <GoogleIcon name="person" size={16} color={ownerFilter === 'mios' ? '#ffffff' : '#64748b'} />
-                <span>Solo míos ({misOportunidadesCount})</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setOwnerFilter('todos')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '7px 14px',
+                    borderRadius: '7px',
+                    fontSize: '12.5px',
+                    fontWeight: 700,
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.18s ease',
+                    background: ownerFilter === 'todos' ? '#ffffff' : 'transparent',
+                    color: ownerFilter === 'todos' ? '#0f172a' : '#64748b',
+                    boxShadow: ownerFilter === 'todos' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                  }}
+                >
+                  <GoogleIcon name="groups" size={16} color={ownerFilter === 'todos' ? roleAccent : '#64748b'} />
+                  <span>Todos ({oportunidades.length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOwnerFilter('mios')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '7px 14px',
+                    borderRadius: '7px',
+                    fontSize: '12.5px',
+                    fontWeight: 700,
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.18s ease',
+                    background: ownerFilter === 'mios' ? roleAccent : 'transparent',
+                    color: ownerFilter === 'mios' ? '#ffffff' : '#64748b',
+                    boxShadow: ownerFilter === 'mios' ? `0 2px 8px ${roleAccent}40` : 'none',
+                  }}
+                >
+                  <GoogleIcon name="person" size={16} color={ownerFilter === 'mios' ? '#ffffff' : '#64748b'} />
+                  <span>Solo míos ({misOportunidadesCount})</span>
+                </button>
               </div>
             )}
           </div>
@@ -260,7 +300,16 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
           {/* Fila Inferior: Chips de Estado y Conteo */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
             <div className="reg-filter-pills">
-              {(['Todos', 'En Licitación', 'Adjudicada', 'Desestimada'] as const).map((st) => (
+              {(
+                [
+                  'Todos',
+                  'En Licitación',
+                  'Aceptada Admin',
+                  'Aceptada Perú Compras',
+                  'Aceptada Desestimada',
+                  'Desestimada',
+                ] as const
+              ).map((st) => (
                 <button
                   key={st}
                   type="button"
@@ -287,8 +336,8 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
               {ownerFilter === 'mios' && misOportunidadesCount === 0
                 ? 'No tienes oportunidades registradas actualmente a tu nombre.'
                 : searchTerm || statusFilter !== 'Todos' || ownerFilter !== 'todos'
-                ? 'No se encontraron oportunidades con los filtros seleccionados.'
-                : 'Aún no hay oportunidades registradas en el sistema.'}
+                  ? 'No se encontraron oportunidades con los filtros seleccionados.'
+                  : 'Aún no hay oportunidades registradas en el sistema.'}
             </p>
           </div>
         ) : (
@@ -378,7 +427,35 @@ export const ListadoOportunidadesView: React.FC<ListadoOportunidadesViewProps> =
                         )}
                       </td>
                       <td>
-                        <span className="reg-pill reg-pill-estado">{op.estado}</span>
+                        {(() => {
+                          const badge = ESTADO_BADGE_STYLE[op.estado] || {
+                            label: op.estado,
+                            color: '#4338ca',
+                            bg: '#eef2ff',
+                            icon: 'info',
+                          };
+                          return (
+                            <span
+                              className="reg-pill"
+                              style={{
+                                background: badge.bg,
+                                color: badge.color,
+                                border: `1px solid ${badge.color}35`,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                fontWeight: 600,
+                                fontSize: '11.5px',
+                                padding: '3px 8px',
+                                borderRadius: '6px',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              <GoogleIcon name={badge.icon} size={13} color={badge.color} />
+                              {badge.label}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td>
                         <div className="reg-creado-por">

@@ -594,7 +594,7 @@
   width: 100%;
   max-width: 520px;
   max-height: 90vh;
-  overflow-y: auto;
+  overflow: visible;
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 20px 60px rgba(15, 23, 42, 0.3);
@@ -640,26 +640,63 @@
   background: #e2e8f0;
 }
 
+.reg-quick-marcas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  min-height: 28px;
+}
+
+.reg-quick-marcas-empty {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+  padding: 2px 0;
+}
+
 .reg-quick-marca-chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  margin: 0 6px 6px 0;
-  padding: 4px 9px;
+  gap: 6px;
+  margin: 0;
+  padding: 4px 10px;
   border-radius: 999px;
   background: #e0f2fe;
+  border: 1px solid #bae6fd;
   color: #0369a1;
   font-size: 12.5px;
   font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: all 0.15s ease;
+}
+
+.reg-quick-marca-chip:hover {
+  background: #bae6fd;
 }
 
 .reg-quick-marca-chip button {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: none;
-  background: transparent;
-  color: inherit;
+  background: rgba(3, 105, 161, 0.12);
+  color: #0369a1;
   cursor: pointer;
   padding: 0;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  transition: all 0.15s ease;
+}
+
+.reg-quick-marca-chip button:hover {
+  background: #ef4444;
+  color: #ffffff;
 }
 
 .reg-quick-modal .reg-modal__actions {
@@ -893,6 +930,24 @@ input[type="number"] {
   background: #ffffff;
 }
 
+/* Intento de superar el monto máximo permitido */
+.reg-price-box.is-exceeded {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3.5px rgba(239, 68, 68, 0.18);
+  animation: reg-price-shake 0.3s ease;
+}
+
+@keyframes reg-price-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.reg-field-hint--limit {
+  color: #b45309;
+  font-weight: 600;
+}
+
 .reg-price-badge {
   display: inline-flex;
   align-items: center;
@@ -1086,7 +1141,7 @@ input[type="number"] {
 .reg-combobox__input {
   width: 100%;
   padding-left: 36px !important;
-  padding-right: 32px !important;
+  padding-right: 64px !important;
 }
 
 .reg-combobox__icon {
@@ -1094,11 +1149,19 @@ input[type="number"] {
   left: 10px;
   pointer-events: none;
   color: #94a3b8;
+  display: flex;
+  align-items: center;
+}
+
+.reg-combobox__actions {
+  position: absolute;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .reg-combobox__clear {
-  position: absolute;
-  right: 8px;
   background: none;
   border: none;
   color: #94a3b8;
@@ -1108,9 +1171,28 @@ input[type="number"] {
   align-items: center;
   justify-content: center;
   border-radius: 6px;
+  transition: all 0.15s ease;
 }
 
 .reg-combobox__clear:hover {
+  color: #0f172a;
+  background: #e2e8f0;
+}
+
+.reg-combobox__toggle {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.reg-combobox__toggle:hover {
   color: #0f172a;
   background: #e2e8f0;
 }
@@ -1123,10 +1205,10 @@ input[type="number"] {
   background: #ffffff;
   border: 1.5px solid #cbd5e1;
   border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
   max-height: 240px;
   overflow-y: auto;
-  z-index: 50;
+  z-index: 1500;
   padding: 6px;
   display: flex;
   flex-direction: column;
@@ -1138,8 +1220,9 @@ input[type="number"] {
   border-radius: 8px;
   cursor: pointer;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   transition: all 0.15s;
   text-align: left;
   border: none;
@@ -1147,10 +1230,66 @@ input[type="number"] {
   width: 100%;
 }
 
-.reg-combobox__item:hover,
-.reg-combobox__item.active {
-  background: #f0fdfa;
+.reg-combobox__item:hover {
+  background: #f1f5f9;
   color: #0f172a;
+}
+
+.reg-combobox__item.active,
+.reg-combobox__item.is-selected {
+  background: #eff6ff;
+  color: #1e40af;
+}
+
+.reg-combobox__item-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.reg-combobox__item-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.reg-combobox__item-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reg-combobox__item.is-selected .reg-combobox__item-name {
+  color: #1e40af;
+  font-weight: 700;
+}
+
+.reg-combobox__item-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: rgba(37, 99, 235, 0.12);
+  flex-shrink: 0;
+}
+
+.reg-combobox__item-add-hint {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #94a3b8;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.reg-combobox__item:hover .reg-combobox__item-add-hint {
+  opacity: 1;
+  color: var(--accent-color, #2563eb);
 }
 
 .reg-combobox__item-code {
@@ -1167,10 +1306,14 @@ input[type="number"] {
 }
 
 .reg-combobox__empty {
-  padding: 14px;
+  padding: 16px 14px;
   text-align: center;
   font-size: 12.5px;
-  color: #94a3b8;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 /* ── Selector de Múltiples Marcas (Chips) ────────── */

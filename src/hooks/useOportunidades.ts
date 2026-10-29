@@ -20,6 +20,7 @@ import type {
   VencimientoBadge,
 } from '../types/oportunidades';
 import { formatFechaHoraPeru } from '../utils/dateUtils';
+import { normalizarOportunidadConReglas } from '../utils/oportunidadUtils';
 
 const LS_KEY = 'sales_rebel_oportunidades';
 
@@ -27,7 +28,7 @@ const LS_KEY = 'sales_rebel_oportunidades';
 
 /** Mapea la respuesta de la API al modelo local de Oportunidad */
 export function mapApiToOportunidad(op: any): Oportunidad {
-  return {
+  const mapped: Oportunidad = {
     id: op.id,
     numeroRequerimiento: op.numeroRequerimiento,
     acuerdoMarco: {
@@ -55,6 +56,11 @@ export function mapApiToOportunidad(op: any): Oportunidad {
       precioUnitarioOfertado: p.precioUnitarioOfertado ?? null,
       condicionesAdicionales: p.condicionesAdicionales ?? '',
       fichaTecnica: p.fichaTecnica ?? '',
+      ajusteFletePorcentaje: p.ajusteFletePorcentaje ?? null,
+      ajusteFleteSolicitadoPorcentaje: p.ajusteFleteSolicitadoPorcentaje ?? null,
+      ajusteFleteMotivo: p.ajusteFleteMotivo ?? null,
+      ajusteFleteEstado: p.ajusteFleteEstado ?? null,
+      ajusteFleteComentarioAdmin: p.ajusteFleteComentarioAdmin ?? null,
       proveedores: (p.proveedores ?? []).map((pv: any) => ({
         id: pv.id,
         nombreProveedor: pv.nombreProveedor ?? '',
@@ -87,6 +93,23 @@ export function mapApiToOportunidad(op: any): Oportunidad {
           nroExpediente: op.ordenCompra.nroExpediente,
           nroFolio: (op.ordenCompra as any).nroFolio ?? null,
           archivoOCUrl: (op.ordenCompra as any).archivoOCUrl ?? null,
+          archivoNombre: (op.ordenCompra as any).archivoNombre ?? null,
+          documentosPool: (op.ordenCompra as any).documentosPool ?? (() => {
+            try {
+              const saved = localStorage.getItem(`rebel_oc_docs_${op.id}`);
+              if (saved) return JSON.parse(saved);
+            } catch {
+              // ignore
+            }
+            return (op.ordenCompra as any).archivoOCUrl
+              ? [{
+                  id: `doc-${op.id}-1`,
+                  url: (op.ordenCompra as any).archivoOCUrl,
+                  nombre: (op.ordenCompra as any).archivoNombre || 'Documento Oficial Perú Compras',
+                  tipo: 'application/pdf',
+                }]
+              : undefined;
+          })(),
           unidad: op.ordenCompra.unidad,
           codigoCIAF: op.ordenCompra.codigoCIAF,
           montoOCAM: op.ordenCompra.montoOCAM,
@@ -102,6 +125,8 @@ export function mapApiToOportunidad(op: any): Oportunidad {
       ? formatFechaHoraPeru(op.fechaActualizacion)
       : undefined,
   };
+
+  return normalizarOportunidadConReglas(mapped);
 }
 
 /** Calcula el badge de vencimiento dado un string de fecha */

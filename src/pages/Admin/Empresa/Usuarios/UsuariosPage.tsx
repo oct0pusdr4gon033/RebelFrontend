@@ -12,7 +12,7 @@ import {
 } from '../../../../api/services/usuario.service';
 import { getEmpleados } from '../../../../api/services/empleado.service';
 import { getSedes } from '../../../../api/services/sede.service';
-import { GoogleIcon } from '../../../../components/GoogleIcon';
+import { GoogleIcon } from '../../../../components/GoogleIcon/GoogleIcon';
 import UsuarioTable from './components/UsuarioTable';
 import UsuarioFormModal from './components/UsuarioFormModal';
 import '../EmpresaAdmin.css';

@@ -60,3 +60,92 @@ export function isOportunidadOwner(
 
   return false;
 }
+
+/**
+ * Determina si la oportunidad cuenta con la acreditación oficial de Perú Compras (OCAM / documento oficial).
+ */
+export function tieneAcreditacionPeruCompras(op: Oportunidad): boolean {
+  if (op.estado === 'Aceptada por Perú Compras' || (op.estado as string) === 'Aceptada por Peru Compras') return true;
+  if (['Cotización', 'OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(op.estado)) return true;
+  if (op.ordenCompra?.nroOCAM && (op.ordenCompra?.archivoOCUrl || op.ordenCompra?.nroExpediente)) return true;
+  return false;
+}
+
+/**
+ * REGLA DE NEGOCIO 1:
+ * Después de la fecha de vencimiento que se llena en la oportunidad, si hasta entonces
+ * no se subió el documento que acredite que Perú Compras nos asignó la oportunidad (OCAM),
+ * debemos marcarla como desestimada:
+ * - Si fue aceptada por el administrador -> "Aceptada Desestimada"
+ * - Si estaba en licitación / competencia -> "Desestimada"
+ */
+export function evaluarReglaVencimientoOportunidad(op: Oportunidad): {
+  estaVencidaSinOCAM: boolean;
+  estadoEfectivo: Oportunidad['estado'];
+  motivoDesestimacion?: string;
+} {
+  // Si ya se encuentra en un estado desestimado
+  if (op.estado === 'Desestimada' || op.estado === 'Aceptada Desestimada') {
+    return {
+      estaVencidaSinOCAM: false,
+      estadoEfectivo: op.estado,
+      motivoDesestimacion: op.motivoDesestimacion ?? undefined,
+    };
+  }
+
+  // Si ya tiene acreditación oficial de Perú Compras
+  if (tieneAcreditacionPeruCompras(op)) {
+    return {
+      estaVencidaSinOCAM: false,
+      estadoEfectivo: op.estado,
+    };
+  }
+
+  // Evaluar vencimiento de la convocatoria
+  if (op.fechaVencimiento) {
+    const timeVenc = new Date(op.fechaVencimiento).getTime();
+    if (!isNaN(timeVenc) && timeVenc < Date.now()) {
+      // Vencida sin documento oficial OCAM de Perú Compras
+      if (op.estado === 'Aceptada por el Administrador' || op.estado === 'Adjudicada') {
+        return {
+          estaVencidaSinOCAM: true,
+          estadoEfectivo: 'Aceptada Desestimada',
+          motivoDesestimacion:
+            op.motivoDesestimacion ||
+            'Vencida: Se superó la fecha límite oficial sin registrar el documento oficial de asignación OCAM de Perú Compras.',
+        };
+      }
+
+      if (['En Licitación', 'En Competencia', 'Asignación de Oportunidad', 'Por Vencer'].includes(op.estado)) {
+        return {
+          estaVencidaSinOCAM: true,
+          estadoEfectivo: 'Desestimada',
+          motivoDesestimacion:
+            op.motivoDesestimacion ||
+            'Vencida: Convocatoria finalizada sin acreditación oficial de Perú Compras.',
+        };
+      }
+    }
+  }
+
+  return {
+    estaVencidaSinOCAM: false,
+    estadoEfectivo: op.estado,
+    motivoDesestimacion: op.motivoDesestimacion ?? undefined,
+  };
+}
+
+/**
+ * Aplica automáticamente la Regla de Negocio 1 a una oportunidad
+ */
+export function normalizarOportunidadConReglas(op: Oportunidad): Oportunidad {
+  const evaluacion = evaluarReglaVencimientoOportunidad(op);
+  if (evaluacion.estaVencidaSinOCAM) {
+    return {
+      ...op,
+      estado: evaluacion.estadoEfectivo,
+      motivoDesestimacion: evaluacion.motivoDesestimacion || op.motivoDesestimacion,
+    };
+  }
+  return op;
+}

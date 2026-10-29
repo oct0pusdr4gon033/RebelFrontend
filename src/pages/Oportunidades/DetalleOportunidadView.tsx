@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
-import { GoogleIcon } from '../../components/GoogleIcon';
+import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
 import { useAuth } from '../../context/AuthContext';
 import { isOportunidadOwner } from '../../utils/oportunidadUtils';
 import type { Oportunidad, ProductoItem } from '../../types/oportunidades';
@@ -9,8 +9,13 @@ import {
   cambiarEstadoApi,
   obtenerImagenesOportunidadApi,
   getImagenArchivoUrl,
+  solicitarAjusteFleteApi,
+  resolverAjusteFleteApi,
+  type OportunidadApiResponse,
   type OportunidadImagenItem,
 } from '../../api/services/oportunidades.service';
+import { mapApiToOportunidad } from '../../hooks/useOportunidades';
+import { montoAjusteUnitario, formatoSoles, validarSolicitudAjusteFlete } from '../../utils/ajusteFleteUtils';
 import { formatFechaHoraPeru } from '../../utils/dateUtils';
 import './DetalleOportunidadView.css';
 
@@ -28,13 +33,17 @@ interface DetalleOportunidadViewProps {
 
 const ESTADO_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
   'En Licitación': { label: 'En Licitación', color: '#d97706', bg: '#fef3c7', icon: 'bolt' },
-  'Por Vencer':    { label: 'Por Vencer',    color: '#dc2626', bg: '#fee2e2', icon: 'timer' },
-  'Adjudicada':    { label: 'Adjudicada',    color: '#059669', bg: '#ecfdf5', icon: 'verified' },
-  'Desestimada':   { label: 'Desestimada',   color: '#dc2626', bg: '#fee2e2', icon: 'cancel' },
-  'OC_RECIBIDA':   { label: 'OC Recibida',   color: '#0284c7', bg: '#e0f2fe', icon: 'receipt_long' },
-  'OC_ACEPTADA':   { label: 'OC Aceptada',   color: '#059669', bg: '#ecfdf5', icon: 'thumb_up' },
-  'OC_RECHAZADA':  { label: 'OC Rechazada',  color: '#dc2626', bg: '#fee2e2', icon: 'thumb_down' },
-  'ENTREGADA':     { label: 'Entregada',     color: '#7c3aed', bg: '#f5f3ff', icon: 'inventory' },
+  'En Competencia': { label: 'En Competencia', color: '#2563eb', bg: '#eff6ff', icon: 'groups' },
+  'Por Vencer': { label: 'Por Vencer', color: '#dc2626', bg: '#fee2e2', icon: 'timer' },
+  'Adjudicada': { label: 'Adjudicada', color: '#059669', bg: '#ecfdf5', icon: 'verified' },
+  'Aceptada por el Administrador': { label: 'Aceptada por Administrador', color: '#2563eb', bg: '#eff6ff', icon: 'how_to_reg' },
+  'Aceptada por Perú Compras': { label: 'Aceptada por Perú Compras', color: '#059669', bg: '#ecfdf5', icon: 'verified' },
+  'Aceptada Desestimada': { label: 'Aceptada Desestimada', color: '#b91c1c', bg: '#fef2f2', icon: 'unpublished' },
+  'Desestimada': { label: 'Desestimada', color: '#dc2626', bg: '#fee2e2', icon: 'cancel' },
+  'OC_RECIBIDA': { label: 'OC Recibida', color: '#0284c7', bg: '#e0f2fe', icon: 'receipt_long' },
+  'OC_ACEPTADA': { label: 'OC Aceptada', color: '#059669', bg: '#ecfdf5', icon: 'thumb_up' },
+  'OC_RECHAZADA': { label: 'OC Rechazada', color: '#dc2626', bg: '#fee2e2', icon: 'thumb_down' },
+  'ENTREGADA': { label: 'Entregada', color: '#7c3aed', bg: '#f5f3ff', icon: 'inventory' },
 };
 
 export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
@@ -51,7 +60,7 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
   const { empleado } = useAuth();
   const isOwner = isOportunidadOwner(op, empleado);
   const isAdmin = empleado?.rolNombre === 'Administrador' || empleado?.rolNombre === 'SysAdmin';
-  const isMaster = empleado?.rolNombre === 'Ejecutivo(a) Master Ventas';
+  const isMaster = empleado?.rolNombre === 'Ejecutivo(a) Master Ventas' || empleado?.rolNombre === 'Ejecutiva Master Ventas';
   const esGestion = isAdmin || isMaster;
   const canManageStatus = isOwner || isAdmin || isMaster;
 
@@ -82,7 +91,15 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
   }, [cargarImagenes]);
 
   const vBadge = getVencimientoBadge(op.fechaVencimiento);
-  const esEstadoFinal = ['Adjudicada', 'Desestimada', 'OC_RECHAZADA', 'ENTREGADA'].includes(op.estado);
+  const esEstadoFinal = [
+    'Adjudicada',
+    'Aceptada por el Administrador',
+    'Aceptada por Perú Compras',
+    'Desestimada',
+    'Aceptada Desestimada',
+    'OC_RECHAZADA',
+    'ENTREGADA',
+  ].includes(op.estado);
   const vColor = esEstadoFinal && vBadge ? '#64748b' : (vBadge?.color ?? '#64748b');
   const vBg = esEstadoFinal && vBadge ? '#f1f5f9' : (vBadge?.bg ?? '#f1f5f9');
   const vKpiColor = esEstadoFinal ? '#64748b' : '#d97706';
@@ -157,24 +174,131 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
     [op, onEstadoCambiado, roleAccent]
   );
 
-  // Desestimar exige un motivo obligatorio
+  // Desestimar exige un motivo obligatorio y distingue si ya había sido aceptada por el Administrador
   const handleDesestimar = useCallback(async () => {
+    const yaAceptadaPorAdmin = op.estado === 'Aceptada por el Administrador' || op.estado === 'Adjudicada';
+    const estadoDestino = yaAceptadaPorAdmin ? 'Aceptada Desestimada' : 'Desestimada';
+    const titulo = yaAceptadaPorAdmin ? 'Desestimar por Perú Compras' : 'Desestimar requerimiento';
+    const explicacion = yaAceptadaPorAdmin
+      ? `La oportunidad fue <strong>Aceptada por el Administrador</strong> pero desestimada por Perú Compras. Pasará al estado <strong>Aceptada Desestimada</strong>.`
+      : `Indica el motivo por el cual se desestima directamente <strong>${op.numeroRequerimiento}</strong>.`;
+
     const { value, isConfirmed } = await Swal.fire({
-      title: 'Desestimar requerimiento',
-      html: `Indica el motivo por el cual se desestima <strong>${op.numeroRequerimiento}</strong>.`,
+      title: titulo,
+      html: explicacion,
       input: 'textarea',
-      inputPlaceholder: 'Ej. Precio no competitivo, el cliente ya no requiere el bien...',
+      inputPlaceholder: yaAceptadaPorAdmin ? 'Ej. Perú Compras no emitió OCAM / Desestimada en plataforma...' : 'Ej. Precio no competitivo, cliente canceló...',
       inputAttributes: { 'aria-label': 'Motivo de desestimación', maxlength: '500' },
       showCancelButton: true,
-      confirmButtonText: 'Sí, desestimar',
+      confirmButtonText: yaAceptadaPorAdmin ? 'Sí, marcar Aceptada Desestimada' : 'Sí, desestimar',
       cancelButtonText: 'Cancelar',
       confirmButtonColor: '#dc2626',
       cancelButtonColor: '#64748b',
       inputValidator: (v) => (!v || !v.trim() ? 'El motivo es obligatorio para desestimar.' : undefined),
     });
     if (!isConfirmed || !value) return;
-    await handleCambiarEstado('Desestimada', 'Desestimada', value.trim());
+    await handleCambiarEstado(estadoDestino, estadoDestino, value.trim());
+  }, [op.estado, op.numeroRequerimiento, handleCambiarEstado]);
+
+  // Reabrir licitación con confirmación clara al frente
+  const handleReabrir = useCallback(async () => {
+    const { isConfirmed } = await Swal.fire({
+      title: '¿Reabrir oportunidad?',
+      html: `¿Estás seguro de que deseas reabrir el requerimiento <strong>${op.numeroRequerimiento}</strong>?<br/><br/><span style="color:#64748b; font-size:13px;">Volverá al estado <strong>EN LICITACIÓN</strong> y se restablecerán sus opciones de dictamen.</span>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, reabrir licitación',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#d97706',
+      cancelButtonColor: '#64748b',
+      reverseButtons: true,
+    });
+    if (!isConfirmed) return;
+    await handleCambiarEstado('En Licitación', 'Reabierta');
   }, [op.numeroRequerimiento, handleCambiarEstado]);
+
+  // ── Ajuste de flete por producto ──
+  const [procesandoAjuste, setProcesandoAjuste] = useState<string | number | null>(null);
+
+  const aplicarRespuestaAjuste = (resp: OportunidadApiResponse) => {
+    const itemsActualizados = mapApiToOportunidad(resp).items;
+    onEstadoCambiado?.({ ...op, items: itemsActualizados });
+  };
+
+  /** La ejecutiva dueña solicita un nuevo % (nunca se aplica hasta que la administradora lo apruebe) */
+  const handleSolicitarAjuste = async (it: ProductoItem) => {
+    const { value, isConfirmed } = await Swal.fire({
+      title: `Solicitar ajuste de flete`,
+      html: `
+        <div style="text-align:left; font-size:13px; color:#475569;">
+          Ítem <strong>${it.numeroParte}</strong> • Límite unitario S/ ${formatoSoles(Number(it.limiteUnitario) || 0)}<br/>
+          Quedará <strong>pendiente de aprobación</strong> de la administradora.
+        </div>
+        <input id="swal-aj-pct" class="swal2-input" type="number" min="0" max="100" step="0.1" placeholder="Ajuste (%)" value="${it.ajusteFletePorcentaje ?? ''}">
+        <textarea id="swal-aj-motivo" class="swal2-textarea" maxlength="300" placeholder="Motivo / justificación (obligatorio)"></textarea>`,
+      showCancelButton: true,
+      confirmButtonText: 'Enviar solicitud',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: roleAccent,
+      focusConfirm: false,
+      preConfirm: () => {
+        const pct = Number((document.getElementById('swal-aj-pct') as HTMLInputElement).value);
+        const motivo = (document.getElementById('swal-aj-motivo') as HTMLTextAreaElement).value;
+        if (!(pct > 0)) {
+          Swal.showValidationMessage('Ingresa un porcentaje mayor a 0.');
+          return;
+        }
+        const err = validarSolicitudAjusteFlete(pct, motivo);
+        if (err) {
+          Swal.showValidationMessage(err);
+          return;
+        }
+        return { pct, motivo: motivo.trim() };
+      },
+    });
+    if (!isConfirmed || !value) return;
+
+    setProcesandoAjuste(it.id);
+    try {
+      const resp = await solicitarAjusteFleteApi(op.id, it.id, { porcentaje: value.pct, motivo: value.motivo });
+      aplicarRespuestaAjuste(resp);
+      Swal.fire({ icon: 'success', title: 'Solicitud enviada', text: 'La administradora fue notificada para aprobar el ajuste.', confirmButtonColor: roleAccent, timer: 2500, timerProgressBar: true });
+    } catch (err: any) {
+      Swal.fire({ icon: 'error', title: 'No se pudo enviar la solicitud', text: err.message || 'Error al comunicarse con el servidor.', confirmButtonColor: '#dc2626' });
+    } finally {
+      setProcesandoAjuste(null);
+    }
+  };
+
+  /** La administradora aprueba o rechaza (el rechazo exige comentario) */
+  const handleResolverAjuste = async (it: ProductoItem, aprobar: boolean) => {
+    const pct = it.ajusteFleteSolicitadoPorcentaje ?? 0;
+    const { value, isConfirmed } = await Swal.fire({
+      icon: aprobar ? 'question' : 'warning',
+      title: aprobar ? 'Aprobar ajuste de flete' : 'Rechazar ajuste de flete',
+      html: `<div style="text-align:left; font-size:13px; color:#475569;">Ítem <strong>${it.numeroParte}</strong> • Ajuste solicitado: <strong>${pct}%</strong> (S/ ${formatoSoles(montoAjusteUnitario(it.limiteUnitario, pct))} por unidad)<br/>Motivo: <em>${(it.ajusteFleteMotivo ?? '').replace(/</g, '&lt;')}</em></div>`,
+      input: 'textarea',
+      inputPlaceholder: aprobar ? 'Comentario (opcional)' : 'Motivo del rechazo (obligatorio)',
+      inputAttributes: { maxlength: '300' },
+      showCancelButton: true,
+      confirmButtonText: aprobar ? 'Sí, aprobar' : 'Sí, rechazar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: aprobar ? '#059669' : '#dc2626',
+      inputValidator: (v) => (!aprobar && (!v || !v.trim()) ? 'El motivo del rechazo es obligatorio.' : undefined),
+    });
+    if (!isConfirmed) return;
+
+    setProcesandoAjuste(it.id);
+    try {
+      const resp = await resolverAjusteFleteApi(op.id, it.id, { aprobado: aprobar, comentario: (value ?? '').trim() || null });
+      aplicarRespuestaAjuste(resp);
+      Swal.fire({ icon: 'success', title: aprobar ? 'Ajuste aprobado' : 'Ajuste rechazado', confirmButtonColor: roleAccent, timer: 2000, timerProgressBar: true });
+    } catch (err: any) {
+      Swal.fire({ icon: 'error', title: 'No se pudo resolver el ajuste', text: err.message || 'Error al comunicarse con el servidor.', confirmButtonColor: '#dc2626' });
+    } finally {
+      setProcesandoAjuste(null);
+    }
+  };
 
   // Copiar resumen al portapapeles
   const copiarResumen = () => {
@@ -496,6 +620,7 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
                       <th style={{ textAlign: 'right' }}>Cant.</th>
                       <th style={{ textAlign: 'right' }}>Límite Unitario</th>
                       <th style={{ textAlign: 'right' }}>Subtotal Límite</th>
+                      <th style={{ minWidth: 190 }}>Ajuste de flete</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -553,6 +678,52 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
                               maximumFractionDigits: 2,
                             })}
                           </td>
+                          <td>
+                            {(() => {
+                              const estado = it.ajusteFleteEstado;
+                              const colores: Record<string, { c: string; b: string }> = {
+                                Pendiente: { c: '#b45309', b: '#fef3c7' },
+                                Aprobado: { c: '#166534', b: '#dcfce7' },
+                                Rechazado: { c: '#991b1b', b: '#fee2e2' },
+                              };
+                              const ocupado = procesandoAjuste === it.id;
+                              const btn: React.CSSProperties = { fontSize: 11.5, fontWeight: 700, padding: '4px 10px', borderRadius: 6, border: '1.5px solid #cbd5e1', background: '#fff', cursor: ocupado ? 'wait' : 'pointer' };
+                              return (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
+                                  {(it.ajusteFletePorcentaje ?? 0) > 0 && (
+                                    <span>
+                                      Vigente: <strong>{it.ajusteFletePorcentaje}%</strong> (S/ {formatoSoles(montoAjusteUnitario(it.limiteUnitario, it.ajusteFletePorcentaje ?? 0))} / unid)
+                                    </span>
+                                  )}
+                                  {estado && (
+                                    <span style={{ alignSelf: 'flex-start', fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 999, color: colores[estado].c, background: colores[estado].b }}>
+                                      {estado === 'Aprobado' ? 'Aprobado' : `${estado}: ${it.ajusteFleteSolicitadoPorcentaje ?? 0}%`}
+                                    </span>
+                                  )}
+                                  {estado === 'Pendiente' && it.ajusteFleteMotivo && (
+                                    <em style={{ color: '#64748b' }}>{it.ajusteFleteMotivo}</em>
+                                  )}
+                                  {estado === 'Rechazado' && it.ajusteFleteComentarioAdmin && (
+                                    <em style={{ color: '#991b1b' }}>{it.ajusteFleteComentarioAdmin}</em>
+                                  )}
+                                  {!estado && !((it.ajusteFletePorcentaje ?? 0) > 0) && (
+                                    <span style={{ color: '#cbd5e1' }}>—</span>
+                                  )}
+                                  {isAdmin && estado === 'Pendiente' && (
+                                    <div style={{ display: 'flex', gap: 6 }}>
+                                      <button type="button" disabled={ocupado} onClick={() => handleResolverAjuste(it, true)} style={{ ...btn, color: '#166534', borderColor: '#86efac' }}>Aprobar</button>
+                                      <button type="button" disabled={ocupado} onClick={() => handleResolverAjuste(it, false)} style={{ ...btn, color: '#991b1b', borderColor: '#fca5a5' }}>Rechazar</button>
+                                    </div>
+                                  )}
+                                  {isOwner && !isAdmin && estado !== 'Pendiente' && (
+                                    <button type="button" disabled={ocupado} onClick={() => handleSolicitarAjuste(it)} style={{ ...btn, alignSelf: 'flex-start', color: roleAccent }}>
+                                      {estado === 'Aprobado' ? 'Solicitar cambio' : 'Solicitar ajuste'}
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </td>
                         </tr>
                       );
                     })}
@@ -571,6 +742,7 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
                           maximumFractionDigits: 2,
                         })}
                       </td>
+                      <td />
                     </tr>
                   </tfoot>
                 </table>
@@ -807,49 +979,49 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
           {esGestion && (
             <div className="det-section">
               <div className="det-section__header">
-              <div className="det-section__title">
-                <div className="det-section__icon" style={{ background: '#f1f5f9' }}>
-                  <GoogleIcon name="history" size={17} color="#475569" />
-                </div>
-                <h3>Trazabilidad y Auditoría</h3>
-              </div>
-            </div>
-            <div className="det-section__body">
-              <div className="det-audit-row">
-                <div className="det-audit-user">
-                  <div className="det-audit-avatar">
-                    {(op.creadoPor || 'E').charAt(0).toUpperCase()}
+                <div className="det-section__title">
+                  <div className="det-section__icon" style={{ background: '#f1f5f9' }}>
+                    <GoogleIcon name="history" size={17} color="#475569" />
                   </div>
-                  <div>
-                    <div>Registrado por: <strong>{op.creadoPor || 'Ejecutiva'}</strong></div>
-                    <div style={{ fontSize: '0.74rem', color: '#94a3b8' }}>Usuario asignado a la oportunidad</div>
-                  </div>
-                </div>
-
-                <div className="det-audit-times">
-                  <div className="det-audit-time-item">
-                    <GoogleIcon name="event" size={15} color="#64748b" />
-                    <span>Fecha: <strong>{op.createdAt || 'N/A'}</strong></span>
-                  </div>
-
-                  {op.horaRegistroExacta && (
-                    <div className="det-audit-time-item">
-                      <GoogleIcon name="timer" size={15} color="#059669" />
-                      <span>Captura legal: <strong style={{ color: '#059669' }}>{op.horaRegistroExacta}</strong></span>
-                    </div>
-                  )}
-
-                  {op.updatedAt && (
-                    <div className="det-audit-time-item">
-                      <GoogleIcon name="update" size={15} color="#2563eb" />
-                      <span>Modificado: <strong>{op.updatedAt}</strong></span>
-                    </div>
-                  )}
+                  <h3>Trazabilidad y Auditoría</h3>
                 </div>
               </div>
+              <div className="det-section__body">
+                <div className="det-audit-row">
+                  <div className="det-audit-user">
+                    <div className="det-audit-avatar">
+                      {(op.creadoPor || 'E').charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div>Registrado por: <strong>{op.creadoPor || 'Ejecutiva'}</strong></div>
+                      <div style={{ fontSize: '0.74rem', color: '#94a3b8' }}>Usuario asignado a la oportunidad</div>
+                    </div>
+                  </div>
+
+                  <div className="det-audit-times">
+                    <div className="det-audit-time-item">
+                      <GoogleIcon name="event" size={15} color="#64748b" />
+                      <span>Fecha: <strong>{op.createdAt || 'N/A'}</strong></span>
+                    </div>
+
+                    {op.horaRegistroExacta && (
+                      <div className="det-audit-time-item">
+                        <GoogleIcon name="timer" size={15} color="#059669" />
+                        <span>Captura legal: <strong style={{ color: '#059669' }}>{op.horaRegistroExacta}</strong></span>
+                      </div>
+                    )}
+
+                    {op.updatedAt && (
+                      <div className="det-audit-time-item">
+                        <GoogleIcon name="update" size={15} color="#2563eb" />
+                        <span>Modificado: <strong>{op.updatedAt}</strong></span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-            )}
+          )}
         </div>
 
         {/* ── Footer Sticky con Acciones ── */}
@@ -857,44 +1029,58 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
           <div className="det-footer__inner">
             {/* Acciones de Estado / Resolución */}
             <div className="det-footer__left">
-              {canManageStatus && op.estado !== 'Adjudicada' && (
-                <button
-                  type="button"
-                  className="det-btn-success"
-                  disabled={cambiandoEstado}
-                  onClick={() => handleCambiarEstado('Adjudicada', 'Adjudicada')}
-                  title="Dictaminar Buena Pro / Adjudicación"
-                >
-                  <GoogleIcon name="verified" size={16} color="#059669" />
-                  <span>Adjudicar</span>
-                </button>
-              )}
+              {canManageStatus &&
+                op.estado !== 'Aceptada por el Administrador' &&
+                op.estado !== 'Aceptada por Perú Compras' &&
+                op.estado !== 'Adjudicada' &&
+                !['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(op.estado) && (
+                  <button
+                    type="button"
+                    className="det-btn-success"
+                    disabled={cambiandoEstado}
+                    onClick={() => handleCambiarEstado('Aceptada por el Administrador', 'Aceptada por el Administrador')}
+                    title="Asignar Buena Pro (Aceptada por el Administrador)"
+                  >
+                    <GoogleIcon name="how_to_reg" size={16} color="#059669" />
+                    <span>Aceptar (Admin)</span>
+                  </button>
+                )}
 
-              {canManageStatus && op.estado !== 'Desestimada' && (
-                <button
-                  type="button"
-                  className="det-btn-danger"
-                  disabled={cambiandoEstado}
-                  onClick={handleDesestimar}
-                  title="Marcar como desestimada o perdida"
-                >
-                  <GoogleIcon name="cancel" size={16} color="#dc2626" />
-                  <span>Desestimar</span>
-                </button>
-              )}
+              {canManageStatus &&
+                op.estado !== 'Desestimada' &&
+                op.estado !== 'Aceptada Desestimada' &&
+                op.estado !== 'Aceptada por el Administrador' &&
+                op.estado !== 'Aceptada por Perú Compras' &&
+                op.estado !== 'Adjudicada' &&
+                !['OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(op.estado) && (
+                  <button
+                    type="button"
+                    className="det-btn-danger"
+                    disabled={cambiandoEstado}
+                    onClick={handleDesestimar}
+                    title="Desestimar oportunidad directamente"
+                  >
+                    <GoogleIcon name="cancel" size={16} color="#dc2626" />
+                    <span>Desestimar</span>
+                  </button>
+                )}
 
-              {canManageStatus && (op.estado === 'Desestimada' || op.estado === 'Adjudicada') && (
-                <button
-                  type="button"
-                  className="det-btn-secondary"
-                  disabled={cambiandoEstado}
-                  onClick={() => handleCambiarEstado('En Licitación', 'Reabierta')}
-                  title="Reabrir la licitación"
-                >
-                  <GoogleIcon name="replay" size={16} color="#d97706" />
-                  <span>Reabrir</span>
-                </button>
-              )}
+              {canManageStatus &&
+                (op.estado === 'Desestimada' ||
+                  op.estado === 'Aceptada Desestimada' ||
+                  op.estado === 'Adjudicada' ||
+                  op.estado === 'Aceptada por el Administrador') && (
+                  <button
+                    type="button"
+                    className="det-btn-secondary"
+                    disabled={cambiandoEstado}
+                    onClick={handleReabrir}
+                    title="Reabrir la licitación"
+                  >
+                    <GoogleIcon name="replay" size={16} color="#d97706" />
+                    <span>Reabrir</span>
+                  </button>
+                )}
             </div>
 
             {/* Acciones Generales */}

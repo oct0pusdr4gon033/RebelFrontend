@@ -1,5 +1,5 @@
 import type { UsuarioDto } from '../../../../../api/Dtos/Usuario';
-import { GoogleIcon } from '../../../../../components/GoogleIcon';
+import { GoogleIcon } from '../../../../../components/GoogleIcon/GoogleIcon';
 
 interface Props {
   usuarios: UsuarioDto[];
@@ -10,10 +10,12 @@ interface Props {
 }
 
 const ROL_COLORS: Record<string, { bg: string; color: string }> = {
-  'SysAdmin':                 { bg: 'rgba(79,154,255,0.12)', color: '#1a73e8' },
-  'Administrador':            { bg: 'rgba(59,91,219,0.12)',  color: '#3b5bdb' },
-  'Ejecutivo(a) Master Ventas':  { bg: 'rgba(14,165,233,0.12)', color: '#0284c7' },
-  'Ejecutivo(a) Ventas':         { bg: 'rgba(6,182,212,0.12)',  color: '#0e7490' },
+  'SysAdmin': { bg: 'rgba(79,154,255,0.12)', color: '#1a73e8' },
+  'Administrador': { bg: 'rgba(59,91,219,0.12)', color: '#3b5bdb' },
+  'Ejecutivo(a) Master Ventas': { bg: 'rgba(14,165,233,0.12)', color: '#0284c7' },
+  'Ejecutiva Master Ventas': { bg: 'rgba(14,165,233,0.12)', color: '#0284c7' },
+  'Ejecutivo(a) Ventas': { bg: 'rgba(6,182,212,0.12)', color: '#0e7490' },
+  'Ejecutiva Ventas': { bg: 'rgba(6,182,212,0.12)', color: '#0e7490' },
 };
 
 export default function UsuarioTable({ usuarios, loading, onEdit, onDelete, onRestore }: Props) {

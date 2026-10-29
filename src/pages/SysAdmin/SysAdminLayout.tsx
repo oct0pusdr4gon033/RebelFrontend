@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Sidebar, type NavItem } from '../../components/Sidebar';
-import { GoogleIcon } from '../../components/GoogleIcon';
+import { Sidebar, type NavItem } from '../../components/SideBar/Sidebar';
+import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
 import '../DashboardLayout.css';
 import './SysAdminTelemetry.css';
 

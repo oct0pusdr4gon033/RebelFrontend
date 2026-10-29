@@ -1,14 +1,24 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // src/api/services/pagos.service.ts
-// Servicio para el registro, consulta y persistencia de pagos vinculados a OC
+// Servicio para solicitud, validación, revisión administrativa, corrección y
+// liquidación de pagos vinculados a Órdenes de Compra (OC)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { PagoOC, RegistrarPagoInput, LiquidacionOC } from '../../types/pagos';
+import type {
+  PagoOC,
+  RegistrarPagoInput,
+  ResolverPagoAdminInput,
+  CorregirPagoInput,
+  LiquidacionOC,
+} from '../../types/pagos';
 import type { Oportunidad } from '../../types/oportunidades';
 import { subirImagenOportunidadApi } from './oportunidades.service';
 import { API_BASE } from '../../env/envoviment';
+import { mapBackendDtoToPagoOC } from '../Mapers/mapBackendDtoToPagoOC';
+import { montoAjusteItem } from '../../utils/ajusteFleteUtils';
 
 const STORAGE_KEY = 'sales_rebel_pagos_v1';
+const AJUSTE_FLETE_OC_STORAGE_KEY = 'sales_rebel_ajuste_flete_oc_v1';
 
 /** Helper para convertir File a Base64 Data URL */
 export function fileToDataUrl(file: File): Promise<string> {
@@ -29,140 +39,121 @@ export function formatTamanoBytes(bytes: number): string {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 }
 
-/** Genera un comprobante placeholder en SVG Data URL si no hay archivo (ejemplo para seeds) */
-function generarPlaceholderVoucher(titulo: string, monto: string): string {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="380" viewBox="0 0 600 380">
-    <defs>
-      <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#0f172a"/>
-        <stop offset="100%" stop-color="#1e293b"/>
-      </linearGradient>
-    </defs>
-    <rect width="600" height="380" rx="16" fill="url(#bg)"/>
-    <rect x="24" y="24" width="552" height="70" rx="10" fill="#2563eb" fill-opacity="0.2" stroke="#2563eb" stroke-dasharray="4"/>
-    <text x="44" y="66" fill="#60a5fa" font-family="system-ui, sans-serif" font-size="20" font-weight="bold">COMPROBANTE DE TRANSFERENCIA BANCARIA</text>
-    <circle cx="60" cy="150" r="22" fill="#10b981" fill-opacity="0.2"/>
-    <path d="M52 150 L58 156 L70 144" stroke="#10b981" stroke-width="3" fill="none" stroke-linecap="round"/>
-    <text x="96" y="145" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="16" font-weight="600">${titulo}</text>
-    <text x="96" y="168" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="13">Operación Exitosa - BCP Conexión Negocios</text>
-    <line x1="40" y1="200" x2="560" y2="200" stroke="#334155" stroke-width="1"/>
-    <text x="40" y="240" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14">Monto Transferido:</text>
-    <text x="40" y="280" fill="#38bdf8" font-family="system-ui, sans-serif" font-size="32" font-weight="bold">${monto}</text>
-    <text x="40" y="325" fill="#64748b" font-family="system-ui, sans-serif" font-size="12">Ref: Operación N° 09248201 · Fecha: 2026-09-28 · Canal: Banca Digital</text>
-  </svg>`;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+/** Obtiene ajustes de flete manuales guardados por OC */
+export function obtenerAjusteFleteGuardadoOC(claveOC?: string): number {
+  if (!claveOC) return 0;
+  try {
+    const raw = localStorage.getItem(AJUSTE_FLETE_OC_STORAGE_KEY);
+    if (!raw) return 0;
+    const map = JSON.parse(raw);
+    return Number(map[claveOC.trim().toUpperCase()]) || 0;
+  } catch {
+    return 0;
+  }
 }
 
-/** Pagos de demostración iniciales para enriquecer el módulo */
-const SEED_PAGOS: PagoOC[] = [
-  {
-    id: 'pago_seed_1',
-    codigoPago: 'PAG-2026-0001',
-    oportunidadId: 33,
-    numeroOC: 'OC-2026-001',
-    numeroRequerimiento: 'REQ-100002002',
-    empresaRazonSocial: 'MINISTERIO DE EDUCACIÓN - SEDE CENTRAL',
-    entidadConvocante: 'PRONIED',
-    concepto: 'Flete',
-    monto: 1450.0,
-    moneda: 'PEN',
-    fechaPago: '2026-09-29',
-    metodoPago: 'Transferencia Bancaria',
-    banco: 'BCP (Banco de Crédito)',
-    numeroOperacion: '08349210',
-    beneficiario: 'Transportes Expreso del Norte S.A.C.',
-    notas: 'Flete de 40 equipos de cómputo hacia almacén central Lima con seguro de carga incluido.',
-    comprobante: {
-      nombreArchivo: 'voucher_flete_bcp_08349210.png',
-      tamanoBytes: 245100,
-      tamanoFormateado: '239.35 KB',
-      contentType: 'image/png',
-      dataUrl: generarPlaceholderVoucher('Pago de Flete - OC-2026-001', 'S/ 1,450.00'),
-      fechaSubida: '2026-09-29T14:30:00Z',
-    },
-    registradoPor: 'Carlos Perez H.',
-    registradoPorEmail: 'admin@rebelqueen.com',
-    fechaRegistro: '2026-09-29T14:35:12Z',
-    estado: 'Registrado',
-  },
-  {
-    id: 'pago_seed_2',
-    codigoPago: 'PAG-2026-0002',
-    oportunidadId: 21,
-    numeroOC: 'OC-2026-002',
-    numeroRequerimiento: 'REQ-000231990',
-    empresaRazonSocial: 'GOBIERNO REGIONAL DE LA LIBERTAD',
-    entidadConvocante: 'GERENCIA REGIONAL DE SALUD',
-    concepto: 'Comisión',
-    monto: 1200.0,
-    moneda: 'PEN',
-    fechaPago: '2026-09-30',
-    metodoPago: 'Transferencia Bancaria',
-    banco: 'BBVA',
-    numeroOperacion: '04781923',
-    beneficiario: 'Agencia de Enlace Comercial Trujillo EIRL',
-    notas: 'Comisión del 3.3% por cierre y adjudicación de la licitación.',
-    comprobante: {
-      nombreArchivo: 'captura_pago_comision_bbva.jpg',
-      tamanoBytes: 310500,
-      tamanoFormateado: '303.22 KB',
-      contentType: 'image/jpeg',
-      dataUrl: generarPlaceholderVoucher('Comisión Comercial - OC-2026-002', 'S/ 1,200.00'),
-      fechaSubida: '2026-09-30T10:15:00Z',
-    },
-    registradoPor: 'Carlos Perez H.',
-    registradoPorEmail: 'admin@rebelqueen.com',
-    fechaRegistro: '2026-09-30T10:18:44Z',
-    estado: 'Registrado',
-  },
-  {
-    id: 'pago_seed_3',
-    codigoPago: 'PAG-2026-0003',
-    oportunidadId: 21,
-    numeroOC: 'OC-2026-002',
-    numeroRequerimiento: 'REQ-000231990',
-    empresaRazonSocial: 'GOBIERNO REGIONAL DE LA LIBERTAD',
-    entidadConvocante: 'GERENCIA REGIONAL DE SALUD',
-    concepto: 'Gastos Varios',
-    monto: 480.0,
-    moneda: 'PEN',
-    fechaPago: '2026-10-01',
-    metodoPago: 'Yape / Plin',
-    banco: 'BCP (Banco de Crédito)',
-    numeroOperacion: '98230198',
-    beneficiario: 'Embalajes Industriales y Estiba La Libertad',
-    notas: 'Embalaje con plástico burbuja reforzado, precintos de seguridad y estiba.',
-    comprobante: {
-      nombreArchivo: 'yape_gastos_embalaje_98230198.png',
-      tamanoBytes: 185400,
-      tamanoFormateado: '181.05 KB',
-      contentType: 'image/png',
-      dataUrl: generarPlaceholderVoucher('Gastos de Embalaje y Estiba', 'S/ 480.00'),
-      fechaSubida: '2026-10-01T16:20:00Z',
-    },
-    registradoPor: 'Carlos Perez H.',
-    registradoPorEmail: 'admin@rebelqueen.com',
-    fechaRegistro: '2026-10-01T16:22:10Z',
-    estado: 'Registrado',
-  },
-];
+/** Guarda el monto de ajuste de flete asociado a una OC */
+export function guardarAjusteFleteOC(claveOC: string, montoAjuste: number) {
+  if (!claveOC) return;
+  try {
+    const raw = localStorage.getItem(AJUSTE_FLETE_OC_STORAGE_KEY);
+    const map = raw ? JSON.parse(raw) : {};
+    map[claveOC.trim().toUpperCase()] = Number(montoAjuste) || 0;
+    localStorage.setItem(AJUSTE_FLETE_OC_STORAGE_KEY, JSON.stringify(map));
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Calcula el monto total de Ajustes de Flete de una Oportunidad / Orden de Compra.
+ * Suma los ajustes por porcentaje de cada ítem (aprobados o solicitados vigentes)
+ * o los costos de envío de proveedores, y respeta el ajuste registrado en la OC.
+ */
+export function calcularMontoAjusteFleteOC(op?: Oportunidad, overrideManual?: number): number {
+  let totalItems = 0;
+  if (op?.items && op.items.length > 0) {
+    for (const it of op.items) {
+      let pct = 0;
+      if ((it.ajusteFletePorcentaje ?? 0) > 0) {
+        pct = Number(it.ajusteFletePorcentaje) || 0;
+      } else if (
+        it.ajusteFleteEstado !== 'Rechazado' &&
+        (it.ajusteFleteSolicitadoPorcentaje ?? 0) > 0
+      ) {
+        pct = Number(it.ajusteFleteSolicitadoPorcentaje) || 0;
+      }
+
+      let ajusteItem = montoAjusteItem(it, pct);
+      if (ajusteItem <= 0 && it.proveedores && it.proveedores.length > 0) {
+        ajusteItem = it.proveedores.reduce((sum, pv) => sum + (Number(pv.costoEnvio) || 0), 0);
+      }
+      totalItems += ajusteItem;
+    }
+  }
+
+  const claveOC =
+    op?.ordenCompra?.numeroOC ||
+    op?.ordenCompra?.nroOCAM ||
+    (op ? `OC-REQ-${op.numeroRequerimiento}` : '');
+  const guardado = obtenerAjusteFleteGuardadoOC(claveOC);
+
+  if (overrideManual !== undefined && !isNaN(overrideManual) && overrideManual >= 0) {
+    return overrideManual;
+  }
+  return Math.max(totalItems, guardado);
+}
+
+/** Determina si un pago cuenta en el acumulado presupuestal (excluye rechazados/anulados) */
+export function pagoCuentaEnAcumulado(
+  pOrEstado?: Pick<PagoOC, 'estado'> | string | null
+): boolean {
+  const raw =
+    typeof pOrEstado === 'string'
+      ? pOrEstado
+      : pOrEstado && typeof pOrEstado === 'object'
+        ? pOrEstado.estado
+        : '';
+  const est = (raw || '').trim().toLowerCase();
+  return est !== 'anulado' && est !== 'pago rechazado' && est !== 'rechazado';
+}
+
+/** Determina si un pago corresponde al concepto de Flete / Transporte */
+export function esPagoDeFlete(
+  pOrConcepto?: Pick<PagoOC, 'concepto' | 'conceptoPersonalizado'> | string | null,
+  conceptoPersonalizadoArg?: string
+): boolean {
+  const c =
+    typeof pOrConcepto === 'string'
+      ? pOrConcepto.toLowerCase()
+      : (pOrConcepto?.concepto || '').toLowerCase();
+  const cp =
+    typeof pOrConcepto === 'string'
+      ? (conceptoPersonalizadoArg || '').toLowerCase()
+      : (pOrConcepto?.conceptoPersonalizado || '').toLowerCase();
+  return (
+    c.includes('flete') ||
+    c.includes('transporte') ||
+    cp.includes('flete') ||
+    cp.includes('transporte')
+  );
+}
 
 /** Obtiene todos los pagos registrados */
 export function obtenerPagos(): PagoOC[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_PAGOS));
-      return SEED_PAGOS;
+      return [];
     }
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed) || parsed.length === 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_PAGOS));
-      return SEED_PAGOS;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+      return [];
     }
     return parsed;
   } catch {
-    return SEED_PAGOS;
+    return [];
   }
 }
 
@@ -195,44 +186,6 @@ function generarCodigoPago(pagosActuales: PagoOC[]): string {
   return `${prefijo}${String(siguiente).padStart(4, '0')}`;
 }
 
-/** Mapea el response DTO del backend .NET a PagoOC */
-function mapBackendDtoToPagoOC(dto: any): PagoOC {
-  return {
-    id: String(dto.id || dto.codigoPago),
-    codigoPago: dto.codigoPago,
-    oportunidadId: dto.oportunidadId,
-    ordenCompraId: dto.ordenCompraId,
-    numeroOC: dto.numeroOC,
-    numeroRequerimiento: dto.numeroRequerimiento,
-    empresaRazonSocial: dto.empresaRazonSocial,
-    entidadConvocante: dto.entidadConvocante,
-    concepto: dto.concepto,
-    conceptoPersonalizado: dto.conceptoPersonalizado,
-    monto: Number(dto.monto),
-    moneda: dto.moneda || 'PEN',
-    fechaPago: dto.fechaPago ? dto.fechaPago.slice(0, 10) : new Date().toISOString().slice(0, 10),
-    metodoPago: dto.metodoPago,
-    banco: dto.banco,
-    numeroOperacion: dto.numeroOperacion,
-    beneficiario: dto.beneficiario,
-    notas: dto.notas,
-    comprobante: {
-      nombreArchivo: dto.comprobante?.nombreArchivo || 'comprobante.jpg',
-      tamanoBytes: Number(dto.comprobante?.tamanoBytes) || 0,
-      tamanoFormateado: dto.comprobante?.tamanoFormateado || '0 B',
-      contentType: dto.comprobante?.contentType || 'image/jpeg',
-      dataUrl: dto.comprobante?.dataUrl || '',
-      backendImagenId: dto.comprobante?.backendImagenId,
-      backendUrl: dto.comprobante?.backendUrl,
-      fechaSubida: dto.comprobante?.fechaSubida || new Date().toISOString(),
-    },
-    registradoPor: dto.registradoPor || 'Usuario de Ventas',
-    registradoPorEmail: dto.registradoPorEmail,
-    fechaRegistro: dto.fechaRegistro || new Date().toISOString(),
-    estado: dto.estado || 'Registrado',
-  };
-}
-
 /** Obtiene pagos consultando el API backend con fallback a almacenamiento local */
 export async function obtenerPagosApi(): Promise<PagoOC[]> {
   try {
@@ -241,8 +194,13 @@ export async function obtenerPagosApi(): Promise<PagoOC[]> {
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
         const mapeados = data.map(mapBackendDtoToPagoOC);
-        guardarPagos(mapeados);
-        return mapeados;
+        // Combinar con pagos locales que aún no tengan ID numérico en backend
+        const locales = obtenerPagos();
+        const codigosBackend = new Set(mapeados.map((m) => m.codigoPago));
+        const soloLocales = locales.filter((l) => !codigosBackend.has(l.codigoPago));
+        const consolidados = [...mapeados, ...soloLocales];
+        guardarPagos(consolidados);
+        return consolidados;
       }
     }
   } catch (err) {
@@ -252,38 +210,60 @@ export async function obtenerPagosApi(): Promise<PagoOC[]> {
 }
 
 /**
- * Registra un nuevo pago vinculado a una Orden de Compra.
+ * Registra una nueva solicitud de pago vinculada a una Orden de Compra.
  * Realiza la petición POST a /api/pagos en el backend y mantiene respaldo local.
  */
 export async function registrarPago(
   input: RegistrarPagoInput,
-  usuario?: { nombreCompleto?: string; email?: string }
+  usuario?: { nombreCompleto?: string; email?: string },
+  _oportunidad?: Oportunidad
 ): Promise<PagoOC> {
-  const dataUrl = await fileToDataUrl(input.archivoComprobante);
-  const tamanoBytes = input.archivoComprobante.size;
-  const tamanoFormateado = formatTamanoBytes(tamanoBytes);
+  let dataUrl = '';
+  let tamanoBytes = 0;
+  let tamanoFormateado = '0 B';
+  let nombreArchivo = 'Pendiente de adjuntar por Administración';
+  let contentType = 'image/jpeg';
 
   let backendImagenId: number | undefined;
   let backendUrl: string | undefined;
 
-  // 1. Intento de respaldo de imagen en el backend
-  try {
-    const comentario = `Comprobante de Pago (${input.concepto}): ${input.moneda} ${input.monto.toFixed(2)} - Op #${input.numeroOperacion || 'S/N'}`;
-    const respBackend = await subirImagenOportunidadApi(
-      input.oportunidadId,
-      input.archivoComprobante,
-      `Pago_${input.concepto.replace(/\s+/g, '_')}`,
-      comentario
-    );
-    if (respBackend && respBackend.id) {
-      backendImagenId = respBackend.id;
-      backendUrl = respBackend.url;
+  if (input.archivoComprobante) {
+    try {
+      dataUrl = await fileToDataUrl(input.archivoComprobante);
+      tamanoBytes = input.archivoComprobante.size;
+      tamanoFormateado = formatTamanoBytes(tamanoBytes);
+      nombreArchivo = input.archivoComprobante.name;
+      contentType = input.archivoComprobante.type || 'image/jpeg';
+    } catch {
+      // ignore
     }
-  } catch {
-    // Continuar
+
+    try {
+      const comentario = `Evidencia de Pago (${input.concepto}): ${input.moneda} ${input.monto.toFixed(2)} - Op #${input.numeroOperacion || 'S/N'}`;
+      const respBackend = await subirImagenOportunidadApi(
+        input.oportunidadId,
+        input.archivoComprobante,
+        `Pago_${input.concepto.replace(/\s+/g, '_')}`,
+        comentario
+      );
+      if (respBackend && respBackend.id) {
+        backendImagenId = respBackend.id;
+        backendUrl = respBackend.url;
+      }
+    } catch {
+      // Continuar
+    }
   }
 
-  // 2. Intento de registro en el backend .NET (/api/pagos)
+  const entidadFinal = (input.entidadCorrespondiente || input.banco || '').trim();
+  const titularFinal = (input.titularCuenta || input.beneficiario || '').trim();
+  const estadoInicial = input.estado || (input.archivoComprobante && input.numeroOperacion ? 'Completo' : 'En Revisión');
+
+  if (input.montoAjusteFlete !== undefined && input.montoAjusteFlete > 0) {
+    guardarAjusteFleteOC(input.numeroOC, input.montoAjusteFlete);
+  }
+
+  // Intento de registro en el backend .NET (/api/pagos)
   try {
     const payload = {
       oportunidadId: input.oportunidadId,
@@ -295,18 +275,27 @@ export async function registrarPago(
       concepto: input.concepto,
       conceptoPersonalizado: input.conceptoPersonalizado?.trim(),
       monto: Number(input.monto),
+      montoAjusteFlete: input.montoAjusteFlete,
       moneda: input.moneda,
       fechaPago: input.fechaPago,
+      fechaVencimientoOC: input.fechaVencimientoOC || null,
       metodoPago: input.metodoPago,
-      banco: input.banco?.trim(),
+      banco: entidadFinal || undefined,
+      entidadCorrespondiente: entidadFinal || undefined,
+      numeroCuentaBancaria: input.numeroCuentaBancaria?.trim(),
+      titularCuenta: titularFinal || undefined,
+      beneficiario: titularFinal || undefined,
       numeroOperacion: input.numeroOperacion?.trim(),
-      beneficiario: input.beneficiario?.trim(),
+      horaPago: input.horaPago?.trim(),
       notas: input.notas?.trim(),
-      comprobanteNombreArchivo: input.archivoComprobante.name,
+      comprobanteNombreArchivo: nombreArchivo,
       comprobanteTamanoBytes: tamanoBytes,
-      comprobanteContentType: input.archivoComprobante.type || 'image/jpeg',
+      comprobanteContentType: contentType,
       comprobanteDataUrl: dataUrl,
-      registradoPor: usuario?.nombreCompleto || 'Usuario de Ventas',
+      comprobanteBackendImagenId: backendImagenId,
+      comprobanteBackendUrl: backendUrl,
+      estado: estadoInicial,
+      registradoPor: usuario?.nombreCompleto || 'Ejecutiva de Ventas',
       registradoPorEmail: usuario?.email || 'ventas@rebelqueen.com',
     };
 
@@ -325,7 +314,9 @@ export async function registrarPago(
         pagoCreado.comprobante.backendImagenId = backendImagenId;
         pagoCreado.comprobante.backendUrl = backendUrl;
       }
-      const actuales = obtenerPagos().filter((p) => p.id !== pagoCreado.id && p.codigoPago !== pagoCreado.codigoPago);
+      const actuales = obtenerPagos().filter(
+        (p) => p.id !== pagoCreado.id && p.codigoPago !== pagoCreado.codigoPago
+      );
       guardarPagos([pagoCreado, ...actuales]);
       return pagoCreado;
     } else {
@@ -335,18 +326,18 @@ export async function registrarPago(
       }
     }
   } catch (err: any) {
-    if (err.message && err.message.includes('excede')) {
+    if (err.message && (err.message.includes('excede') || err.message.includes('mayor'))) {
       throw err;
     }
     console.warn('Servidor /api/pagos no disponible, guardando en persistencia local:', err);
   }
 
-  // 3. Fallback a persistencia local garantizada
+  // Fallback a persistencia local garantizada
   const pagosActuales = obtenerPagos();
   const codigoPago = generarCodigoPago(pagosActuales);
 
   const nuevoPago: PagoOC = {
-    id: `pago_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+    id: `pago_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     codigoPago,
     oportunidadId: input.oportunidadId,
     ordenCompraId: input.ordenCompraId,
@@ -357,33 +348,241 @@ export async function registrarPago(
     concepto: input.concepto,
     conceptoPersonalizado: input.conceptoPersonalizado?.trim(),
     monto: Number(input.monto),
+    montoAjusteFlete: input.montoAjusteFlete,
     moneda: input.moneda,
     fechaPago: input.fechaPago,
+    fechaVencimientoOC: input.fechaVencimientoOC,
     metodoPago: input.metodoPago,
-    banco: input.banco?.trim(),
+    banco: entidadFinal || undefined,
+    entidadCorrespondiente: entidadFinal || undefined,
+    numeroCuentaBancaria: input.numeroCuentaBancaria?.trim(),
+    titularCuenta: titularFinal || undefined,
+    beneficiario: titularFinal || undefined,
     numeroOperacion: input.numeroOperacion?.trim(),
-    beneficiario: input.beneficiario?.trim(),
+    horaPago: input.horaPago?.trim(),
     notas: input.notas?.trim(),
     comprobante: {
-      nombreArchivo: input.archivoComprobante.name,
+      nombreArchivo,
       tamanoBytes,
       tamanoFormateado,
-      contentType: input.archivoComprobante.type || 'image/jpeg',
+      contentType,
       dataUrl,
       backendImagenId,
       backendUrl,
       fechaSubida: new Date().toISOString(),
     },
-    registradoPor: usuario?.nombreCompleto || 'Usuario de Ventas',
+    registradoPor: usuario?.nombreCompleto || 'Ejecutiva de Ventas',
     registradoPorEmail: usuario?.email || 'ventas@rebelqueen.com',
     fechaRegistro: new Date().toISOString(),
-    estado: 'Registrado',
+    estado: estadoInicial,
   };
 
   const actualizados = [nuevoPago, ...pagosActuales];
   guardarPagos(actualizados);
 
   return nuevoPago;
+}
+
+/**
+ * Acción del Usuario Administrador:
+ * Completa los datos de Número de Operación, La Hora y Adjunta la Evidencia del Pago,
+ * y marca el pago como 'Completo', 'En Revisión' o 'Pago Rechazado' (con justificación de corrección).
+ */
+export async function resolverPagoAdmin(
+  pagoId: string,
+  input: ResolverPagoAdminInput,
+  adminNombre?: string
+): Promise<PagoOC> {
+  if (adminNombre && !input.resueltoPorAdmin) {
+    input.resueltoPorAdmin = adminNombre;
+  }
+  const pagos = obtenerPagos();
+  const actual = pagos.find((p) => p.id === pagoId || p.codigoPago === pagoId);
+
+  let dataUrl = actual?.comprobante?.dataUrl || '';
+  let tamanoBytes = actual?.comprobante?.tamanoBytes || 0;
+  let tamanoFormateado = actual?.comprobante?.tamanoFormateado || '0 B';
+  let nombreArchivo = actual?.comprobante?.nombreArchivo || 'Pendiente de adjuntar por Administración';
+  let contentType = actual?.comprobante?.contentType || 'image/jpeg';
+  let backendImagenId = actual?.comprobante?.backendImagenId;
+  let backendUrl = actual?.comprobante?.backendUrl;
+
+  if (input.archivoEvidencia) {
+    dataUrl = await fileToDataUrl(input.archivoEvidencia);
+    tamanoBytes = input.archivoEvidencia.size;
+    tamanoFormateado = formatTamanoBytes(tamanoBytes);
+    nombreArchivo = input.archivoEvidencia.name;
+    contentType = input.archivoEvidencia.type || 'image/jpeg';
+
+    if (actual?.oportunidadId) {
+      try {
+        const resp = await subirImagenOportunidadApi(
+          actual.oportunidadId,
+          input.archivoEvidencia,
+          `Evidencia_Pago_${actual.codigoPago}`,
+          `Evidencia de Pago ${actual.codigoPago} - Op: ${input.numeroOperacion || ''} - Hora: ${input.horaPago || ''}`
+        );
+        if (resp?.id) {
+          backendImagenId = resp.id;
+          backendUrl = resp.url;
+        }
+      } catch {
+        // continuar con dataUrl local
+      }
+    }
+  }
+
+  const numericId = parseInt(pagoId, 10);
+  if (!isNaN(numericId) && numericId > 0) {
+    try {
+      const res = await fetch(`${API_BASE}/api/pagos/${numericId}/resolver-admin`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          estado: input.estado,
+          numeroOperacion: input.numeroOperacion?.trim(),
+          horaPago: input.horaPago?.trim(),
+          justificacionCorreccion: input.justificacionCorreccion?.trim(),
+          comprobanteNombreArchivo: nombreArchivo,
+          comprobanteTamanoBytes: tamanoBytes,
+          comprobanteContentType: contentType,
+          comprobanteDataUrl: dataUrl,
+          comprobanteBackendImagenId: backendImagenId,
+          comprobanteBackendUrl: backendUrl,
+          resueltoPorAdmin: input.resueltoPorAdmin || 'Administradora',
+        }),
+      });
+      if (res.ok) {
+        const dto = await res.json();
+        const actualizadoBackend = mapBackendDtoToPagoOC(dto);
+        const nuevaLista = pagos.map((p) =>
+          p.id === pagoId || p.codigoPago === actualizadoBackend.codigoPago ? actualizadoBackend : p
+        );
+        guardarPagos(nuevaLista);
+        return actualizadoBackend;
+      } else {
+        const err = await res.json().catch(() => ({}));
+        if (err.mensaje) throw new Error(err.mensaje);
+      }
+    } catch (err: any) {
+      if (err.message && err.message.includes('obligatorio')) {
+        throw err;
+      }
+      console.warn('Resolviendo pago en almacenamiento local:', err);
+    }
+  }
+
+  if (!actual) {
+    throw new Error('No se encontró el registro de pago.');
+  }
+
+  const modificado: PagoOC = {
+    ...actual,
+    estado: input.estado,
+    numeroOperacion: input.numeroOperacion !== undefined ? input.numeroOperacion.trim() : actual.numeroOperacion,
+    horaPago: input.horaPago !== undefined ? input.horaPago.trim() : actual.horaPago,
+    justificacionCorreccion:
+      input.estado === 'Pago Rechazado' ? input.justificacionCorreccion?.trim() : undefined,
+    resueltoPorAdmin: input.resueltoPorAdmin || 'Administradora',
+    fechaResolucionAdmin: new Date().toISOString(),
+    comprobante: {
+      nombreArchivo,
+      tamanoBytes,
+      tamanoFormateado,
+      contentType,
+      dataUrl,
+      backendImagenId,
+      backendUrl,
+      fechaSubida: new Date().toISOString(),
+    },
+  };
+
+  const actualizados = pagos.map((p) => (p.id === pagoId ? modificado : p));
+  guardarPagos(actualizados);
+  return modificado;
+}
+
+/**
+ * Acción de la Ejecutiva de Ventas:
+ * Corrige una solicitud de pago rechazada y la vuelve a enviar a estado 'En Revisión'.
+ */
+export async function corregirSolicitudPago(
+  pagoId: string,
+  input: CorregirPagoInput,
+  _oportunidad?: Oportunidad
+): Promise<PagoOC> {
+  const pagos = obtenerPagos();
+  const actual = pagos.find((p) => p.id === pagoId || p.codigoPago === pagoId);
+
+  const numericId = parseInt(pagoId, 10);
+  if (!isNaN(numericId) && numericId > 0) {
+    try {
+      const res = await fetch(`${API_BASE}/api/pagos/${numericId}/corregir`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fechaVencimientoOC: input.fechaVencimientoOC || null,
+          numeroCuentaBancaria: input.numeroCuentaBancaria.trim(),
+          entidadCorrespondiente: input.entidadCorrespondiente.trim(),
+          banco: (input.banco || input.entidadCorrespondiente).trim(),
+          titularCuenta: input.titularCuenta.trim(),
+          beneficiario: (input.beneficiario || input.titularCuenta).trim(),
+          concepto: input.concepto,
+          conceptoPersonalizado: input.conceptoPersonalizado?.trim(),
+          monto: Number(input.monto),
+          montoAjusteFlete: input.montoAjusteFlete,
+          moneda: input.moneda,
+          fechaPago: input.fechaPago,
+          metodoPago: input.metodoPago,
+          notas: input.notas?.trim(),
+        }),
+      });
+      if (res.ok) {
+        const dto = await res.json();
+        const actualizadoBackend = mapBackendDtoToPagoOC(dto);
+        const nuevaLista = pagos.map((p) =>
+          p.id === pagoId || p.codigoPago === actualizadoBackend.codigoPago ? actualizadoBackend : p
+        );
+        guardarPagos(nuevaLista);
+        return actualizadoBackend;
+      } else {
+        const err = await res.json().catch(() => ({}));
+        if (err.mensaje) throw new Error(err.mensaje);
+      }
+    } catch (err: any) {
+      if (err.message && (err.message.includes('excede') || err.message.includes('mayor'))) {
+        throw err;
+      }
+      console.warn('Corrigiendo solicitud de pago en almacenamiento local:', err);
+    }
+  }
+
+  if (!actual) {
+    throw new Error('No se encontró la solicitud de pago a corregir.');
+  }
+
+  const corregido: PagoOC = {
+    ...actual,
+    fechaVencimientoOC: input.fechaVencimientoOC,
+    numeroCuentaBancaria: input.numeroCuentaBancaria.trim(),
+    entidadCorrespondiente: input.entidadCorrespondiente.trim(),
+    banco: (input.banco || input.entidadCorrespondiente).trim(),
+    titularCuenta: input.titularCuenta.trim(),
+    beneficiario: (input.beneficiario || input.titularCuenta).trim(),
+    concepto: input.concepto,
+    conceptoPersonalizado: input.conceptoPersonalizado?.trim(),
+    monto: Number(input.monto),
+    montoAjusteFlete: input.montoAjusteFlete ?? actual.montoAjusteFlete,
+    moneda: input.moneda,
+    fechaPago: input.fechaPago,
+    metodoPago: input.metodoPago,
+    notas: input.notas?.trim(),
+    estado: 'En Revisión',
+  };
+
+  const actualizados = pagos.map((p) => (p.id === pagoId ? corregido : p));
+  guardarPagos(actualizados);
+  return corregido;
 }
 
 /** Elimina un pago por su ID sincronizando con el backend */
@@ -401,7 +600,7 @@ export function eliminarPago(pagoId: string): boolean {
   return false;
 }
 
-/** Actualiza el estado de un pago (Conciliado / Observado) */
+/** Actualiza el estado de un pago */
 export function cambiarEstadoPago(pagoId: string, nuevoEstado: PagoOC['estado']): PagoOC | null {
   const pagos = obtenerPagos();
   let modificado: PagoOC | null = null;
@@ -423,20 +622,33 @@ export function calcularLiquidacionesOC(
   oportunidades: Oportunidad[],
   pagos: PagoOC[]
 ): LiquidacionOC[] {
-  // Oportunidades con OC o que tienen pagos registrados
   const mapaOC = new Map<string, LiquidacionOC>();
 
-  // Inicializar con las oportunidades que tienen Orden de Compra
   oportunidades.forEach((op) => {
-    if (op.ordenCompra || op.estado === 'OC_RECIBIDA' || op.estado === 'OC_ACEPTADA' || op.estado === 'ENTREGADA') {
+    if (
+      op.ordenCompra ||
+      op.estado === 'OC_RECIBIDA' ||
+      op.estado === 'OC_ACEPTADA' ||
+      op.estado === 'ENTREGADA' ||
+      op.estado === 'Cotización' ||
+      op.estado === 'Adjudicada'
+    ) {
       const ocNum = op.ordenCompra?.numeroOC || `OC-REQ-${op.numeroRequerimiento}`;
+      const baseOC =
+        op.ordenCompra?.montoOCAM && op.ordenCompra.montoOCAM > 0
+          ? Number(op.ordenCompra.montoOCAM)
+          : Number(op.limiteTotal) || 0;
+      const ajusteFlete = calcularMontoAjusteFleteOC(op);
+
       mapaOC.set(ocNum, {
         oportunidadId: Number(op.id),
         numeroOC: ocNum,
         numeroRequerimiento: op.numeroRequerimiento,
         empresa: op.empresaRazonSocial || op.entidadConvocante || 'Entidad Convocante',
-        costoInicial: op.ordenCompra?.costoInicial ?? null,
+        costoInicial: op.ordenCompra?.costoInicial ?? baseOC,
         costoRenegociado: op.ordenCompra?.costoRenegociado ?? null,
+        totalAjusteFlete: ajusteFlete,
+        techoConAjustes: baseOC + ajusteFlete,
         totalPagadoPEN: 0,
         totalPagadoUSD: 0,
         totalFlete: 0,
@@ -450,7 +662,6 @@ export function calcularLiquidacionesOC(
     }
   });
 
-  // Agregar los pagos correspondientes
   pagos.forEach((p) => {
     let liq = mapaOC.get(p.numeroOC);
     if (!liq) {
@@ -461,6 +672,8 @@ export function calcularLiquidacionesOC(
         empresa: p.empresaRazonSocial || p.entidadConvocante || 'Entidad Convocante',
         costoInicial: null,
         costoRenegociado: null,
+        totalAjusteFlete: p.montoAjusteFlete || 0,
+        techoConAjustes: undefined,
         totalPagadoPEN: 0,
         totalPagadoUSD: 0,
         totalFlete: 0,
@@ -477,16 +690,22 @@ export function calcularLiquidacionesOC(
     liq.conteoPagos += 1;
     liq.pagos.push(p);
 
+    if (!pagoCuentaEnAcumulado(p)) {
+      return;
+    }
+
     if (p.moneda === 'PEN') {
       liq.totalPagadoPEN += p.monto;
     } else {
       liq.totalPagadoUSD += p.monto;
     }
 
+    if (esPagoDeFlete(p)) {
+      liq.totalFlete += p.monto;
+      return;
+    }
+
     switch (p.concepto) {
-      case 'Flete':
-        liq.totalFlete += p.monto;
-        break;
       case 'Comisión':
         liq.totalComision += p.monto;
         break;

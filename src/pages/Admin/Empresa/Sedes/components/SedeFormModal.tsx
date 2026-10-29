@@ -1,13 +1,8 @@
 import { useState, useEffect } from 'react';
-import type { SedeDto, CrearSedeRequest, ActualizarSedeRequest } from '../../../../../api/Dtos/Sede';
-import { GoogleIcon } from '../../../../../components/GoogleIcon';
+import type { CrearSedeRequest } from '../../../../../api/Dtos/Sede';
+import { GoogleIcon } from '../../../../../components/GoogleIcon/GoogleIcon';
+import type { Props } from './Props';
 
-interface Props {
-  open: boolean;
-  sede?: SedeDto | null;   // null = crear, SedeDto = editar
-  onClose: () => void;
-  onSave: (data: CrearSedeRequest | ActualizarSedeRequest) => Promise<void>;
-}
 
 const EMPTY_FORM: CrearSedeRequest = {
   nombre: '',

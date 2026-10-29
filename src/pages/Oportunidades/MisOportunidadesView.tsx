@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
-import { GoogleIcon } from '../../components/GoogleIcon';
+import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
 import { useAuth } from '../../context/AuthContext';
 import { isOportunidadOwner } from '../../utils/oportunidadUtils';
 import type { Oportunidad } from '../../types/oportunidades';
@@ -16,22 +16,32 @@ interface MisOportunidadesViewProps {
 }
 
 const ESTADO_CONFIG: Record<string, { color: string; bg: string; icon: string; next: string | null }> = {
-  'En Licitación': { color: '#d97706', bg: '#fef3c7', icon: 'bolt', next: 'Adjudicada' },
-  'Adjudicada':    { color: '#059669', bg: '#ecfdf5', icon: 'verified', next: null },
-  'Desestimada':   { color: '#dc2626', bg: '#fee2e2', icon: 'cancel', next: null },
-  'OC_RECIBIDA':   { color: '#2563eb', bg: '#eff6ff', icon: 'receipt_long', next: null },
-  'OC_ACEPTADA':   { color: '#059669', bg: '#ecfdf5', icon: 'thumb_up', next: null },
-  'OC_RECHAZADA':  { color: '#dc2626', bg: '#fee2e2', icon: 'thumb_down', next: null },
-  'ENTREGADA':     { color: '#7c3aed', bg: '#f5f3ff', icon: 'inventory', next: null },
+  'En Licitación': { color: '#d97706', bg: '#fef3c7', icon: 'bolt', next: 'Aceptada por el Administrador' },
+  'En Competencia': { color: '#2563eb', bg: '#eff6ff', icon: 'groups', next: null },
+  'Adjudicada': { color: '#059669', bg: '#ecfdf5', icon: 'verified', next: null },
+  'Aceptada por el Administrador': { color: '#2563eb', bg: '#eff6ff', icon: 'how_to_reg', next: 'Aceptada por Perú Compras' },
+  'Aceptada por Perú Compras': { color: '#059669', bg: '#ecfdf5', icon: 'verified', next: null },
+  'Aceptada Desestimada': { color: '#b91c1c', bg: '#fef2f2', icon: 'unpublished', next: null },
+  'Desestimada': { color: '#dc2626', bg: '#fee2e2', icon: 'cancel', next: null },
+  'OC_RECIBIDA': { color: '#2563eb', bg: '#eff6ff', icon: 'receipt_long', next: null },
+  'OC_ACEPTADA': { color: '#059669', bg: '#ecfdf5', icon: 'thumb_up', next: null },
+  'OC_RECHAZADA': { color: '#dc2626', bg: '#fee2e2', icon: 'thumb_down', next: null },
+  'ENTREGADA': { color: '#7c3aed', bg: '#f5f3ff', icon: 'inventory', next: null },
 };
 
-const PIPELINE_ORDER = ['En Licitación', 'Adjudicada', 'Desestimada'];
+const PIPELINE_ORDER = [
+  'En Licitación',
+  'Aceptada por el Administrador',
+  'Aceptada por Perú Compras',
+  'Aceptada Desestimada',
+  'Desestimada',
+];
 
 const OC_STATES = ['OC_RECIBIDA', 'OC_ACEPTADA', 'OC_RECHAZADA', 'ENTREGADA'] as const;
 const OC_ACTIVAS = ['OC_RECIBIDA', 'OC_ACEPTADA'] as const;
-const ACTIVAS_STATES = ['En Licitación', 'Por Vencer'] as const;
-const GANADAS_STATES = ['Adjudicada', 'OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'] as const;
-const PERDIDAS_STATES = ['Desestimada', 'OC_RECHAZADA'] as const;
+const ACTIVAS_STATES = ['En Licitación', 'En Competencia', 'Por Vencer'] as const;
+const GANADAS_STATES = ['Adjudicada', 'Aceptada por el Administrador', 'Aceptada por Perú Compras', 'OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'] as const;
+const PERDIDAS_STATES = ['Desestimada', 'Aceptada Desestimada', 'OC_RECHAZADA'] as const;
 
 /** Cálculo seguro de estado de vencimiento para evitar NaN */
 function formatVencimientoSafe(dateStr?: string | null) {
@@ -137,18 +147,26 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
   const pipeline = useMemo(() => {
     const cols: Record<string, Oportunidad[]> = {
       'En Licitación': [],
-      'Adjudicada': [],
+      'Aceptada por el Administrador': [],
+      'Aceptada por Perú Compras': [],
+      'Aceptada Desestimada': [],
       'Desestimada': [],
     };
     misOportunidades.forEach((op) => {
-      if (cols[op.estado]) cols[op.estado].push(op);
+      if (op.estado === 'Adjudicada') {
+        cols['Aceptada por el Administrador'].push(op);
+      } else if (cols[op.estado]) {
+        cols[op.estado].push(op);
+      }
     });
     return cols;
   }, [misOportunidades]);
 
   const kpis = useMemo(() => ({
     total: misOportunidades.length,
-    adjudicadas: misOportunidades.filter((op) => op.estado === 'Adjudicada').length,
+    adjudicadas: misOportunidades.filter((op) =>
+      ['Adjudicada', 'Aceptada por el Administrador', 'Aceptada por Perú Compras', 'OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(op.estado)
+    ).length,
     ocPendientes: ocPendientes.length,
     montoTotal: misOportunidades.reduce((sum, op) => sum + (Number(op.limiteTotal) || 0), 0),
   }), [misOportunidades, ocPendientes]);
@@ -175,21 +193,28 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
   };
 
   const handleDesestimar = async (op: Oportunidad) => {
+    const yaAceptadaPorAdmin = op.estado === 'Aceptada por el Administrador' || op.estado === 'Adjudicada';
+    const estadoDestino = yaAceptadaPorAdmin ? 'Aceptada Desestimada' : 'Desestimada';
+    const titulo = yaAceptadaPorAdmin ? 'Desestimar por Perú Compras' : 'Desestimar requerimiento';
+    const explicacion = yaAceptadaPorAdmin
+      ? `La oportunidad fue <strong>Aceptada por el Administrador</strong> pero desestimada por Perú Compras. Pasará al estado <strong>Aceptada Desestimada</strong>.`
+      : `Indica el motivo por el cual se desestima directamente <strong>${op.numeroRequerimiento}</strong>.`;
+
     const { value, isConfirmed } = await Swal.fire({
-      title: 'Desestimar requerimiento',
-      html: `Indica el motivo por el cual se desestima <strong>${op.numeroRequerimiento}</strong>.`,
+      title: titulo,
+      html: explicacion,
       input: 'textarea',
-      inputPlaceholder: 'Ej. Precio no competitivo, el cliente ya no requiere el bien...',
+      inputPlaceholder: yaAceptadaPorAdmin ? 'Ej. Perú Compras no emitió OCAM / Desestimada...' : 'Ej. Precio no competitivo, cliente canceló...',
       inputAttributes: { 'aria-label': 'Motivo de desestimación', maxlength: '500' },
       showCancelButton: true,
-      confirmButtonText: 'Sí, desestimar',
+      confirmButtonText: yaAceptadaPorAdmin ? 'Sí, marcar Aceptada Desestimada' : 'Sí, desestimar',
       cancelButtonText: 'Cancelar',
       confirmButtonColor: '#dc2626',
       cancelButtonColor: '#64748b',
       inputValidator: (v) => (!v || !v.trim() ? 'El motivo es obligatorio para desestimar.' : undefined),
     });
     if (!isConfirmed || !value) return;
-    await handleCambiarEstado(op, 'Desestimada', value.trim());
+    await handleCambiarEstado(op, estadoDestino, value.trim());
   };
 
   const nombreEjecutiva = userEmail.split('@')[0].replace('.', ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -518,8 +543,8 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
                         op={op}
                         accent={roleAccent}
                         changing={cambiandoId === op.id}
-                         onChangeEstado={handleCambiarEstado}
-                         onConfirmDesestimar={handleDesestimar}
+                        onChangeEstado={handleCambiarEstado}
+                        onConfirmDesestimar={handleDesestimar}
                         onEdit={onEdit}
                       />
                     ))
@@ -638,7 +663,7 @@ export const MisOportunidadesView: React.FC<MisOportunidadesViewProps> = ({
                               → {cfg.next}
                             </button>
                           )}
-                          {op.estado !== 'Desestimada' && op.estado !== 'Adjudicada' && (
+                          {op.estado !== 'Desestimada' && op.estado !== 'Aceptada Desestimada' && op.estado !== 'Aceptada por Perú Compras' && (
                             <button
                               type="button"
                               disabled={cambiandoId === op.id}
@@ -942,7 +967,7 @@ const OpCard: React.FC<{
             <span>{changing ? '...' : cfg.next}</span>
           </button>
         )}
-        {op.estado !== 'Desestimada' && op.estado !== 'Adjudicada' && (
+        {op.estado !== 'Desestimada' && op.estado !== 'Aceptada Desestimada' && op.estado !== 'Aceptada por Perú Compras' && (
           <button
             type="button"
             disabled={changing}

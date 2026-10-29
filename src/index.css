@@ -63,3 +63,9 @@ button:focus-visible {
 ::-webkit-scrollbar-track { background: #f0f6ff; }
 ::-webkit-scrollbar-thumb { background: rgba(37, 99, 235, 0.25); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(37, 99, 235, 0.5); }
+
+/* ── SweetAlert2 Global Stacking: Siempre al frente de modales y drawers ── */
+.swal2-container {
+  z-index: 1000000 !important;
+}
+

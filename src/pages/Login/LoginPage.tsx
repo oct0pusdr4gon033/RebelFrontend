@@ -8,22 +8,47 @@ import { useAuth } from '../../context/AuthContext';
 
 import './LoginPage.css';
 
+export function getRouteForRole(rol?: string | null): string {
+  if (!rol) return '/login';
+  const r = rol.trim().toLowerCase();
+  if (r.includes('sysadmin')) return '/sysadmin';
+  if (r.includes('admin')) return '/admin';
+  if (r.includes('master')) return '/master';
+  if (r.includes('ejecutiv') || r.includes('venta')) return '/ejecutiva';
+  return '/login';
+}
+
 const ROLE_ROUTES: Record<string, string> = {
   'SysAdmin': '/sysadmin',
   'Administrador': '/admin',
+  'Admin': '/admin',
   'Ejecutivo(a) Master Ventas': '/master',
+  'Ejecutiva Master Ventas': '/master',
+  'Master': '/master',
   'Ejecutivo(a) Ventas': '/ejecutiva',
+  'Ejecutiva Ventas': '/ejecutiva',
+  'Ejecutivo Ventas': '/ejecutiva',
 };
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated, empleado: currentEmpleado } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Redirigir si ya tiene sesión activa
+  useEffect(() => {
+    if (isAuthenticated && currentEmpleado?.rolNombre) {
+      const target = ROLE_ROUTES[currentEmpleado.rolNombre] ?? getRouteForRole(currentEmpleado.rolNombre);
+      if (target && target !== '/login') {
+        navigate(target, { replace: true });
+      }
+    }
+  }, [isAuthenticated, currentEmpleado, navigate]);
 
   // Estados para control de concurrencia y autorización de sesión
   const [pendingAttemptId, setPendingAttemptId] = useState<string | null>(null);
@@ -56,7 +81,7 @@ export function LoginPage() {
             clearInterval(timerInterval);
             login(token, empleado);
             const rol = empleado.rolNombre ?? '';
-            const route = ROLE_ROUTES[rol] ?? '/login';
+            const route = ROLE_ROUTES[rol] ?? getRouteForRole(rol);
             navigate(route, { replace: true });
           }
         } else if (res.status === 'Rejected') {
@@ -104,7 +129,7 @@ export function LoginPage() {
       if (token && empleado) {
         login(token, empleado);
         const rol = empleado.rolNombre ?? '';
-        const route = ROLE_ROUTES[rol] ?? '/login';
+        const route = ROLE_ROUTES[rol] ?? getRouteForRole(rol);
         navigate(route, { replace: true });
       } else {
         setError('No se pudieron obtener los datos de la sesión.');

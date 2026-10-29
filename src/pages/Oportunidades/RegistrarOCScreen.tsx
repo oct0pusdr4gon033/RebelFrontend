@@ -1,18 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
-import { GoogleIcon } from '../../components/GoogleIcon';
-import type { Oportunidad } from '../../types/oportunidades';
+import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
+import type { Oportunidad, DocumentoOCItem } from '../../types/oportunidades';
+import {
+  obtenerPoolDocumentosOC,
+  guardarPoolDocumentosOC,
+  procesarArchivosParaPool,
+  getDocumentoVisualProps,
+  cargarPoolCompletoAsync,
+} from '../../utils/documentosPoolUtils';
 import { registrarOCApi, cambiarEstadoApi } from '../../api/services/oportunidades.service';
 import { PrecioInput } from '../../components/FormInputs/PrecioInput';
 import './RegistroOportunidad.css';
-
-interface RegistrarOCScreenProps {
-  op: Oportunidad;
-  roleAccent?: string;
-  onBack: () => void;
-  onSuccess: (opActualizada: Oportunidad) => void;
-}
+import type { RegistrarOCScreenProps } from './RegistrarOCScreenProps';
+import { VerDocumentoModal, type DocumentoVisualizable } from '../../components/DocumentoModal/VerDocumentoModal';
 
 export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
   op,
@@ -21,35 +23,90 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
   onSuccess,
 }) => {
   const [registrarBusy, setRegistrarBusy] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [documentoParaVer, setDocumentoParaVer] = useState<DocumentoVisualizable | null>(null);
+
+  // Pool de documentos oficiales (soporta 1 o más documentos acumulados sin reemplazarse)
+  const initialPool = obtenerPoolDocumentosOC(op);
+  const [documentosPool, setDocumentosPool] = useState<DocumentoOCItem[]>(initialPool);
 
   const [formOC, setFormOC] = useState({
-    numeroOC: '',
-    fechaEmisionOC: '',
-    nroOCAM: '',
-    nroExpediente: '',
-    nroFolio: '',
-    unidad: op.entidadConvocante || op.empresaRazonSocial || '',
-    codigoCIAF: '',
-    montoOCAM: Number(op.limiteTotal) || 0,
-    archivoOCUrl: '',
-    archivoNombre: '',
+    numeroOC: op.ordenCompra?.numeroOC || '',
+    fechaEmisionOC: op.ordenCompra?.fechaEmisionOC || '',
+    nroOCAM: op.ordenCompra?.nroOCAM || '',
+    nroExpediente: op.ordenCompra?.nroExpediente || '',
+    nroFolio: op.ordenCompra?.nroFolio || '',
+    unidad: op.ordenCompra?.unidad || op.entidadConvocante || op.empresaRazonSocial || '',
+    codigoCIAF: op.ordenCompra?.codigoCIAF || '',
+    montoOCAM: op.ordenCompra?.montoOCAM || Number(op.limiteTotal) || 0,
+    archivoOCUrl: initialPool[0]?.url || op.ordenCompra?.archivoOCUrl || '',
+    archivoNombre: initialPool[0]?.nombre || (op.ordenCompra as any)?.archivoNombre || '',
   });
 
-  const handleArchivoOCChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setFormOC((prev) => ({
-        ...prev,
-        archivoOCUrl: (event.target?.result as string) || '',
-        archivoNombre: file.name,
-      }));
-    };
-    reader.readAsDataURL(file);
+  const limiteOCAM = Number(op.limiteTotal) || 0;
+  const limiteOCAMTexto = limiteOCAM.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  // Sincroniza el pool con formOC y persistencia local
+  const sincronizarPool = (nuevoPool: DocumentoOCItem[]) => {
+    setDocumentosPool(nuevoPool);
+    setFormOC((prev) => ({
+      ...prev,
+      archivoOCUrl: nuevoPool[0]?.url || '',
+      archivoNombre: nuevoPool[0]?.nombre || '',
+    }));
+    guardarPoolDocumentosOC(op.id, nuevoPool);
   };
 
+  // Cargar documentos pesados (DataURLs) desde IndexedDB si se reinició la página
+  useEffect(() => {
+    cargarPoolCompletoAsync(op.id).then((poolCompleto) => {
+      if (poolCompleto && poolCompleto.length > 0) {
+        setDocumentosPool(poolCompleto);
+        setFormOC((prev) => ({
+          ...prev,
+          archivoOCUrl: poolCompleto[0]?.url || prev.archivoOCUrl,
+          archivoNombre: poolCompleto[0]?.nombre || prev.archivoNombre,
+        }));
+      }
+    });
+  }, [op.id]);
+
+  // Agrega archivos acumulativamente al pool (no reemplaza los existentes)
+  const agregarArchivosAlPool = async (files: FileList | File[]) => {
+    if (!files || (files instanceof FileList && files.length === 0)) return;
+    const procesados = await procesarArchivosParaPool(files);
+    if (!procesados.length) return;
+
+    const actualizado = [...documentosPool, ...procesados];
+    sincronizarPool(actualizado);
+  };
+
+  const handleArchivoOCChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      await agregarArchivosAlPool(e.target.files);
+      // Limpia para que el usuario pueda volver a seleccionar el mismo archivo o nuevos
+      e.target.value = '';
+    }
+  };
+
+  const handleQuitarDocumento = (idOIndex: string | number) => {
+    const filtrado = documentosPool.filter((d, idx) => (d.id != null ? d.id !== idOIndex : idx !== idOIndex));
+    sincronizarPool(filtrado);
+  };
+
+  const esAceptadaPorPeruCompras = op.estado === 'Aceptada por Perú Compras' || op.estado === 'Adjudicada';
+
   const handleRegistrarOC = async () => {
+    if (!esAceptadaPorPeruCompras) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Requiere Aceptación de Perú Compras',
+        html: `El Registro de Orden de Compra Oficial (OCAM) solo se puede generar cuando la oportunidad sea <strong>Aceptada por Perú Compras</strong>.<br/><br/>Estado actual: <strong>${op.estado}</strong>.<br/><br/><span style="color:#64748b; font-size:13px;">Primero debes adjuntar el documento oficial emitido por Perú Compras en <em>Subir Evidencias</em> para acreditar la adjudicación oficial.</span>`,
+        confirmButtonColor: roleAccent,
+      });
+      return;
+    }
+
     if (!formOC.numeroOC.trim()) {
       Swal.fire({
         icon: 'warning',
@@ -113,11 +170,20 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
       });
       return;
     }
-    if (!formOC.archivoOCUrl.trim()) {
+    if (limiteOCAM > 0 && formOC.montoOCAM > limiteOCAM) {
       Swal.fire({
         icon: 'warning',
-        title: 'Documento PDF obligatorio',
-        text: 'Adjunta el archivo digital oficial de la Orden de Compra emitida por Perú Compras (PDF o imagen).',
+        title: 'Monto OCAM supera el límite',
+        text: `El monto de la OCAM no puede ser mayor al límite total del requerimiento (S/ ${limiteOCAMTexto}).`,
+        confirmButtonColor: roleAccent,
+      });
+      return;
+    }
+    if (documentosPool.length === 0 && !formOC.archivoOCUrl.trim()) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Documento oficial obligatorio',
+        text: 'Adjunta al menos un archivo digital oficial en el pool de la Orden de Compra (PDF, imagen o documento).',
         confirmButtonColor: roleAccent,
       });
       return;
@@ -131,7 +197,7 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
         nroOCAM: formOC.nroOCAM.trim(),
         nroExpediente: formOC.nroExpediente.trim(),
         nroFolio: formOC.nroFolio.trim(),
-        archivoOCUrl: formOC.archivoOCUrl,
+        archivoOCUrl: formOC.archivoOCUrl || documentosPool[0]?.url || '',
         unidad: formOC.unidad.trim(),
         codigoCIAF: formOC.codigoCIAF.trim(),
         montoOCAM: formOC.montoOCAM,
@@ -150,11 +216,15 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
         nroOCAM: formOC.nroOCAM.trim(),
         nroExpediente: formOC.nroExpediente.trim(),
         nroFolio: formOC.nroFolio.trim(),
-        archivoOCUrl: formOC.archivoOCUrl,
+        archivoOCUrl: formOC.archivoOCUrl || documentosPool[0]?.url || '',
+        archivoNombre: formOC.archivoNombre || documentosPool[0]?.nombre || '',
+        documentosPool: documentosPool,
         unidad: formOC.unidad.trim(),
         codigoCIAF: formOC.codigoCIAF.trim(),
         montoOCAM: formOC.montoOCAM,
       };
+
+      guardarPoolDocumentosOC(op.id, documentosPool);
 
       const opFinal: Oportunidad = {
         ...op,
@@ -168,6 +238,7 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
         html: `
           <div style="text-align: left; font-size: 13.5px; color: #334155;">
             <p>Se registró formalmente la OC <strong>${formOC.numeroOC}</strong> para el requerimiento <strong>${op.numeroRequerimiento}</strong>.</p>
+            <p>Documentos adjuntados en el pool: <strong>${documentosPool.length}</strong> archivo(s).</p>
             <div style="background: #ecfdf5; border: 1px solid #86efac; border-radius: 4px; padding: 10px; margin: 10px 0; color: #166534; font-size: 13px;">
               ✓ La oportunidad pasó al estado <strong>Cotización</strong> y quedaron <strong>habilitadas las solicitudes de pago</strong>.
             </div>
@@ -259,7 +330,7 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <GoogleIcon name="info" size={22} color="#2563eb" />
           <div style={{ fontSize: '13px', color: '#1e40af' }}>
-            <strong>Flujo Oficial:</strong> Al registrar Folio, Expediente, N° OCAM y adjuntar el documento emitido,
+            <strong>Flujo Oficial:</strong> Al registrar Folio, Expediente, N° OCAM y adjuntar los documentos del pool,
             la oportunidad avanzará formalmente al estado <strong>Cotización</strong> y se habilitarán los pagos a proveedores y transportistas.
           </div>
         </div>
@@ -270,6 +341,30 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
           </strong>
         </div>
       </div>
+
+      {/* ── Bloqueo visual por Regla de Negocio ── */}
+      {!esAceptadaPorPeruCompras && (
+        <div
+          style={{
+            background: '#fff7ed',
+            border: '1.5px solid #fdba74',
+            borderRadius: '4px',
+            padding: '14px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14,
+            color: '#9a3412',
+            fontSize: '13px',
+          }}
+        >
+          <GoogleIcon name="warning" size={24} color="#ea580c" />
+          <div>
+            <strong>Regla de negocio:</strong> El Registro de Orden de Compra Oficial (OCAM) solo se puede generar cuando la oportunidad sea <strong>Aceptada por Perú Compras</strong>.
+            <br />
+            Estado actual: <strong>{op.estado}</strong>. Debe adjuntarse primero el documento oficial emitido por Perú Compras en el módulo de <em>Subir Evidencias</em>.
+          </div>
+        </div>
+      )}
 
       {/* ── Formulario Unificado (.reg-unified-form con esquinas rectas) ── */}
       <div className="reg-unified-form">
@@ -423,31 +518,67 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
                 onChange={(val) => setFormOC({ ...formOC, montoOCAM: val })}
                 placeholder="0.00"
                 min={0.01}
+                max={limiteOCAM > 0 ? limiteOCAM : undefined}
               />
               <span className="reg-field-hint">Monto techo presupuestal formal adjudicado en Soles (S/)</span>
+              {limiteOCAM > 0 && (
+                <span className="reg-field-hint reg-field-hint--limit">
+                  Máximo permitido: S/ {limiteOCAMTexto} (límite total del requerimiento)
+                </span>
+              )}
             </div>
           </div>
         </div>
 
-        {/* ── 3. SECCIÓN 3: DOCUMENTO DIGITAL OFICIAL DE PERÚ COMPRAS ── */}
+        {/* ── 3. SECCIÓN 3: DOCUMENTO DIGITAL OFICIAL DE PERÚ COMPRAS (POOL DE DOCUMENTOS) ── */}
         <div className="reg-flat-section reg-flat-section--required">
           <div className="reg-flat-section__header">
             <div className="reg-flat-section__title">
               <span className="reg-flat-section__badge-num">3</span>
               <div>
-                <h3>Documento Oficial de Perú Compras (Sustento Digital)</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <h3>Documentos Oficiales de Perú Compras (Pool de Documentos)</h3>
+                  {documentosPool.length > 0 && (
+                    <span
+                      style={{
+                        background: '#059669',
+                        color: '#ffffff',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: 12,
+                        letterSpacing: '0.3px',
+                      }}
+                    >
+                      {documentosPool.length} {documentosPool.length === 1 ? 'documento en pool' : 'documentos en pool'}
+                    </span>
+                  )}
+                </div>
                 <span className="reg-flat-section__desc">
-                  Adjunta el archivo digital formal de la Orden de Compra para habilitar las solicitudes de pago.
+                  Puedes subir 1 o más documentos en este pool (Orden de Compra, adendas, resolución, anexos técnicos). No se reemplazarán entre sí.
                 </span>
               </div>
             </div>
             <span className="reg-flat-badge-obligatorio">Paso Obligatorio</span>
           </div>
 
+          {/* Zona Drag & Drop para subir al pool */}
           <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={async (e) => {
+              e.preventDefault();
+              setIsDragging(false);
+              if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                await agregarArchivosAlPool(e.dataTransfer.files);
+              }
+            }}
             style={{
-              border: '2px dashed #cbd5e1',
-              background: '#f8fafc',
+              border: isDragging ? '2px dashed #2563eb' : '2px dashed #cbd5e1',
+              background: isDragging ? '#eff6ff' : '#f8fafc',
               borderRadius: 4,
               padding: '24px 20px',
               textAlign: 'center',
@@ -455,57 +586,219 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
               flexDirection: 'column',
               alignItems: 'center',
               gap: 10,
+              transition: 'all 0.15s ease',
             }}
           >
             <input
               type="file"
+              multiple
               id={`archivo-oc-standalone-${op.id}`}
-              accept=".pdf,image/*"
+              accept=".pdf,image/*,.doc,.docx,.xls,.xlsx"
               onChange={handleArchivoOCChange}
               style={{ display: 'none' }}
             />
-            <GoogleIcon name="cloud_upload" size={40} color={roleAccent} />
+            <GoogleIcon name="cloud_upload" size={40} color={isDragging ? '#2563eb' : roleAccent} />
             <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>
-              {formOC.archivoNombre ? formOC.archivoNombre : 'Selecciona o arrastra la Orden de Compra de Perú Compras'}
+              {documentosPool.length > 0
+                ? `Pool activo con ${documentosPool.length} documento(s) adjunto(s). Puedes arrastrar o seleccionar más archivos.`
+                : 'Selecciona o arrastra la Orden de Compra y documentos complementarios'}
             </div>
             <span style={{ fontSize: '12px', color: '#64748b' }}>
-              Formatos soportados: <strong>PDF, JPG, PNG</strong>
+              Formatos soportados: <strong>PDF, JPG, PNG, DOCX, XLSX</strong> &bull; Puedes seleccionar varios archivos a la vez
             </span>
-            <label
-              htmlFor={`archivo-oc-standalone-${op.id}`}
-              className="reg-btn-quick-action"
-              style={{
-                background: roleAccent,
-                cursor: 'pointer',
-                marginTop: 6,
-                padding: '9px 18px',
-                fontSize: '12.5px',
-              }}
-            >
-              <GoogleIcon name="upload_file" size={16} color="#ffffff" />
-              <span>{formOC.archivoNombre ? 'Cambiar Documento' : 'Examinar Documento Oficial'}</span>
-            </label>
+            <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+              <label
+                htmlFor={`archivo-oc-standalone-${op.id}`}
+                className="reg-btn-quick-action"
+                style={{
+                  background: roleAccent,
+                  cursor: 'pointer',
+                  padding: '9px 18px',
+                  fontSize: '12.5px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <GoogleIcon name="upload_file" size={16} color="#ffffff" />
+                <span>{documentosPool.length > 0 ? '+ Agregar Más Documentos al Pool' : 'Examinar Documentos (Pool)'}</span>
+              </label>
+            </div>
           </div>
 
-          {formOC.archivoOCUrl && (
-            <div
-              style={{
-                padding: 12,
-                background: '#f0fdf4',
-                border: '1.5px solid #86efac',
-                borderRadius: 4,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                fontSize: '12.5px',
-                color: '#166534',
-              }}
-            >
-              <GoogleIcon name="verified" size={20} color="#16a34a" />
-              <div>
-                <strong>Documento adjuntado con éxito:</strong> {formOC.archivoNombre}
+          {/* LISTA COMPLETA DE DOCUMENTOS SUBIDOS AL POOL */}
+          {documentosPool.length > 0 ? (
+            <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 4px',
+                  borderBottom: '1.5px solid #e2e8f0',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <GoogleIcon name="folder_open" size={18} color="#2563eb" />
+                  <span style={{ fontSize: '13px', fontWeight: 800, color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                    Documentos Oficiales Subidos ({documentosPool.length})
+                  </span>
+                </div>
+                <span style={{ fontSize: '12px', color: '#059669', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <GoogleIcon name="check_circle" size={15} color="#059669" />
+                  Todos se conservan juntos en el pool
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {documentosPool.map((doc, idx) => {
+                  const visual = getDocumentoVisualProps(doc.nombre, doc.tipo);
+                  return (
+                    <div
+                      key={doc.id || idx}
+                      style={{
+                        padding: '12px 16px',
+                        background: '#ffffff',
+                        border: '1.5px solid #cbd5e1',
+                        borderRadius: 4,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 12,
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                        <span
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 4,
+                            background: visual.badgeBg,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <GoogleIcon name={visual.icon} size={20} color={visual.color} />
+                        </span>
+                        <div style={{ minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontSize: '13.5px',
+                              fontWeight: 700,
+                              color: '#0f172a',
+                              whiteSpace: 'nowrap',
+                              textOverflow: 'ellipsis',
+                              overflow: 'hidden',
+                              maxWidth: '460px',
+                            }}
+                            title={doc.nombre}
+                          >
+                            {doc.nombre}
+                          </div>
+                          <div style={{ fontSize: '11.5px', color: '#64748b', display: 'flex', gap: 8, marginTop: 2 }}>
+                            {doc.tamanoTexto && <span>{doc.tamanoTexto}</span>}
+                            <span>&bull;</span>
+                            <span>Documento #{idx + 1} del pool</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                        {doc.url && (
+                          <button
+                            type="button"
+                            onClick={() => setDocumentoParaVer(doc)}
+                            style={{
+                              padding: '6px 12px',
+                              background: '#eff6ff',
+                              border: '1.5px solid #bfdbfe',
+                              color: '#1d4ed8',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 5,
+                              borderRadius: 4,
+                            }}
+                            title="Ver documento en modal"
+                          >
+                            <GoogleIcon name="visibility" size={15} color="#1d4ed8" />
+                            <span>Ver Documento</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleQuitarDocumento(doc.id || idx)}
+                          title="Quitar este documento del pool"
+                          style={{
+                            padding: '6px 12px',
+                            background: '#fff1f2',
+                            border: '1px solid #fecdd3',
+                            color: '#e11d48',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            borderRadius: 3,
+                          }}
+                        >
+                          <GoogleIcon name="delete" size={15} color="#e11d48" />
+                          <span>Quitar</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Mensaje de confirmación del pool */}
+              <div
+                style={{
+                  padding: '10px 14px',
+                  background: '#f0fdf4',
+                  border: '1.5px solid #86efac',
+                  borderRadius: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  fontSize: '12.5px',
+                  color: '#166534',
+                }}
+              >
+                <GoogleIcon name="verified" size={20} color="#16a34a" />
+                <div>
+                  <strong>Pool verificado:</strong> Hay {documentosPool.length} archivo(s) listo(s) para vincular a la Orden de Compra.
+                </div>
               </div>
             </div>
+          ) : (
+            formOC.archivoOCUrl && (
+              <div
+                style={{
+                  marginTop: 12,
+                  padding: 12,
+                  background: '#f0fdf4',
+                  border: '1.5px solid #86efac',
+                  borderRadius: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  fontSize: '12.5px',
+                  color: '#166534',
+                }}
+              >
+                <GoogleIcon name="verified" size={20} color="#16a34a" />
+                <div>
+                  <strong>Documento adjuntado con éxito:</strong> {formOC.archivoNombre}
+                </div>
+              </div>
+            )
           )}
         </div>
 
@@ -597,14 +890,20 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
               type="button"
               className="reg-btn-submit-complete"
               onClick={handleRegistrarOC}
-              disabled={registrarBusy}
+              disabled={registrarBusy || !esAceptadaPorPeruCompras}
+              title={
+                !esAceptadaPorPeruCompras
+                  ? 'La oportunidad debe estar "Aceptada por Perú Compras" para registrar la OCAM'
+                  : undefined
+              }
               style={{
                 padding: '10px 24px',
                 fontSize: '13px',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 8,
-                cursor: 'pointer',
+                cursor: registrarBusy || !esAceptadaPorPeruCompras ? 'not-allowed' : 'pointer',
+                opacity: !esAceptadaPorPeruCompras ? 0.6 : 1,
                 borderRadius: 4,
               }}
             >
@@ -614,6 +913,12 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Modal para previsualizar documento PDF o imagen */}
+      <VerDocumentoModal
+        documento={documentoParaVer}
+        onClose={() => setDocumentoParaVer(null)}
+      />
     </div>
   );
 };

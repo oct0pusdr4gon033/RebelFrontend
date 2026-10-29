@@ -12,6 +12,7 @@ namespace Domain.Interfaces.Repositories
         Task<IEnumerable<PagoOC>> ObtenerPorOportunidadIdAsync(int oportunidadId);
         Task<string> GenerarSiguienteCodigoAsync();
         Task<PagoOC> CrearAsync(PagoOC pago);
+        Task<PagoOC> ActualizarAsync(PagoOC pago);
         Task<bool> EliminarAsync(int id);
     }
 }

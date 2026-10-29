@@ -1,5 +1,5 @@
 import React from 'react';
-import { GoogleIcon } from '../../components/GoogleIcon';
+import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
 
 export type OportunidadTab = 'registrar' | 'mis-oportunidades' | 'listar' | 'podio';
 
@@ -23,33 +23,33 @@ export const OportunidadNavButtons: React.FC<OportunidadNavButtonsProps> = ({
     badge?: string | number;
     description: string;
   }[] = [
-    {
-      id: 'registrar',
-      label: 'Registrar',
-      icon: 'flash_on',
-      description: 'Formulario Exprés',
-    },
-    {
-      id: 'mis-oportunidades',
-      label: 'Mis Oportunidades',
-      icon: 'person',
-      description: 'Mi Pipeline',
-    },
-    {
-      id: 'listar',
-      label: 'Listar',
-      icon: 'table_chart',
-      badge: totalOportunidades > 0 ? totalOportunidades : undefined,
-      description: 'Todas las Oportunidades',
-    },
-    {
-      id: 'podio',
-      label: 'Podio',
-      icon: 'emoji_events',
-      badge: 'Top Ventas',
-      description: 'Ranking de Ejecutivas',
-    },
-  ];
+      {
+        id: 'registrar',
+        label: 'Registrar',
+        icon: 'flash_on',
+        description: 'Formulario Exprés',
+      },
+      {
+        id: 'mis-oportunidades',
+        label: 'Mis Oportunidades',
+        icon: 'person',
+        description: 'Mi Pipeline',
+      },
+      {
+        id: 'listar',
+        label: 'Listar',
+        icon: 'table_chart',
+        badge: totalOportunidades > 0 ? totalOportunidades : undefined,
+        description: 'Todas las Oportunidades',
+      },
+      {
+        id: 'podio',
+        label: 'Podio',
+        icon: 'emoji_events',
+        badge: 'Top Ventas',
+        description: 'Ranking de Ejecutivas',
+      },
+    ];
 
   return (
     <div className="reg-push-bar" role="tablist" aria-label="Navegación de Oportunidades">
@@ -66,10 +66,10 @@ export const OportunidadNavButtons: React.FC<OportunidadNavButtonsProps> = ({
             style={
               isActive
                 ? ({
-                    borderColor: `${roleAccent}40`,
-                    color: roleAccent,
-                    boxShadow: `0 4px 12px ${roleAccent}20`,
-                  } as React.CSSProperties)
+                  borderColor: `${roleAccent}40`,
+                  color: roleAccent,
+                  boxShadow: `0 4px 12px ${roleAccent}20`,
+                } as React.CSSProperties)
                 : undefined
             }
           >

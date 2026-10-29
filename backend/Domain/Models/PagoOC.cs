@@ -32,12 +32,18 @@ namespace Domain.Models
         public string? ConceptoPersonalizado { get; set; }
 
         public decimal Monto { get; set; }
+        public decimal? MontoAjusteFlete { get; set; }
         public string Moneda { get; set; } = "PEN"; // PEN | USD
 
         public DateTime FechaPago { get; set; }
+        public DateTime? FechaVencimientoOC { get; set; }
         public string MetodoPago { get; set; } = "Transferencia Bancaria";
         public string? Banco { get; set; }
+        public string? EntidadCorrespondiente { get; set; }
+        public string? NumeroCuentaBancaria { get; set; }
+        public string? TitularCuenta { get; set; }
         public string? NumeroOperacion { get; set; }
+        public string? HoraPago { get; set; }
         public string? Beneficiario { get; set; }
         public string? Notas { get; set; }
 
@@ -56,7 +62,10 @@ namespace Domain.Models
         public virtual AppUser? CreadoPorUsuario { get; set; }
         public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;
 
-        /// <summary>Estado del pago: Registrado, Conciliado, Observado, Anulado</summary>
-        public string Estado { get; set; } = "Registrado";
+        /// <summary>Estado del pago: En Revisión, Completo, Pago Rechazado</summary>
+        public string Estado { get; set; } = "En Revisión";
+        public string? JustificacionCorreccion { get; set; }
+        public string? ResueltoPorAdmin { get; set; }
+        public DateTime? FechaResolucionAdmin { get; set; }
     }
 }

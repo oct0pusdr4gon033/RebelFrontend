@@ -4,7 +4,6 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Domain.DTOs.Pagos;
 using Domain.Interfaces.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,9 +20,6 @@ namespace Api.Controllers
             _pagoService = pagoService;
         }
 
-        /// <summary>
-        /// Obtiene el historial completo de pagos y peticiones registradas
-        /// </summary>
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<PagoResponseDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<PagoResponseDto>>> ObtenerTodos()
@@ -32,9 +28,6 @@ namespace Api.Controllers
             return Ok(pagos);
         }
 
-        /// <summary>
-        /// Obtiene el detalle de un pago por su ID
-        /// </summary>
         [HttpGet("{id:int}")]
         [ProducesResponseType(typeof(PagoResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -48,9 +41,6 @@ namespace Api.Controllers
             return Ok(pago);
         }
 
-        /// <summary>
-        /// Obtiene los pagos registrados asociados a una Orden de Compra o Requerimiento
-        /// </summary>
         [HttpGet("oc/{numeroOC}")]
         [ProducesResponseType(typeof(IEnumerable<PagoResponseDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<PagoResponseDto>>> ObtenerPorOC(string numeroOC)
@@ -59,9 +49,6 @@ namespace Api.Controllers
             return Ok(pagos);
         }
 
-        /// <summary>
-        /// Obtiene el balance financiero y liquidación acumulada de una Orden de Compra
-        /// </summary>
         [HttpGet("liquidacion/oc/{numeroOC}")]
         [ProducesResponseType(typeof(LiquidacionOCResponseDto), StatusCodes.Status200OK)]
         public async Task<ActionResult<LiquidacionOCResponseDto>> ObtenerLiquidacionPorOC(string numeroOC)
@@ -70,9 +57,6 @@ namespace Api.Controllers
             return Ok(liquidacion);
         }
 
-        /// <summary>
-        /// Registra una nueva petición de pago (proveedor, transporte, producto individual u otro)
-        /// </summary>
         [HttpPost]
         [ProducesResponseType(typeof(PagoResponseDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -99,9 +83,46 @@ namespace Api.Controllers
             }
         }
 
-        /// <summary>
-        /// Elimina un pago por su ID
-        /// </summary>
+        [HttpPut("{id:int}/resolver-admin")]
+        [ProducesResponseType(typeof(PagoResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<PagoResponseDto>> ResolverPagoAdmin(int id, [FromBody] ResolverPagoAdminDto dto)
+        {
+            try
+            {
+                var actualizado = await _pagoService.ResolverPagoAdminAsync(id, dto);
+                return Ok(actualizado);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { mensaje = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { mensaje = "Error al resolver el pago: " + ex.Message });
+            }
+        }
+
+        [HttpPut("{id:int}/corregir")]
+        [ProducesResponseType(typeof(PagoResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<PagoResponseDto>> CorregirPago(int id, [FromBody] CorregirPagoDto dto)
+        {
+            try
+            {
+                var corregido = await _pagoService.CorregirPagoAsync(id, dto);
+                return Ok(corregido);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { mensaje = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { mensaje = "Error al corregir la solicitud de pago: " + ex.Message });
+            }
+        }
+
         [HttpDelete("{id:int}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { RolDto } from '../../api/Dtos/Usuario';
 import { getRoles } from '../../api/services/usuario.service';
 import { getAuthHeaders } from '../../api/services/oportunidades.service';
-import { GoogleIcon } from '../../components/GoogleIcon';
+import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
 import '../Admin/Empresa/EmpresaAdmin.css';
 
 import { API_BASE } from '../../env/envoviment';
@@ -38,7 +38,18 @@ const ROL_PRIVILEGIOS: Record<string, string[]> = {
     'Asignar oportunidades',
     'Ver reportes del equipo',
   ],
+  'Ejecutiva Master Ventas': [
+    'Registrar y editar oportunidades',
+    'Ver oportunidades del equipo',
+    'Asignar oportunidades',
+    'Ver reportes del equipo',
+  ],
   'Ejecutivo(a) Ventas': [
+    'Registrar oportunidades propias',
+    'Editar sus oportunidades',
+    'Ver reportes personales',
+  ],
+  'Ejecutiva Ventas': [
     'Registrar oportunidades propias',
     'Editar sus oportunidades',
     'Ver reportes personales',
@@ -64,7 +75,19 @@ const ROL_ACCENT: Record<string, { color: string; bg: string; border: string; ic
     border: 'rgba(14,165,233,0.25)',
     icon: 'star',
   },
+  'Ejecutiva Master Ventas': {
+    color: '#0284c7',
+    bg: 'rgba(14,165,233,0.1)',
+    border: 'rgba(14,165,233,0.25)',
+    icon: 'star',
+  },
   'Ejecutivo(a) Ventas': {
+    color: '#0e7490',
+    bg: 'rgba(6,182,212,0.1)',
+    border: 'rgba(6,182,212,0.25)',
+    icon: 'work',
+  },
+  'Ejecutiva Ventas': {
     color: '#0e7490',
     bg: 'rgba(6,182,212,0.1)',
     border: 'rgba(6,182,212,0.25)',

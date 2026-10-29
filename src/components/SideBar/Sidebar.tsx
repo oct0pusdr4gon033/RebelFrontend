@@ -1,45 +1,11 @@
 import React from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { GoogleIcon } from './GoogleIcon';
+import { useAuth } from '../../context/AuthContext';
+import { GoogleIcon } from '../GoogleIcon/GoogleIcon';
 import './Sidebar.css';
+import type { NavItem } from './NavItem';
+import type { SidebarProps } from './SidebarProps';
 
-export interface NavPushButton {
-  id: string;
-  label: string;
-  icon?: string;
-  path: string;
-  tabKey?: string;
-  badge?: string | number;
-  description?: string;
-}
-
-export interface NavItem {
-  icon: string;
-  label: string;
-  path?: string;
-  section?: string | null;
-  badge?: string;
-  onClick?: () => void;
-  /** Sub-botones a modo de push button integrados en el sidebar */
-  pushButtons?: NavPushButton[];
-}
-
-export interface SidebarProps {
-  roleName: string;
-  roleDisplayName?: string;
-  roleIcon?: string;
-  accent?: string;
-  accentBg?: string;
-  accentBorder?: string;
-  avatarGrad?: string;
-  basePath: string;
-  navItems: NavItem[];
-  isOpen?: boolean;
-  onClose?: () => void;
-  isCollapsed?: boolean;
-  onToggleCollapse?: () => void;
-}
 
 export const Sidebar: React.FC<SidebarProps> = ({
   roleName,
@@ -66,6 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     'Registro Oportunidad': true,
     'Resolver Oportunidades': true,
     'Pagos': true,
+    'Agenda de Contactos': true,
   });
 
   const toggleGroup = (label: string) => {
@@ -131,9 +98,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       <aside
-        className={`sb-container ${isOpen ? 'sb-container--mobile-open' : ''} ${
-          isCollapsed ? 'sb-container--collapsed' : ''
-        }`}
+        className={`sb-container ${isOpen ? 'sb-container--mobile-open' : ''} ${isCollapsed ? 'sb-container--collapsed' : ''
+          }`}
         aria-label="Menú de Navegación Principal"
       >
         {/* Brand / Logo + Botón de Cerrar para Móvil */}
@@ -187,12 +153,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   style={
                     isActive
                       ? {
-                          background: accent,
-                          color: '#ffffff',
-                          border: 'none',
-                          boxShadow: 'none',
-                          outline: 'none',
-                        }
+                        background: accent,
+                        color: '#ffffff',
+                        border: 'none',
+                        boxShadow: 'none',
+                        outline: 'none',
+                      }
                       : { border: 'none', outline: 'none' }
                   }
                   onClick={() => handleNavClick(item)}
@@ -270,13 +236,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           style={
                             isPbActive
                               ? {
-                                  color: accent,
-                                  background: `${accent}14`,
-                                  fontWeight: 700,
-                                  border: 'none',
-                                  boxShadow: 'none',
-                                  outline: 'none',
-                                }
+                                color: accent,
+                                background: `${accent}14`,
+                                fontWeight: 700,
+                                border: 'none',
+                                boxShadow: 'none',
+                                outline: 'none',
+                              }
                               : { border: 'none', outline: 'none' }
                           }
                           onClick={() => {

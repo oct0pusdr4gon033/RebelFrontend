@@ -50,10 +50,12 @@ namespace Domain.DTOs.Oportunidad
     public class CambiarEstadoDto
     {
         [Required(ErrorMessage = "El estado es obligatorio.")]
-        [RegularExpression("^(En Licitación|Cotizada|Adjudicada|Desestimada)$",
-            ErrorMessage = "Estado inválido. Valores permitidos: En Licitación, Cotizada, Adjudicada, Desestimada.")]
+        [RegularExpression("^(En Licitación|En Licitacion|Adjudicada|Aceptada|Aceptada por el Administrador|Aceptada por Perú Compras|Aceptada por Peru Compras|Aceptada Desestimada|Desestimada|Cotizada|Cotización|Cotizacion)$",
+            ErrorMessage = "Estado inválido. Valores permitidos: En Licitación, Aceptada, Adjudicada, Aceptada por el Administrador, Aceptada por Perú Compras, Aceptada Desestimada, Desestimada.")]
         public string Estado { get; set; } = string.Empty;
 
+        // Obligatorio únicamente cuando el estado es "Desestimada"
+        [MaxLength(500, ErrorMessage = "El motivo de desestimación no debe exceder los 500 caracteres.")]
         public string? Motivo { get; set; }
     }
 
@@ -68,6 +70,22 @@ namespace Domain.DTOs.Oportunidad
         public string NumeroOC { get; set; } = string.Empty;
 
         public DateTime? FechaEmisionOC { get; set; }
+
+        // ── Datos de la Buena Pro / Adjudicación (Perú Compras) ──
+        [MaxLength(100)]
+        public string? NroOCAM { get; set; }
+
+        [MaxLength(100)]
+        public string? NroExpediente { get; set; }
+
+        [MaxLength(200)]
+        public string? Unidad { get; set; }
+
+        [MaxLength(50)]
+        public string? CodigoCIAF { get; set; }
+
+        [Range(0, double.MaxValue, ErrorMessage = "El monto de la OCAM no puede ser negativo.")]
+        public decimal? MontoOCAM { get; set; }
     }
 
     // ── DTO PARA ACEPTAR / RECHAZAR LA OC (OC_RECIBIDA → OC_ACEPTADA / OC_RECHAZADA) ──
@@ -119,6 +137,14 @@ namespace Domain.DTOs.Oportunidad
         public string? Transportista { get; set; }
         public string? NoGuiaRemision { get; set; }
         public DateTime? FechaEntrega { get; set; }
+
+        // ── Datos de la Buena Pro / Adjudicación (Perú Compras) ──
+        public string? NroOCAM { get; set; }
+        public string? NroExpediente { get; set; }
+        public string? Unidad { get; set; }
+        public string? CodigoCIAF { get; set; }
+        public decimal? MontoOCAM { get; set; }
+
         public DateTime FechaRegistro { get; set; }
         public DateTime? FechaActualizacion { get; set; }
     }
@@ -126,6 +152,8 @@ namespace Domain.DTOs.Oportunidad
     // ── DTO DE PRODUCTO / ÍTEM ──
     public class ProductoItemDto
     {
+        public int? Id { get; set; }
+
         [Required(ErrorMessage = "El número de parte es obligatorio.")]
         public string NumeroParte { get; set; } = string.Empty;
 
@@ -152,6 +180,29 @@ namespace Domain.DTOs.Oportunidad
 
         public string? CondicionesAdicionales { get; set; }
         public string? FichaTecnica { get; set; }
+
+        // ── Ajuste de Flete (Precios de Perú Compras desfasados) ──
+        public decimal? AjusteFleteSolicitadoPorcentaje { get; set; }
+        public string? AjusteFleteMotivo { get; set; }
+
+        // Proveedores del ítem (N por ítem), cada uno con cantidad, costo y envío propios
+        public List<ItemProveedorDto> Proveedores { get; set; } = new();
+    }
+
+    // ── DTO DE PROVEEDOR POR ÍTEM (entrada) ──
+    public class ItemProveedorDto
+    {
+        [Required(ErrorMessage = "El nombre del proveedor es obligatorio.")]
+        public string NombreProveedor { get; set; } = string.Empty;
+
+        [Range(0, int.MaxValue, ErrorMessage = "La cantidad asignada no puede ser negativa.")]
+        public int Cantidad { get; set; }
+
+        [Range(0, double.MaxValue, ErrorMessage = "El costo unitario no puede ser negativo.")]
+        public decimal CostoUnitario { get; set; }
+
+        [Range(0, double.MaxValue, ErrorMessage = "El costo de envío no puede ser negativo.")]
+        public decimal CostoEnvio { get; set; }
     }
 
     // ── DTO DE RESPUESTA COMPLETA ──
@@ -182,6 +233,10 @@ namespace Domain.DTOs.Oportunidad
         // Totales y estado
         public decimal LimiteTotal { get; set; }
         public string Estado { get; set; } = string.Empty;
+        public bool EstaBloqueada { get; set; }
+
+        // Motivo registrado cuando la oportunidad fue Desestimada
+        public string? MotivoDesestimacion { get; set; }
 
         // Bloque 2: Orden de Compra asociada
         public OrdenCompraResponseDto? OrdenCompra { get; set; }
@@ -216,6 +271,30 @@ namespace Domain.DTOs.Oportunidad
         public decimal? PrecioUnitarioOfertado { get; set; }
         public string? CondicionesAdicionales { get; set; }
         public string? FichaTecnica { get; set; }
+
+        // ── Ajuste de Flete (Aprobado por el Administrador) ──
+        public decimal? AjusteFletePorcentaje { get; set; }
+        public decimal? AjusteFleteSolicitadoPorcentaje { get; set; }
+        public string? AjusteFleteMotivo { get; set; }
+        public string? AjusteFleteEstado { get; set; }
+        public string? AjusteFleteComentarioAdmin { get; set; }
+
+        // Proveedores del ítem y totales calculados (costos + envíos)
+        public List<ItemProveedorResponseDto> Proveedores { get; set; } = new();
+        public int CantidadAsignada { get; set; }
+        public decimal CostoTotalProveedores { get; set; }
+    }
+
+    // ── DTO DE PROVEEDOR POR ÍTEM (respuesta) ──
+    public class ItemProveedorResponseDto
+    {
+        public int Id { get; set; }
+        public string NombreProveedor { get; set; } = string.Empty;
+        public int Cantidad { get; set; }
+        public decimal CostoUnitario { get; set; }
+        public decimal CostoEnvio { get; set; }
+        // Subtotal = Cantidad * CostoUnitario + CostoEnvio
+        public decimal Subtotal { get; set; }
     }
 
     // ── DTO DE IMAGEN / EVIDENCIA DE OPORTUNIDAD (STORAGE EN BD) ──
@@ -225,6 +304,8 @@ namespace Domain.DTOs.Oportunidad
         public int OportunidadId { get; set; }
         public string NumeroRequerimiento { get; set; } = string.Empty;
         public string TipoEvidencia { get; set; } = string.Empty;
+        public int? TipoEvidenciaId { get; set; }
+        public string? NombreTipo { get; set; }
         public string NombreArchivo { get; set; } = string.Empty;
         public string ContentType { get; set; } = string.Empty;
         public long TamanoBytes { get; set; }
@@ -238,9 +319,29 @@ namespace Domain.DTOs.Oportunidad
 
     public class SubirOportunidadImagenDto
     {
-        [Required(ErrorMessage = "El tipo de evidencia es obligatorio.")]
-        public string TipoEvidencia { get; set; } = string.Empty;
+        public string? TipoEvidencia { get; set; }
 
+        public int? TipoEvidenciaId { get; set; }
+
+        public string? Comentario { get; set; }
+    }
+
+    // ── DTOs PARA AJUSTE DE FLETE (SOLICITAR Y RESOLVER) ──
+    public class SolicitarAjusteFleteDto
+    {
+        [Range(0.01, 100, ErrorMessage = "El porcentaje de ajuste debe estar entre 0.01 y 100.")]
+        public decimal Porcentaje { get; set; }
+
+        [Required(ErrorMessage = "El motivo de la solicitud es obligatorio.")]
+        [MaxLength(300, ErrorMessage = "El motivo no puede exceder los 300 caracteres.")]
+        public string Motivo { get; set; } = string.Empty;
+    }
+
+    public class ResolverAjusteFleteDto
+    {
+        public bool Aprobado { get; set; }
+
+        [MaxLength(300, ErrorMessage = "El comentario no puede exceder los 300 caracteres.")]
         public string? Comentario { get; set; }
     }
 }

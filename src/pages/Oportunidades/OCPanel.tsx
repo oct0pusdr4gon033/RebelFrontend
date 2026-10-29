@@ -1,8 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GoogleIcon } from '../../components/GoogleIcon';
+import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
 import { useAuth } from '../../context/AuthContext';
-import type { Oportunidad } from '../../types/oportunidades';
+import type { Oportunidad, DocumentoOCItem } from '../../types/oportunidades';
+import {
+  obtenerPoolDocumentosOC,
+  guardarPoolDocumentosOC,
+  procesarArchivosParaPool,
+  getDocumentoVisualProps,
+} from '../../utils/documentosPoolUtils';
 import {
   registrarOCApi,
   cambiarEstadoOCApi,
@@ -11,12 +17,13 @@ import {
   cambiarEstadoApi,
 } from '../../api/services/oportunidades.service';
 import { formatFechaHoraPeru } from '../../utils/dateUtils';
+import { VerDocumentoModal, type DocumentoVisualizable } from '../../components/DocumentoModal/VerDocumentoModal';
 
 export const OC_ESTADO_CONFIG: Record<string, { color: string; bg: string; icon: string; label: string }> = {
-  'OC_RECIBIDA':  { color: '#0284c7', bg: '#e0f2fe', icon: 'receipt_long', label: 'OC Recibida' },
-  'OC_ACEPTADA':  { color: '#059669', bg: '#d1fae5', icon: 'thumb_up', label: 'OC Aceptada' },
+  'OC_RECIBIDA': { color: '#0284c7', bg: '#e0f2fe', icon: 'receipt_long', label: 'OC Recibida' },
+  'OC_ACEPTADA': { color: '#059669', bg: '#d1fae5', icon: 'thumb_up', label: 'OC Aceptada' },
   'OC_RECHAZADA': { color: '#dc2626', bg: '#fee2e2', icon: 'thumb_down', label: 'OC Rechazada' },
-  'ENTREGADA':    { color: '#7c3aed', bg: '#ede9fe', icon: 'inventory', label: 'Entregada' },
+  'ENTREGADA': { color: '#7c3aed', bg: '#ede9fe', icon: 'inventory', label: 'Entregada' },
 };
 
 export const OC_STATES = ['OC_RECIBIDA', 'OC_ACEPTADA', 'OC_RECHAZADA', 'ENTREGADA'] as const;
@@ -96,6 +103,10 @@ const ConfirmModal: React.FC<{
           </button>
         </div>
       </div>
+      <VerDocumentoModal
+        documento={documentoParaVer}
+        onClose={() => setDocumentoParaVer(null)}
+      />
     </>
   );
 };
@@ -121,6 +132,8 @@ export const DetalleOCModal: React.FC<{ open: boolean; onClose: () => void; op: 
   );
 
   const costos: { label: string; value: string }[] = [];
+  const [documentoParaVer, setDocumentoParaVer] = useState<DocumentoVisualizable | null>(null);
+  const poolDocs = obtenerPoolDocumentosOC(op);
   if (oc.costoInicial != null) costos.push({ label: 'Costo inicial', value: money(oc.costoInicial) });
   if (oc.costoRenegociado != null) costos.push({ label: 'Costo renegociado', value: money(oc.costoRenegociado) });
   if (oc.margenAdicional != null) costos.push({ label: 'Margen adicional', value: money(oc.margenAdicional) });
@@ -167,8 +180,8 @@ export const DetalleOCModal: React.FC<{ open: boolean; onClose: () => void; op: 
               {op.marcas.length === 0
                 ? <span style={{ fontSize: '13px', color: '#94a3b8' }}>—</span>
                 : op.marcas.map((m) => (
-                    <span key={m.id} style={{ background: '#f1f5f9', color: '#334155', fontSize: '12px', fontWeight: 600, padding: '3px 10px', borderRadius: 14 }}>{m.nombre}</span>
-                  ))}
+                  <span key={m.id} style={{ background: '#f1f5f9', color: '#334155', fontSize: '12px', fontWeight: 600, padding: '3px 10px', borderRadius: 14 }}>{m.nombre}</span>
+                ))}
             </div>
           </Seccion>
 
@@ -215,21 +228,94 @@ export const DetalleOCModal: React.FC<{ open: boolean; onClose: () => void; op: 
               {oc.unidad && <Row label="Unidad" value={oc.unidad} />}
               {oc.codigoCIAF && <Row label="Código CIAF" value={oc.codigoCIAF} mono />}
               {oc.montoOCAM != null && <Row label="Monto OCAM (Techo)" value={money(oc.montoOCAM)} accent="#059669" />}
-              {oc.archivoOCUrl && (
+              {poolDocs.length > 0 ? (
+                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <GoogleIcon name="folder_open" size={14} color="#2563eb" />
+                    <span>Pool de Documentos Oficiales ({poolDocs.length})</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    {poolDocs.map((doc, idx) => {
+                      const visual = getDocumentoVisualProps(doc.nombre, doc.tipo);
+                      return (
+                        <div
+                          key={doc.id || idx}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '6px 10px',
+                            background: '#f8fafc',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: 4,
+                            fontSize: '12px',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                            <span style={{ width: 22, height: 22, borderRadius: 3, background: visual.badgeBg, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <GoogleIcon name={visual.icon} size={13} color={visual.color} />
+                            </span>
+                            <span style={{ fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: 220 }} title={doc.nombre}>
+                              {doc.nombre}
+                            </span>
+                            {doc.tamanoTexto && (
+                              <span style={{ fontSize: '11px', color: '#94a3b8' }}>({doc.tamanoTexto})</span>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setDocumentoParaVer(doc)}
+                            style={{
+                              color: '#2563eb',
+                              background: '#eff6ff',
+                              border: '1px solid #bfdbfe',
+                              padding: '3px 8px',
+                              borderRadius: 3,
+                              cursor: 'pointer',
+                              fontWeight: 700,
+                              fontSize: '11.5px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                            }}
+                          >
+                            <GoogleIcon name="visibility" size={13} color="#2563eb" />
+                            <span>Ver</span>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : oc.archivoOCUrl ? (
                 <Row
                   label="Documento Perú Compras"
                   value={
-                    <a
-                      href={oc.archivoOCUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{ color: '#2563eb', textDecoration: 'underline', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                    <button
+                      type="button"
+                      onClick={() => setDocumentoParaVer({
+                        nombre: oc.archivoNombre || 'Documento Oficial Perú Compras.pdf',
+                        url: oc.archivoOCUrl!,
+                        tipo: 'application/pdf',
+                      })}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        padding: 0,
+                        cursor: 'pointer',
+                        color: '#2563eb',
+                        textDecoration: 'underline',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
                     >
-                      <GoogleIcon name="attach_file" size={14} color="#2563eb" /> Ver Documento Oficial
-                    </a>
+                      <GoogleIcon name="visibility" size={14} color="#2563eb" /> Ver Documento Oficial
+                    </button>
                   }
                 />
-              )}
+              ) : null}
               <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed #e2e8f0' }}>
                 <a
                   href={`/admin/pagos?tab=registrar&oc=${encodeURIComponent(oc.numeroOC)}`}
@@ -311,9 +397,9 @@ export const OCPanel: React.FC<{
   const roleBasePath =
     empleado?.rolNombre === 'Administrador' || empleado?.rolNombre === 'SysAdmin'
       ? '/admin'
-      : empleado?.rolNombre === 'Ejecutivo(a) Master Ventas'
-      ? '/master'
-      : '/ejecutiva';
+      : (empleado?.rolNombre === 'Ejecutivo(a) Master Ventas' || empleado?.rolNombre === 'Ejecutiva Master Ventas')
+        ? '/master'
+        : '/ejecutiva';
 
   const oc = op.ordenCompra;
   const ocCfg = oc ? OC_ESTADO_CONFIG[oc.estadoOC] : null;
@@ -381,6 +467,11 @@ export const OCPanel: React.FC<{
 
   const handleRegistrarOC = async () => {
     setErrorMsg(null); setOkMsg(null);
+    const esAceptadaPeruCompras = op.estado === 'Aceptada por Perú Compras' || op.estado === 'Adjudicada';
+    if (!esAceptadaPeruCompras) {
+      flash(true, `El Registro de Orden de Compra Oficial (OCAM) solo se puede generar cuando la oportunidad sea "Aceptada por Perú Compras". Estado actual: "${op.estado}".`);
+      return;
+    }
     if (!formOC.numeroOC.trim()) { flash(true, 'El número de Orden de Compra es obligatorio.'); return; }
     // ── Buena Pro: la OC se registra junto con los datos oficiales de Perú Compras ──
     if (!formOC.nroOCAM.trim()) { flash(true, 'El N° OCAM de la Orden de Compra (Perú Compras) es obligatorio.'); return; }
@@ -390,7 +481,11 @@ export const OCPanel: React.FC<{
     if (!formOC.codigoCIAF.trim()) { flash(true, 'El Código CIAF de la orden de compra es obligatorio.'); return; }
     const montoOCAM = Number(formOC.montoOCAM);
     if (!montoOCAM || montoOCAM <= 0) { flash(true, 'El Monto de la OCAM (techo financiero) debe ser mayor a S/ 0.00.'); return; }
-    if (!formOC.archivoOCUrl.trim()) { flash(true, 'Es obligatorio subir el documento oficial de la Orden de Compra de Perú Compras (PDF o imagen).'); return; }
+    if (costoInicialRequerimiento > 0 && montoOCAM > costoInicialRequerimiento) {
+      flash(true, `El Monto de la OCAM no puede ser mayor al límite total del requerimiento (S/ ${costoInicialRequerimiento.toLocaleString('es-PE', { minimumFractionDigits: 2 })}).`);
+      return;
+    }
+    if (documentosPool.length === 0 && !formOC.archivoOCUrl.trim()) { flash(true, 'Es obligatorio subir al menos un documento oficial en el pool (PDF o imagen).'); return; }
 
     setRegistrarBusy(true);
     try {
@@ -527,358 +622,382 @@ export const OCPanel: React.FC<{
                   margin: '6px 0',
                 }}
               >
-                  {/* HEADER FIJO SUPERIOR DE PANTALLA COMPLETA */}
-                  <div
+                {/* HEADER FIJO SUPERIOR DE PANTALLA COMPLETA */}
+                <div
+                  style={{
+                    background: '#0f172a',
+                    borderBottom: '2px solid #2563eb',
+                    padding: '16px 32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexShrink: 0,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div
+                      style={{
+                        width: 44,
+                        height: 44,
+                        background: '#16a34a',
+                        borderRadius: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <GoogleIcon name="verified" size={26} color="#ffffff" />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '16px', fontWeight: 800, color: '#ffffff', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <span>REGISTRO DE ORDEN DE COMPRA OFICIAL (PERÚ COMPRAS)</span>
+                        <span
+                          style={{
+                            fontSize: '12px',
+                            padding: '3px 10px',
+                            background: 'rgba(37,99,235,0.25)',
+                            color: '#60a5fa',
+                            border: '1px solid #3b82f6',
+                            fontWeight: 700,
+                            borderRadius: 0,
+                          }}
+                        >
+                          Requerimiento: {op.numeroRequerimiento}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '12.5px', color: '#94a3b8', marginTop: 2 }}>
+                        Al registrar estos datos oficiales y adjuntar el documento, la oportunidad pasará al estado <strong>Cotización</strong> y se <strong>habilitarán los pagos</strong>.
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setMostrarRegistrar(false)}
                     style={{
-                      background: '#0f172a',
-                      borderBottom: '2px solid #2563eb',
-                      padding: '16px 32px',
+                      background: 'transparent',
+                      border: '1.5px solid #475569',
+                      color: '#cbd5e1',
+                      padding: '8px 16px',
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                      fontSize: '13px',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'space-between',
-                      flexShrink: 0,
+                      gap: 6,
+                      borderRadius: 0,
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                      <div
-                        style={{
-                          width: 44,
-                          height: 44,
-                          background: '#16a34a',
-                          borderRadius: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <GoogleIcon name="verified" size={26} color="#ffffff" />
+                    <GoogleIcon name="close" size={18} color="#cbd5e1" />
+                    <span>Cerrar Pantalla</span>
+                  </button>
+                </div>
+
+                {/* CUERPO CENTRAL DE PANTALLA COMPLETA CON SCROLL */}
+                <div
+                  style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    background: '#f8fafc',
+                    padding: '28px 36px',
+                  }}
+                >
+                  <div style={{ maxWidth: 1360, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+                    {/* Banner Informativo Superior */}
+                    <div
+                      style={{
+                        background: '#eff6ff',
+                        border: '1.5px solid #bfdbfe',
+                        borderRadius: 0,
+                        padding: '14px 20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 16,
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <GoogleIcon name="info" size={22} color="#2563eb" />
+                        <div style={{ fontSize: '13px', color: '#1e40af' }}>
+                          <strong>Flujo Oficial:</strong> Este registro formaliza la adjudicación con la <strong>Orden de Compra emitida por Perú Compras</strong>. Al completar Folio, Expediente, OCAM y documento, se habilitarán las solicitudes de pago a proveedores y flete.
+                        </div>
                       </div>
-                      <div>
-                        <div style={{ fontSize: '16px', fontWeight: 800, color: '#ffffff', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 12 }}>
-                          <span>REGISTRO DE ORDEN DE COMPRA OFICIAL (PERÚ COMPRAS)</span>
-                          <span
-                            style={{
-                              fontSize: '12px',
-                              padding: '3px 10px',
-                              background: 'rgba(37,99,235,0.25)',
-                              color: '#60a5fa',
-                              border: '1px solid #3b82f6',
-                              fontWeight: 700,
-                              borderRadius: 0,
-                            }}
-                          >
-                            Requerimiento: {op.numeroRequerimiento}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '12.5px', color: '#94a3b8', marginTop: 2 }}>
-                          Al registrar estos datos oficiales y adjuntar el documento, la oportunidad pasará al estado <strong>Cotización</strong> y se <strong>habilitarán los pagos</strong>.
-                        </div>
+                      <div style={{ display: 'flex', gap: 16, fontSize: '12px', color: '#334155' }}>
+                        <span>Entidad: <strong>{op.entidadConvocante || op.empresaRazonSocial || 'Entidad'}</strong></span>
+                        <span>&bull;</span>
+                        <span>Límite Cotizado: <strong>S/ {Number(op.limiteTotal).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</strong></span>
                       </div>
                     </div>
 
+                    {/* Grid de 2 Columnas: Izquierda Resumen y Evidencias, Derecha Formulario de la OC */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(420px, 1.4fr)', gap: 24, alignItems: 'start' }}>
+
+                      {/* COLUMNA IZQUIERDA: Resumen de Requerimiento y Documento Oficial */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                        {/* Card: Resumen del Requerimiento */}
+                        <div style={{ background: '#ffffff', border: '1.5px solid #cbd5e1', borderRadius: 0, padding: 20 }}>
+                          <div style={{ fontSize: '12px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <GoogleIcon name="description" size={16} color="#2563eb" />
+                            <span>Detalle del Requerimiento</span>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                            <div>
+                              <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, display: 'block' }}>N° Requerimiento:</span>
+                              <strong style={{ fontSize: '14px', color: '#0f172a' }}>{op.numeroRequerimiento}</strong>
+                            </div>
+                            <div>
+                              <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, display: 'block' }}>Estado Actual:</span>
+                              <span style={{ padding: '2px 8px', background: '#ecfdf5', color: '#059669', fontWeight: 700, fontSize: '12px' }}>
+                                {op.estado}
+                              </span>
+                            </div>
+                            <div>
+                              <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, display: 'block' }}>Entidad Convocante:</span>
+                              <span style={{ fontSize: '12.5px', color: '#1e293b', fontWeight: 600 }}>{op.entidadConvocante || op.empresaRazonSocial || 'No especificada'}</span>
+                            </div>
+                            <div>
+                              <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, display: 'block' }}>Límite Total:</span>
+                              <strong style={{ fontSize: '14px', color: '#059669' }}>S/ {Number(op.limiteTotal).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</strong>
+                            </div>
+                          </div>
+
+                          {/* Items del Requerimiento */}
+                          <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 6 }}>
+                            Productos a Atender ({op.items?.length || 0})
+                          </div>
+                          <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid #e2e8f0' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11.5px' }}>
+                              <thead>
+                                <tr style={{ background: '#f8fafc', color: '#475569', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
+                                  <th style={{ padding: '6px 8px' }}>N° Parte</th>
+                                  <th style={{ padding: '6px 8px' }}>Cant</th>
+                                  <th style={{ padding: '6px 8px', textAlign: 'right' }}>Límite</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {(op.items || []).map((it) => (
+                                  <tr key={it.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                    <td style={{ padding: '6px 8px', fontWeight: 600 }}>{it.numeroParte}</td>
+                                    <td style={{ padding: '6px 8px' }}>{it.cantidad}</td>
+                                    <td style={{ padding: '6px 8px', textAlign: 'right', color: '#059669', fontWeight: 600 }}>S/ {Number(it.limiteUnitario).toFixed(2)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        {/* Card: Documento Oficial de Perú Compras */}
+                        <div style={{ background: '#ffffff', border: '1.5px solid #cbd5e1', borderRadius: 0, padding: 20 }}>
+                          <div style={{ fontSize: '12px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <GoogleIcon name="attach_file" size={16} color="#059669" />
+                            <span>3. Documento Oficial de Perú Compras *</span>
+                          </div>
+                          <p style={{ fontSize: '11.5px', color: '#64748b', margin: '0 0 14px' }}>
+                            Requisito obligatorio para habilitar las solicitudes de pago de proveedor y transporte.
+                          </p>
+
+                          <div
+                            style={{
+                              border: '2px dashed #94a3b8',
+                              background: '#f8fafc',
+                              padding: 20,
+                              textAlign: 'center',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              gap: 10,
+                            }}
+                          >
+                            <input
+                              type="file"
+                              id={`archivo-oc-fullscreen-${op.id}`}
+                              accept=".pdf,image/*"
+                              onChange={handleArchivoOCChange}
+                              style={{ display: 'none' }}
+                            />
+                            <GoogleIcon name="cloud_upload" size={40} color="#2563eb" />
+                            <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
+                              {formOC.archivoNombre ? formOC.archivoNombre : 'Selecciona o arrastra la Orden de Compra de Perú Compras'}
+                            </div>
+                            <div style={{ fontSize: '11.5px', color: '#64748b' }}>
+                              Formatos soportados: <strong>PDF, JPG, PNG</strong>
+                            </div>
+                            <label
+                              htmlFor={`archivo-oc-fullscreen-${op.id}`}
+                              style={{
+                                padding: '9px 18px',
+                                background: '#0f172a',
+                                color: '#ffffff',
+                                fontSize: '12.5px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                borderRadius: 0,
+                                marginTop: 6,
+                              }}
+                            >
+                              <GoogleIcon name="upload_file" size={16} color="#ffffff" />
+                              <span>{formOC.archivoNombre ? 'Cambiar Archivo' : 'Examinar Documento Oficial'}</span>
+                            </label>
+                          </div>
+
+                          {formOC.archivoOCUrl && (
+                            <div style={{ marginTop: 14, padding: 12, background: '#f0fdf4', border: '1px solid #86efac', display: 'flex', alignItems: 'center', gap: 8, fontSize: '12px', color: '#166534' }}>
+                              <GoogleIcon name="verified" size={18} color="#16a34a" />
+                              <span>Documento verificado y adjuntado con éxito. Se habilitarán los pagos al guardar.</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* COLUMNA DERECHA: Formulario de Datos Emitidos y OCAM */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                        {/* Card: Datos de la Orden de Compra Emitida */}
+                        <div style={{ background: '#ffffff', border: '1.5px solid #cbd5e1', borderRadius: 0, padding: 20 }}>
+                          <div style={{ fontSize: '12px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <GoogleIcon name="receipt" size={16} color="#2563eb" />
+                            <span>1. Datos de la Orden de Compra Emitida</span>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                            <Field label="N° de Orden de Compra *" value={
+                              <input style={{ ...inputStyle, borderRadius: 0, padding: '11px 12px' }} placeholder="OC-2026-0000001" value={formOC.numeroOC} onChange={(e) => setFormOC({ ...formOC, numeroOC: e.target.value })} />
+                            } />
+                            <Field label="Fecha y hora de emisión" value={
+                              <input type="datetime-local" style={{ ...inputStyle, borderRadius: 0, padding: '11px 12px' }} value={formOC.fechaEmisionOC} onChange={(e) => setFormOC({ ...formOC, fechaEmisionOC: e.target.value })} />
+                            } />
+                          </div>
+                        </div>
+
+                        {/* Card: Datos de la OCAM (Perú Compras) */}
+                        <div style={{ background: '#ffffff', border: '1.5px solid #cbd5e1', borderRadius: 0, padding: 20 }}>
+                          <div style={{ fontSize: '12px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <GoogleIcon name="verified" size={16} color="#059669" />
+                            <span>2. Datos de la OCAM (Perú Compras)</span>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+                            <Field label="N° OCAM *" value={
+                              <input style={{ ...inputStyle, borderRadius: 0, padding: '11px 12px' }} placeholder="OCAM-2026-000001234" value={formOC.nroOCAM} onChange={(e) => setFormOC({ ...formOC, nroOCAM: e.target.value })} />
+                            } />
+                            <Field label="N° Expediente *" value={
+                              <input style={{ ...inputStyle, borderRadius: 0, padding: '11px 12px' }} placeholder="EE-2026-0000001" value={formOC.nroExpediente} onChange={(e) => setFormOC({ ...formOC, nroExpediente: e.target.value })} />
+                            } />
+                            <Field label="N° de Folio *" value={
+                              <input style={{ ...inputStyle, borderRadius: 0, padding: '11px 12px' }} placeholder="FOLIO-001" value={formOC.nroFolio} onChange={(e) => setFormOC({ ...formOC, nroFolio: e.target.value })} />
+                            } />
+                            <Field label="Unidad (u.o.e.) *" value={
+                              <input style={{ ...inputStyle, borderRadius: 0, padding: '11px 12px' }} placeholder="Ej: Municipalidad de Lima" value={formOC.unidad} onChange={(e) => setFormOC({ ...formOC, unidad: e.target.value })} />
+                            } />
+                            <Field label="Código CIAF *" value={
+                              <input style={{ ...inputStyle, borderRadius: 0, padding: '11px 12px' }} placeholder="CIAF-2026-000001" value={formOC.codigoCIAF} onChange={(e) => setFormOC({ ...formOC, codigoCIAF: e.target.value })} />
+                            } />
+                            <Field label="Monto OCAM / Techo Presupuestal (S/) *" value={
+                              <>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  max={costoInicialRequerimiento > 0 ? costoInicialRequerimiento : undefined}
+                                  style={{ ...inputStyle, borderRadius: 0, padding: '11px 12px', fontWeight: 800, color: '#059669', fontSize: '14px' }}
+                                  placeholder="0.00"
+                                  value={formOC.montoOCAM}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    // No permitir un monto mayor al límite total del requerimiento
+                                    if (costoInicialRequerimiento > 0 && Number(val) > costoInicialRequerimiento) {
+                                      flash(true, `El monto OCAM no puede superar el límite total (S/ ${costoInicialRequerimiento.toLocaleString('es-PE', { minimumFractionDigits: 2 })}).`);
+                                      return;
+                                    }
+                                    setFormOC({ ...formOC, montoOCAM: val });
+                                  }}
+                                />
+                                {costoInicialRequerimiento > 0 && (
+                                  <div style={{ fontSize: '11px', color: '#b45309', fontWeight: 600, padding: '4px 12px 6px', background: '#fffbeb' }}>
+                                    Máximo permitido: S/ {costoInicialRequerimiento.toLocaleString('es-PE', { minimumFractionDigits: 2 })} (límite total)
+                                  </div>
+                                )}
+                              </>
+                            } />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* BARRA INFERIOR FIJA DE ACCIONES */}
+                <div
+                  style={{
+                    background: '#ffffff',
+                    borderTop: '2px solid #e2e8f0',
+                    padding: '16px 36px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexShrink: 0,
+                  }}
+                >
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>
+                    * Todos los campos marcados son obligatorios para validar la buena pro oficial de Perú Compras.
+                  </div>
+                  <div style={{ display: 'flex', gap: 12 }}>
                     <button
                       type="button"
                       onClick={() => setMostrarRegistrar(false)}
                       style={{
-                        background: 'transparent',
-                        border: '1.5px solid #475569',
-                        color: '#cbd5e1',
-                        padding: '8px 16px',
-                        cursor: 'pointer',
+                        padding: '11px 22px',
+                        background: '#ffffff',
+                        border: '1.5px solid #cbd5e1',
+                        color: '#475569',
                         fontWeight: 700,
                         fontSize: '13px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
+                        cursor: 'pointer',
                         borderRadius: 0,
                       }}
                     >
-                      <GoogleIcon name="close" size={18} color="#cbd5e1" />
-                      <span>Cerrar Pantalla</span>
+                      Cancelar y Volver
+                    </button>
+                    <button
+                      type="button"
+                      disabled={registrarBusy}
+                      onClick={handleRegistrarOC}
+                      style={{
+                        padding: '11px 26px',
+                        background: '#059669',
+                        border: 'none',
+                        color: '#ffffff',
+                        fontWeight: 800,
+                        fontSize: '13.5px',
+                        cursor: registrarBusy ? 'not-allowed' : 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        borderRadius: 0,
+                        opacity: registrarBusy ? 0.6 : 1,
+                      }}
+                    >
+                      <GoogleIcon name="save" size={18} color="#ffffff" />
+                      <span>{registrarBusy ? 'Registrando y pasando a Cotización…' : 'Registrar OCAM y Pasar a Cotización'}</span>
                     </button>
                   </div>
-
-                  {/* CUERPO CENTRAL DE PANTALLA COMPLETA CON SCROLL */}
-                  <div
-                    style={{
-                      flex: 1,
-                      overflowY: 'auto',
-                      background: '#f8fafc',
-                      padding: '28px 36px',
-                    }}
-                  >
-                    <div style={{ maxWidth: 1360, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
-                      {/* Banner Informativo Superior */}
-                      <div
-                        style={{
-                          background: '#eff6ff',
-                          border: '1.5px solid #bfdbfe',
-                          borderRadius: 0,
-                          padding: '14px 20px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: 16,
-                          flexWrap: 'wrap',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                          <GoogleIcon name="info" size={22} color="#2563eb" />
-                          <div style={{ fontSize: '13px', color: '#1e40af' }}>
-                            <strong>Flujo Oficial:</strong> Este registro formaliza la adjudicación con la <strong>Orden de Compra emitida por Perú Compras</strong>. Al completar Folio, Expediente, OCAM y documento, se habilitarán las solicitudes de pago a proveedores y flete.
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: 16, fontSize: '12px', color: '#334155' }}>
-                          <span>Entidad: <strong>{op.entidadConvocante || op.empresaRazonSocial || 'Entidad'}</strong></span>
-                          <span>&bull;</span>
-                          <span>Límite Cotizado: <strong>S/ {Number(op.limiteTotal).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</strong></span>
-                        </div>
-                      </div>
-
-                      {/* Grid de 2 Columnas: Izquierda Resumen y Evidencias, Derecha Formulario de la OC */}
-                      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(420px, 1.4fr)', gap: 24, alignItems: 'start' }}>
-                        
-                        {/* COLUMNA IZQUIERDA: Resumen de Requerimiento y Documento Oficial */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                          {/* Card: Resumen del Requerimiento */}
-                          <div style={{ background: '#ffffff', border: '1.5px solid #cbd5e1', borderRadius: 0, padding: 20 }}>
-                            <div style={{ fontSize: '12px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <GoogleIcon name="description" size={16} color="#2563eb" />
-                              <span>Detalle del Requerimiento</span>
-                            </div>
-                            
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-                              <div>
-                                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, display: 'block' }}>N° Requerimiento:</span>
-                                <strong style={{ fontSize: '14px', color: '#0f172a' }}>{op.numeroRequerimiento}</strong>
-                              </div>
-                              <div>
-                                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, display: 'block' }}>Estado Actual:</span>
-                                <span style={{ padding: '2px 8px', background: '#ecfdf5', color: '#059669', fontWeight: 700, fontSize: '12px' }}>
-                                  {op.estado}
-                                </span>
-                              </div>
-                              <div>
-                                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, display: 'block' }}>Entidad Convocante:</span>
-                                <span style={{ fontSize: '12.5px', color: '#1e293b', fontWeight: 600 }}>{op.entidadConvocante || op.empresaRazonSocial || 'No especificada'}</span>
-                              </div>
-                              <div>
-                                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, display: 'block' }}>Límite Total:</span>
-                                <strong style={{ fontSize: '14px', color: '#059669' }}>S/ {Number(op.limiteTotal).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</strong>
-                              </div>
-                            </div>
-
-                            {/* Items del Requerimiento */}
-                            <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 6 }}>
-                              Productos a Atender ({op.items?.length || 0})
-                            </div>
-                            <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid #e2e8f0' }}>
-                              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11.5px' }}>
-                                <thead>
-                                  <tr style={{ background: '#f8fafc', color: '#475569', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
-                                    <th style={{ padding: '6px 8px' }}>N° Parte</th>
-                                    <th style={{ padding: '6px 8px' }}>Cant</th>
-                                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>Límite</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {(op.items || []).map((it) => (
-                                    <tr key={it.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                      <td style={{ padding: '6px 8px', fontWeight: 600 }}>{it.numeroParte}</td>
-                                      <td style={{ padding: '6px 8px' }}>{it.cantidad}</td>
-                                      <td style={{ padding: '6px 8px', textAlign: 'right', color: '#059669', fontWeight: 600 }}>S/ {Number(it.limiteUnitario).toFixed(2)}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-
-                          {/* Card: Documento Oficial de Perú Compras */}
-                          <div style={{ background: '#ffffff', border: '1.5px solid #cbd5e1', borderRadius: 0, padding: 20 }}>
-                            <div style={{ fontSize: '12px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <GoogleIcon name="attach_file" size={16} color="#059669" />
-                              <span>3. Documento Oficial de Perú Compras *</span>
-                            </div>
-                            <p style={{ fontSize: '11.5px', color: '#64748b', margin: '0 0 14px' }}>
-                              Requisito obligatorio para habilitar las solicitudes de pago de proveedor y transporte.
-                            </p>
-
-                            <div
-                              style={{
-                                border: '2px dashed #94a3b8',
-                                background: '#f8fafc',
-                                padding: 20,
-                                textAlign: 'center',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                gap: 10,
-                              }}
-                            >
-                              <input
-                                type="file"
-                                id={`archivo-oc-fullscreen-${op.id}`}
-                                accept=".pdf,image/*"
-                                onChange={handleArchivoOCChange}
-                                style={{ display: 'none' }}
-                              />
-                              <GoogleIcon name="cloud_upload" size={40} color="#2563eb" />
-                              <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
-                                {formOC.archivoNombre ? formOC.archivoNombre : 'Selecciona o arrastra la Orden de Compra de Perú Compras'}
-                              </div>
-                              <div style={{ fontSize: '11.5px', color: '#64748b' }}>
-                                Formatos soportados: <strong>PDF, JPG, PNG</strong>
-                              </div>
-                              <label
-                                htmlFor={`archivo-oc-fullscreen-${op.id}`}
-                                style={{
-                                  padding: '9px 18px',
-                                  background: '#0f172a',
-                                  color: '#ffffff',
-                                  fontSize: '12.5px',
-                                  fontWeight: 700,
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: 6,
-                                  borderRadius: 0,
-                                  marginTop: 6,
-                                }}
-                              >
-                                <GoogleIcon name="upload_file" size={16} color="#ffffff" />
-                                <span>{formOC.archivoNombre ? 'Cambiar Archivo' : 'Examinar Documento Oficial'}</span>
-                              </label>
-                            </div>
-
-                            {formOC.archivoOCUrl && (
-                              <div style={{ marginTop: 14, padding: 12, background: '#f0fdf4', border: '1px solid #86efac', display: 'flex', alignItems: 'center', gap: 8, fontSize: '12px', color: '#166534' }}>
-                                <GoogleIcon name="verified" size={18} color="#16a34a" />
-                                <span>Documento verificado y adjuntado con éxito. Se habilitarán los pagos al guardar.</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* COLUMNA DERECHA: Formulario de Datos Emitidos y OCAM */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                          {/* Card: Datos de la Orden de Compra Emitida */}
-                          <div style={{ background: '#ffffff', border: '1.5px solid #cbd5e1', borderRadius: 0, padding: 20 }}>
-                            <div style={{ fontSize: '12px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <GoogleIcon name="receipt" size={16} color="#2563eb" />
-                              <span>1. Datos de la Orden de Compra Emitida</span>
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                              <Field label="N° de Orden de Compra *" value={
-                                <input style={{ ...inputStyle, borderRadius: 0, padding: '11px 12px' }} placeholder="OC-2026-0000001" value={formOC.numeroOC} onChange={(e) => setFormOC({ ...formOC, numeroOC: e.target.value })} />
-                              } />
-                              <Field label="Fecha y hora de emisión" value={
-                                <input type="datetime-local" style={{ ...inputStyle, borderRadius: 0, padding: '11px 12px' }} value={formOC.fechaEmisionOC} onChange={(e) => setFormOC({ ...formOC, fechaEmisionOC: e.target.value })} />
-                              } />
-                            </div>
-                          </div>
-
-                          {/* Card: Datos de la OCAM (Perú Compras) */}
-                          <div style={{ background: '#ffffff', border: '1.5px solid #cbd5e1', borderRadius: 0, padding: 20 }}>
-                            <div style={{ fontSize: '12px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <GoogleIcon name="verified" size={16} color="#059669" />
-                              <span>2. Datos de la OCAM (Perú Compras)</span>
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
-                              <Field label="N° OCAM *" value={
-                                <input style={{ ...inputStyle, borderRadius: 0, padding: '11px 12px' }} placeholder="OCAM-2026-000001234" value={formOC.nroOCAM} onChange={(e) => setFormOC({ ...formOC, nroOCAM: e.target.value })} />
-                              } />
-                              <Field label="N° Expediente *" value={
-                                <input style={{ ...inputStyle, borderRadius: 0, padding: '11px 12px' }} placeholder="EE-2026-0000001" value={formOC.nroExpediente} onChange={(e) => setFormOC({ ...formOC, nroExpediente: e.target.value })} />
-                              } />
-                              <Field label="N° de Folio *" value={
-                                <input style={{ ...inputStyle, borderRadius: 0, padding: '11px 12px' }} placeholder="FOLIO-001" value={formOC.nroFolio} onChange={(e) => setFormOC({ ...formOC, nroFolio: e.target.value })} />
-                              } />
-                              <Field label="Unidad (u.o.e.) *" value={
-                                <input style={{ ...inputStyle, borderRadius: 0, padding: '11px 12px' }} placeholder="Ej: Municipalidad de Lima" value={formOC.unidad} onChange={(e) => setFormOC({ ...formOC, unidad: e.target.value })} />
-                              } />
-                              <Field label="Código CIAF *" value={
-                                <input style={{ ...inputStyle, borderRadius: 0, padding: '11px 12px' }} placeholder="CIAF-2026-000001" value={formOC.codigoCIAF} onChange={(e) => setFormOC({ ...formOC, codigoCIAF: e.target.value })} />
-                              } />
-                              <Field label="Monto OCAM / Techo Presupuestal (S/) *" value={
-                                <input type="number" step="0.01" min="0" style={{ ...inputStyle, borderRadius: 0, padding: '11px 12px', fontWeight: 800, color: '#059669', fontSize: '14px' }} placeholder="0.00" value={formOC.montoOCAM} onChange={(e) => setFormOC({ ...formOC, montoOCAM: e.target.value })} />
-                              } />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* BARRA INFERIOR FIJA DE ACCIONES */}
-                  <div
-                    style={{
-                      background: '#ffffff',
-                      borderTop: '2px solid #e2e8f0',
-                      padding: '16px 36px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <div style={{ fontSize: '12px', color: '#64748b' }}>
-                      * Todos los campos marcados son obligatorios para validar la buena pro oficial de Perú Compras.
-                    </div>
-                    <div style={{ display: 'flex', gap: 12 }}>
-                      <button
-                        type="button"
-                        onClick={() => setMostrarRegistrar(false)}
-                        style={{
-                          padding: '11px 22px',
-                          background: '#ffffff',
-                          border: '1.5px solid #cbd5e1',
-                          color: '#475569',
-                          fontWeight: 700,
-                          fontSize: '13px',
-                          cursor: 'pointer',
-                          borderRadius: 0,
-                        }}
-                      >
-                        Cancelar y Volver
-                      </button>
-                      <button
-                        type="button"
-                        disabled={registrarBusy}
-                        onClick={handleRegistrarOC}
-                        style={{
-                          padding: '11px 26px',
-                          background: '#059669',
-                          border: 'none',
-                          color: '#ffffff',
-                          fontWeight: 800,
-                          fontSize: '13.5px',
-                          cursor: registrarBusy ? 'not-allowed' : 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 8,
-                          borderRadius: 0,
-                          opacity: registrarBusy ? 0.6 : 1,
-                        }}
-                      >
-                        <GoogleIcon name="save" size={18} color="#ffffff" />
-                        <span>{registrarBusy ? 'Registrando y pasando a Cotización…' : 'Registrar OCAM y Pasar a Cotización'}</span>
-                      </button>
-                    </div>
-                  </div>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setMostrarRegistrar(true)}
-                  style={{ ...btn(accent), borderRadius: 0, alignSelf: 'flex-start' }}
-                >
-                  <GoogleIcon name="receipt_long" size={15} color="#ffffff" />
-                  Registrar Orden de Compra Oficial (Perú Compras) y Pasar a Cotización
-                </button>
-              )
-            )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setMostrarRegistrar(true)}
+                style={{ ...btn(accent), borderRadius: 0, alignSelf: 'flex-start' }}
+              >
+                <GoogleIcon name="receipt_long" size={15} color="#ffffff" />
+                Registrar Orden de Compra Oficial (Perú Compras) y Pasar a Cotización
+              </button>
+            )
+          )}
         </div>
       ) : (
         <>

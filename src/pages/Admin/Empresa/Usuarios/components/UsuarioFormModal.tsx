@@ -1,18 +1,7 @@
 import { useState, useEffect } from 'react';
-import type { UsuarioDto, CrearUsuarioRequest, ActualizarUsuarioRequest, RolDto } from '../../../../../api/Dtos/Usuario';
-import type { EmpleadoDto } from '../../../../../api/Dtos/Empleado';
-import type { SedeDto } from '../../../../../api/Dtos/Sede';
-import { GoogleIcon } from '../../../../../components/GoogleIcon';
-
-interface Props {
-  open: boolean;
-  usuario?: UsuarioDto | null;
-  roles: RolDto[];
-  empleados: EmpleadoDto[];
-  sedes: SedeDto[];
-  onClose: () => void;
-  onSave: (data: CrearUsuarioRequest | ActualizarUsuarioRequest) => Promise<void>;
-}
+import type { CrearUsuarioRequest, ActualizarUsuarioRequest } from '../../../../../api/Dtos/Usuario';
+import { GoogleIcon } from '../../../../../components/GoogleIcon/GoogleIcon';
+import type { PropsUsuario } from './PropsUsuario';
 
 const EMPTY_CREATE: CrearUsuarioRequest = {
   email: '',
@@ -31,7 +20,7 @@ const EMPTY_UPDATE: ActualizarUsuarioRequest = {
   activo: true,
 };
 
-export default function UsuarioFormModal({ open, usuario, roles, empleados, sedes, onClose, onSave }: Props) {
+export default function UsuarioFormModal({ open, usuario, roles, empleados, sedes, onClose, onSave }: PropsUsuario) {
   const isEditing = !!usuario;
   const [createForm, setCreateForm] = useState<CrearUsuarioRequest>(EMPTY_CREATE);
   const [updateForm, setUpdateForm] = useState<ActualizarUsuarioRequest>(EMPTY_UPDATE);

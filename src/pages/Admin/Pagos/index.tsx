@@ -1,11 +1,11 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // src/pages/Admin/Pagos/index.tsx
-// Módulo principal de Pagos para el rol de Administrador
+// Módulo principal de Solicitudes de Pago y Liquidaciones de OC
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { GoogleIcon } from '../../../components/GoogleIcon';
+import { GoogleIcon } from '../../../components/GoogleIcon/GoogleIcon';
 import { getOportunidadesApi } from '../../../api/services/oportunidades.service';
 import { mapApiToOportunidad } from '../../../hooks/useOportunidades';
 import type { Oportunidad } from '../../../types/oportunidades';
@@ -30,8 +30,8 @@ export const PagosPage: React.FC<PagosPageProps> = ({ roleAccent = '#2563eb' }) 
   const [oportunidades, setOportunidades] = useState<Oportunidad[]>([]);
   const [pagos, setPagos] = useState<PagoOC[]>(() => obtenerPagos());
   const [loading, setLoading] = useState(true);
+  const [pagoParaCorregir, setPagoParaCorregir] = useState<PagoOC | null>(null);
 
-  // Carga de oportunidades desde el backend / servicio
   const cargarOportunidades = useCallback(async () => {
     try {
       setLoading(true);
@@ -60,7 +60,6 @@ export const PagosPage: React.FC<PagosPageProps> = ({ roleAccent = '#2563eb' }) 
     refrescarPagos();
   }, [cargarOportunidades, refrescarPagos]);
 
-  // Escuchar evento personalizado de actualización de pagos
   useEffect(() => {
     const handleUpdate = () => refrescarPagos();
     window.addEventListener('sales_rebel_pagos_updated', handleUpdate);
@@ -68,6 +67,9 @@ export const PagosPage: React.FC<PagosPageProps> = ({ roleAccent = '#2563eb' }) 
   }, [refrescarPagos]);
 
   const cambiarTab = (tab: TabPagos, extraParams?: Record<string, string>) => {
+    if (tab !== 'registrar') {
+      setPagoParaCorregir(null);
+    }
     const nextParams = new URLSearchParams(searchParams);
     nextParams.set('tab', tab);
     if (extraParams) {
@@ -79,12 +81,19 @@ export const PagosPage: React.FC<PagosPageProps> = ({ roleAccent = '#2563eb' }) 
   };
 
   const handlePagoRegistrado = (_nuevoPago: PagoOC) => {
+    setPagoParaCorregir(null);
     refrescarPagos();
     cambiarTab('historial');
   };
 
   const handleRegistrarParaOC = (numeroOC: string) => {
+    setPagoParaCorregir(null);
     cambiarTab('registrar', { oc: numeroOC });
+  };
+
+  const handleCorregirPago = (pago: PagoOC) => {
+    setPagoParaCorregir(pago);
+    cambiarTab('registrar', { oc: pago.numeroOC });
   };
 
   return (
@@ -96,14 +105,14 @@ export const PagosPage: React.FC<PagosPageProps> = ({ roleAccent = '#2563eb' }) 
             <GoogleIcon name="payments" size={28} color="#fff" />
           </div>
           <div className="pagos-header__text">
-            <h1>Módulo de Pagos y Liquidaciones de OC</h1>
+            <h1>Módulo de Solicitudes de Pago y Seguimiento de OC</h1>
             <p>
-              Registra pagos de <strong>flete</strong>, <strong>comisiones</strong>, <strong>gastos varios</strong> y compra de mercadería vinculados a Órdenes de Compra.
+              Solicita y gestiona pagos de <strong>mercadería</strong>, <strong>flete</strong> y otros conceptos con control de cuenta bancaria de la entidad y ajustes de flete.
             </p>
           </div>
         </div>
 
-        {/* Push-button selector de pestañas sincronizado con Sidebar */}
+        {/* Push-button selector de pestañas */}
         <div className="pagos-push-tabs">
           <button
             type="button"
@@ -111,19 +120,22 @@ export const PagosPage: React.FC<PagosPageProps> = ({ roleAccent = '#2563eb' }) 
             onClick={() => cambiarTab('historial')}
           >
             <GoogleIcon name="receipt_long" size={18} />
-            <span>Historial de Pagos</span>
+            <span>Solicitudes de Pago</span>
             <span className="pagos-push-btn__badge">{pagos.length}</span>
           </button>
 
           <button
             type="button"
             className={`pagos-push-btn ${currentTab === 'registrar' ? 'pagos-push-btn--active' : ''}`}
-            onClick={() => cambiarTab('registrar')}
+            onClick={() => {
+              setPagoParaCorregir(null);
+              cambiarTab('registrar');
+            }}
           >
             <GoogleIcon name="add_card" size={18} />
-            <span>Agregar Pago</span>
+            <span>{pagoParaCorregir ? 'Corregir Pago' : 'Solicitar Pago'}</span>
             <span className="pagos-push-btn__badge" style={{ background: '#ecfdf5', color: '#059669' }}>
-              Nuevo
+              {pagoParaCorregir ? 'Corrección' : 'Nuevo'}
             </span>
           </button>
 
@@ -141,7 +153,15 @@ export const PagosPage: React.FC<PagosPageProps> = ({ roleAccent = '#2563eb' }) 
       {/* Contenido según la pestaña activa */}
       {loading && oportunidades.length === 0 ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
-          <span className="pagos-spinner" style={{ width: '24px', height: '24px', borderColor: 'rgba(37, 99, 235, 0.3)', borderTopColor: roleAccent }} />
+          <span
+            className="pagos-spinner"
+            style={{
+              width: '24px',
+              height: '24px',
+              borderColor: 'rgba(37, 99, 235, 0.3)',
+              borderTopColor: roleAccent,
+            }}
+          />
         </div>
       ) : (
         <>
@@ -150,6 +170,7 @@ export const PagosPage: React.FC<PagosPageProps> = ({ roleAccent = '#2563eb' }) 
               oportunidades={oportunidades}
               roleAccent={roleAccent}
               preselectedOC={ocParam}
+              pagoParaCorregir={pagoParaCorregir}
               onPagoRegistrado={handlePagoRegistrado}
               onCancelar={() => cambiarTab('historial')}
             />
@@ -159,9 +180,13 @@ export const PagosPage: React.FC<PagosPageProps> = ({ roleAccent = '#2563eb' }) 
             <HistorialPagosView
               pagos={pagos}
               roleAccent={roleAccent}
-              onNuevoPagoClick={() => cambiarTab('registrar')}
+              onNuevoPagoClick={() => {
+                setPagoParaCorregir(null);
+                cambiarTab('registrar');
+              }}
               onPagosActualizados={refrescarPagos}
               onFiltrarPorOC={handleRegistrarParaOC}
+              onCorregirPago={handleCorregirPago}
             />
           )}
 

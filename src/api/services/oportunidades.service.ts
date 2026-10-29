@@ -63,6 +63,9 @@ export interface ProductoItemPayload {
   condicionesAdicionales?: string | null;
   fichaTecnica?: string | null;
   proveedores?: ItemProveedorPayload[];
+  /** % de ajuste de flete solicitado (queda 'Pendiente' hasta que la administradora lo resuelva) */
+  ajusteFleteSolicitadoPorcentaje?: number | null;
+  ajusteFleteMotivo?: string | null;
 }
 
 export interface CrearOportunidadApiRequest {
@@ -120,6 +123,11 @@ export interface OportunidadApiResponse {
     condicionesAdicionales?: string | null;
     fichaTecnica?: string | null;
     proveedores?: ItemProveedorApiResponse[];
+    ajusteFletePorcentaje?: number | null;
+    ajusteFleteSolicitadoPorcentaje?: number | null;
+    ajusteFleteMotivo?: string | null;
+    ajusteFleteEstado?: 'Pendiente' | 'Aprobado' | 'Rechazado' | null;
+    ajusteFleteComentarioAdmin?: string | null;
     cantidadAsignada?: number;
     costoTotalProveedores?: number;
   }[];
@@ -284,7 +292,16 @@ export async function cambiarEstadoApi(
     let errMsg = 'Error al cambiar estado';
     try {
       const err = await response.json();
-      errMsg = err.mensaje || err.message || err.title || err.detail || (typeof err === 'string' ? err : 'Error al cambiar estado');
+      if (err && typeof err === 'object' && err.errors && typeof err.errors === 'object') {
+        const errorList = Object.values(err.errors).flat().filter(Boolean);
+        if (errorList.length > 0) {
+          errMsg = errorList.join(' ');
+        } else {
+          errMsg = err.mensaje || err.message || err.title || err.detail || 'Error al cambiar estado';
+        }
+      } else {
+        errMsg = err.mensaje || err.message || err.title || err.detail || (typeof err === 'string' ? err : 'Error al cambiar estado');
+      }
     } catch {
       try {
         const text = await response.text();
@@ -295,6 +312,49 @@ export async function cambiarEstadoApi(
     }
     throw new Error(errMsg);
   }
+  return response.json();
+}
+
+// ═══ AJUSTE DE FLETE POR PRODUCTO (requiere aprobación de la administradora) ═══
+// Contrato esperado del backend:
+//   POST  /api/oportunidades/{id}/productos/{productoId}/ajuste-flete
+//         body { porcentaje, motivo }       -> deja el ajuste en estado 'Pendiente'
+//   PATCH /api/oportunidades/{id}/productos/{productoId}/ajuste-flete
+//         body { aprobado, comentario }     -> 'Aprobado' (el % solicitado pasa a vigente) o 'Rechazado'
+
+export interface SolicitarAjusteFleteRequest {
+  porcentaje: number;
+  motivo: string;
+}
+
+export interface ResolverAjusteFleteRequest {
+  aprobado: boolean;
+  comentario?: string | null;
+}
+
+export async function solicitarAjusteFleteApi(
+  oportunidadId: number | string,
+  productoId: number | string,
+  data: SolicitarAjusteFleteRequest
+): Promise<OportunidadApiResponse> {
+  const response = await fetch(
+    `${API_BASE}/api/oportunidades/${oportunidadId}/productos/${productoId}/ajuste-flete`,
+    { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(data) }
+  );
+  if (!response.ok) throw new Error(await erroresApi(response, 'Error al solicitar el ajuste de flete'));
+  return response.json();
+}
+
+export async function resolverAjusteFleteApi(
+  oportunidadId: number | string,
+  productoId: number | string,
+  data: ResolverAjusteFleteRequest
+): Promise<OportunidadApiResponse> {
+  const response = await fetch(
+    `${API_BASE}/api/oportunidades/${oportunidadId}/productos/${productoId}/ajuste-flete`,
+    { method: 'PATCH', headers: getAuthHeaders(), body: JSON.stringify(data) }
+  );
+  if (!response.ok) throw new Error(await erroresApi(response, 'Error al resolver el ajuste de flete'));
   return response.json();
 }
 

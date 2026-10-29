@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GoogleIcon } from '../GoogleIcon';
+import { GoogleIcon } from '../GoogleIcon/GoogleIcon';
 import { getEmpresasApi } from '../../api/services/empresa.service';
 import type { EmpresaOption } from '../../api/Dtos/Empresa';
 import './BuscadorEmpresaModal.css';
@@ -116,10 +116,10 @@ export const BuscadorEmpresaModal: React.FC<BuscadorEmpresaModalProps> = ({ onCl
                   </tr>
                 ) : (
                   empresas.map((emp) => (
-                    <tr 
-                      key={emp.id} 
-                      style={{ 
-                        opacity: loading ? 0.5 : 1, 
+                    <tr
+                      key={emp.id}
+                      style={{
+                        opacity: loading ? 0.5 : 1,
                         transition: 'opacity 0.2s ease-in-out',
                         pointerEvents: loading ? 'none' : 'auto'
                       }}
@@ -127,7 +127,7 @@ export const BuscadorEmpresaModal: React.FC<BuscadorEmpresaModalProps> = ({ onCl
                       <td><span className="empresa-ruc">{emp.ruc}</span></td>
                       <td><div className="empresa-name" title={emp.razonSocial}>{emp.razonSocial}</div></td>
                       <td style={{ textAlign: 'center' }}>
-                        <button 
+                        <button
                           className="empresa-modal-select-btn"
                           onClick={() => onSelect(emp)}
                           disabled={loading}
@@ -148,15 +148,15 @@ export const BuscadorEmpresaModal: React.FC<BuscadorEmpresaModalProps> = ({ onCl
             Mostrando {empresas.length > 0 ? (page - 1) * limit + 1 : 0} al {Math.min(page * limit, totalCount)} de <strong>{totalCount}</strong> empresas
           </div>
           <div className="empresa-modal-pagination-controls">
-            <button 
-              className="empresa-modal-page-btn" 
+            <button
+              className="empresa-modal-page-btn"
               disabled={page === 1}
               onClick={() => setPage(page - 1)}
             >
               <GoogleIcon name="chevron_left" size={16} /> Anterior
             </button>
-            <button 
-              className="empresa-modal-page-btn" 
+            <button
+              className="empresa-modal-page-btn"
               disabled={page >= totalPages}
               onClick={() => setPage(page + 1)}
             >

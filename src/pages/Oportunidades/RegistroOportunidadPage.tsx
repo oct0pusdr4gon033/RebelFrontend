@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
-import { GoogleIcon } from '../../components/GoogleIcon';
+import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
 import { useAuth } from '../../context/AuthContext';
 import {
   createOportunidadApi,
@@ -27,6 +27,8 @@ import { PodioComercialView } from './PodioComercialView';
 import { SubirEvidenciaView } from './SubirEvidenciaView';
 import { MisOportunidadesView } from './MisOportunidadesView';
 import { isOportunidadOwner } from '../../utils/oportunidadUtils';
+import { esOportunidadInmutable } from '../../utils/oportunidadCompletitud';
+import { montoAjusteUnitario, montoAjusteItem, formatoSoles, validarSolicitudAjusteFlete } from '../../utils/ajusteFleteUtils';
 
 const nuevoItem = (limiteUnitario = 0): ProductoItem => ({
   id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -93,6 +95,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
   const [marcasCatalogo, setMarcasCatalogo] = useState<Marca[]>([]);
   const [selectedMarcas, setSelectedMarcas] = useState<Marca[]>([]);
   const [marcaSearch, setMarcaSearch] = useState('');
+  const [quickMarcaSearch, setQuickMarcaSearch] = useState('');
   const [isMarcaOpen, setIsMarcaOpen] = useState(false);
   const [isQuickMarcaOpen, setIsQuickMarcaOpen] = useState(false);
   const marcaRef = useRef<HTMLDivElement>(null);
@@ -160,6 +163,11 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
             precioUnitarioOfertado: p.precioUnitarioOfertado ?? null,
             condicionesAdicionales: p.condicionesAdicionales ?? '',
             fichaTecnica: p.fichaTecnica ?? '',
+            ajusteFletePorcentaje: p.ajusteFletePorcentaje ?? null,
+            ajusteFleteSolicitadoPorcentaje: p.ajusteFleteSolicitadoPorcentaje ?? null,
+            ajusteFleteMotivo: p.ajusteFleteMotivo ?? null,
+            ajusteFleteEstado: p.ajusteFleteEstado ?? null,
+            ajusteFleteComentarioAdmin: p.ajusteFleteComentarioAdmin ?? null,
             proveedores: (p.proveedores ?? []).map((pv) => ({
               id: pv.id,
               nombreProveedor: pv.nombreProveedor,
@@ -433,6 +441,18 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
       alert(`No tienes permisos para editar esta licitación. Solo puede ser editada por ${op.creadoPor || 'el usuario que la registró'}.`);
       return;
     }
+    // REGLA: la oportunidad completa y confirmada es INMUTABLE
+    if (esOportunidadInmutable(op)) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Oportunidad inmutable',
+        html: `La oportunidad <strong>${op.numeroRequerimiento}</strong> ya fue validada con doble confirmación y <strong>no se puede editar</strong>.<br/><br/><span style="color:#64748b; font-size:13px;">Si hay un error, comunícalo a la administradora.</span>`,
+        confirmButtonColor: roleAccent || '#0284c7',
+        confirmButtonText: 'Entendido',
+        customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
+      });
+      return;
+    }
     setActiveTab('registrar');
     setEditingId(op.id);
     setNumeroRequerimiento(op.numeroRequerimiento);
@@ -592,6 +612,25 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
       }
     }
 
+    // Validación: ajuste de flete (% sobre el límite unitario + motivo obligatorio)
+    for (const it of validItems) {
+      if (it.ajusteFleteEstado === 'Aprobado') continue;
+      const errAjuste = validarSolicitudAjusteFlete(it.ajusteFleteSolicitadoPorcentaje, it.ajusteFleteMotivo);
+      if (errAjuste) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Ajuste de flete inválido',
+          text: `Ítem "${it.numeroParte}": ${errAjuste}`,
+          confirmButtonColor: roleAccent || '#0284c7',
+        });
+        document.getElementById('reg-section-productos')?.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+    }
+    const ajustesSolicitados = validItems.filter(
+      (it) => it.ajusteFleteEstado !== 'Aprobado' && (Number(it.ajusteFleteSolicitadoPorcentaje) || 0) > 0
+    ).length;
+
     // Validación: la cantidad asignada a proveedores no puede exceder la requerida
     if (hayExcesoAsignacion) {
       const detalle = items
@@ -611,6 +650,53 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
       });
       return;
     }
+
+    // ── DOBLE CONFIRMACIÓN: los datos quedarán inmutables una vez guardados ──
+    const esc = (s: string) =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const totalValido = validItems.reduce(
+      (acc, it) => acc + (Number(it.cantidad) || 0) * (Number(it.limiteUnitario) || 0),
+      0
+    );
+    const resumenHtml = `
+      <div style="text-align:left; font-size:13px; line-height:1.7; color:#334155;">
+        <div><strong>Requerimiento:</strong> ${esc(numeroRequerimiento)}</div>
+        <div><strong>Acuerdo Marco:</strong> ${esc(selectedAcuerdo?.codigo ?? '')}</div>
+        <div><strong>Vencimiento:</strong> ${esc(fechaVencimiento.replace('T', ' '))}</div>
+        <div><strong>Empresa / Entidad:</strong> ${esc(selectedEmpresa?.razonSocial || entidadConvocante.trim())}</div>
+        <div><strong>Marcas:</strong> ${esc(selectedMarcas.map((m) => m.nombre).join(', '))}</div>
+        <div><strong>Productos:</strong> ${validItems.length} ítem(s) &bull; <strong>Límite total:</strong> S/ ${totalValido.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        ${ajustesSolicitados > 0 ? `<div><strong>Ajustes de flete solicitados:</strong> ${ajustesSolicitados} ítem(s) &bull; <span style="color:#b45309;">pendientes de aprobación de la administradora</span></div>` : ''}
+      </div>`;
+
+    const confirmacion1 = await Swal.fire({
+      icon: 'question',
+      title: 'Confirmación 1 de 2: Revisa tus datos',
+      html: `${resumenHtml}<div style="margin-top:12px; font-size:12.5px; color:#64748b;">Verifica que toda la información sea correcta.</div>`,
+      showCancelButton: true,
+      confirmButtonText: 'Sí, los datos son correctos',
+      cancelButtonText: 'Volver a revisar',
+      confirmButtonColor: roleAccent || '#0284c7',
+      cancelButtonColor: '#64748b',
+      reverseButtons: true,
+      customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
+    });
+    if (!confirmacion1.isConfirmed) return;
+
+    const confirmacion2 = await Swal.fire({
+      icon: 'warning',
+      title: 'Confirmación 2 de 2: Acción definitiva',
+      html: `Al confirmar, la oportunidad <strong>${esc(numeroRequerimiento)}</strong> quedará <strong>INMUTABLE</strong>: <strong>no podrás editarla</strong> después.<br/><br/>¿Deseas guardarla definitivamente?`,
+      showCancelButton: true,
+      confirmButtonText: 'Sí, guardar definitivamente',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#64748b',
+      reverseButtons: true,
+      focusCancel: true,
+      customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
+    });
+    if (!confirmacion2.isConfirmed) return;
 
     isSubmittingRef.current = true;
     setLoading(true);
@@ -639,6 +725,12 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
               precioUnitarioOfertado: it.precioUnitarioOfertado != null ? Number(it.precioUnitarioOfertado) : null,
               condicionesAdicionales: it.condicionesAdicionales?.trim() || null,
               fichaTecnica: it.fichaTecnica?.trim() || null,
+              ...(it.ajusteFleteEstado !== 'Aprobado'
+                ? {
+                    ajusteFleteSolicitadoPorcentaje: (Number(it.ajusteFleteSolicitadoPorcentaje) || 0) > 0 ? Number(it.ajusteFleteSolicitadoPorcentaje) : null,
+                    ajusteFleteMotivo: (Number(it.ajusteFleteSolicitadoPorcentaje) || 0) > 0 ? it.ajusteFleteMotivo?.trim() || null : null,
+                  }
+                : {}),
               proveedores: (it.proveedores ?? [])
                 .filter((pv) => pv.nombreProveedor.trim())
                 .map((pv) => ({
@@ -666,7 +758,13 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
               empresaRuc: selectedEmpresa?.ruc,
               entidadConvocante: entidadConvocante.trim() || undefined,
               marcas: selectedMarcas,
-              items: validItems.map((it) => ({ ...it })),
+              items: validItems.map((it) => ({
+                ...it,
+                ajusteFleteEstado:
+                  it.ajusteFleteEstado !== 'Aprobado' && (Number(it.ajusteFleteSolicitadoPorcentaje) || 0) > 0
+                    ? 'Pendiente'
+                    : it.ajusteFleteEstado ?? null,
+              })),
               limiteTotal: validTotalLimite,
               updatedAt: formatFechaHoraPeru(new Date()),
             };
@@ -676,8 +774,8 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
         handleCancelEdit();
         Swal.fire({
           icon: 'success',
-          title: '¡Oportunidad Actualizada!',
-          text: `La oportunidad "${numeroRequerimiento}" se ha actualizado con éxito.`,
+          title: '¡Oportunidad Guardada y Bloqueada!',
+          text: `La oportunidad "${numeroRequerimiento}" se guardó con éxito y ahora es inmutable (no se puede editar).`,
           confirmButtonColor: roleAccent || '#0284c7',
           confirmButtonText: 'Aceptar',
           customClass: { popup: 'reg-swal-modal', container: 'reg-swal-on-top' },
@@ -707,6 +805,12 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
               precioUnitarioOfertado: it.precioUnitarioOfertado != null ? Number(it.precioUnitarioOfertado) : null,
               condicionesAdicionales: it.condicionesAdicionales?.trim() || null,
               fichaTecnica: it.fichaTecnica?.trim() || null,
+              ...(it.ajusteFleteEstado !== 'Aprobado'
+                ? {
+                    ajusteFleteSolicitadoPorcentaje: (Number(it.ajusteFleteSolicitadoPorcentaje) || 0) > 0 ? Number(it.ajusteFleteSolicitadoPorcentaje) : null,
+                    ajusteFleteMotivo: (Number(it.ajusteFleteSolicitadoPorcentaje) || 0) > 0 ? it.ajusteFleteMotivo?.trim() || null : null,
+                  }
+                : {}),
               proveedores: (it.proveedores ?? [])
                 .filter((pv) => pv.nombreProveedor.trim())
                 .map((pv) => ({
@@ -803,7 +907,28 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
 
   // Abrir el modal único de Registro Rápido
   const handleAbrirRegistroRapido = () => {
+    setQuickMarcaSearch('');
+    setIsQuickMarcaOpen(false);
     setIsQuickModalOpen(true);
+  };
+
+  // Manejo de Marcas en modal rápido (combobox con búsqueda)
+  const handleToggleQuickMarca = (marca: Marca) => {
+    const isAlreadySelected = selectedMarcas.some((m) => m.id === marca.id);
+    let siguiente: Marca[];
+    if (isAlreadySelected) {
+      siguiente = selectedMarcas.filter((m) => m.id !== marca.id);
+    } else {
+      siguiente = [...selectedMarcas, marca];
+      if (siguiente.length === 1) {
+        setItems((prev) =>
+          prev.map((it) => (it.marcaProducto ? it : { ...it, marcaProducto: marca.nombre }))
+        );
+      }
+    }
+    setSelectedMarcas(siguiente);
+    setQuickMarcaSearch('');
+    setIsQuickMarcaOpen(false);
   };
 
   // "Seguir completando": guarda el borrador con los datos mínimos (Requerimiento +
@@ -1039,6 +1164,33 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                         }}
                         onFocus={() => setIsMarcaOpen(true)}
                       />
+                      <div className="reg-combobox__actions">
+                        {marcaSearch && (
+                          <button
+                            type="button"
+                            className="reg-combobox__clear"
+                            onClick={() => {
+                              setMarcaSearch('');
+                              setIsMarcaOpen(true);
+                            }}
+                            title="Limpiar búsqueda"
+                          >
+                            <GoogleIcon name="close" size={14} color="#94a3b8" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="reg-combobox__toggle"
+                          onClick={() => setIsMarcaOpen((prev) => !prev)}
+                          title={isMarcaOpen ? 'Cerrar opciones' : 'Mostrar opciones'}
+                        >
+                          <GoogleIcon
+                            name={isMarcaOpen ? 'expand_less' : 'expand_more'}
+                            size={20}
+                            color="#64748b"
+                          />
+                        </button>
+                      </div>
                     </div>
 
                     {/* Dropdown de Marcas */}
@@ -1438,6 +1590,84 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                       <strong>S/ {subtotal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                     </div>
 
+                    {/* ── Ajuste de flete (precios de Perú Compras desfasados) ── */}
+                    {(() => {
+                      const estado = item.ajusteFleteEstado;
+                      const aprobado = estado === 'Aprobado';
+                      const pct = Number(item.ajusteFleteSolicitadoPorcentaje) || 0;
+                      const colores: Record<string, { c: string; b: string }> = {
+                        Pendiente: { c: '#b45309', b: '#fef3c7' },
+                        Aprobado: { c: '#166534', b: '#dcfce7' },
+                        Rechazado: { c: '#991b1b', b: '#fee2e2' },
+                      };
+                      return (
+                        <div style={{ margin: '12px 0', padding: 12, border: '1.5px dashed #fdba74', background: '#fffbeb', borderRadius: 6 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13, color: '#92400e' }}>
+                              <GoogleIcon name="local_shipping" size={16} color="#d97706" />
+                              <span>Ajuste de flete (precio desfasado)</span>
+                            </div>
+                            {estado && (
+                              <span style={{ fontSize: 11, fontWeight: 800, padding: '2px 10px', borderRadius: 999, color: colores[estado].c, background: colores[estado].b }}>
+                                {estado}
+                              </span>
+                            )}
+                          </div>
+                          <p style={{ margin: '0 0 10px', fontSize: 12, color: '#78716c' }}>
+                            Los precios de Perú Compras pueden estar desactualizados. Solicita un % sobre el límite unitario; <strong>debe ser aprobado por la administradora</strong>.
+                          </p>
+                          <div className="reg-form-row" style={{ marginBottom: 0 }}>
+                            <div className="reg-field">
+                              <label>Ajuste (%)</label>
+                              <input
+                                type="number"
+                                min={0}
+                                max={100}
+                                step="0.1"
+                                placeholder="0"
+                                disabled={aprobado}
+                                value={item.ajusteFleteSolicitadoPorcentaje ?? ''}
+                                onChange={(e) =>
+                                  handleUpdateItem(
+                                    item.id,
+                                    'ajusteFleteSolicitadoPorcentaje',
+                                    e.target.value === '' ? null : Number(e.target.value)
+                                  )
+                                }
+                              />
+                            </div>
+                            <div className="reg-field">
+                              <label>Motivo / justificación {pct > 0 && <span className="required">*</span>}</label>
+                              <input
+                                type="text"
+                                placeholder="Ej. Precio de catálogo de 2022, flete a provincia"
+                                disabled={aprobado}
+                                maxLength={300}
+                                value={item.ajusteFleteMotivo ?? ''}
+                                onChange={(e) => handleUpdateItem(item.id, 'ajusteFleteMotivo', e.target.value)}
+                              />
+                            </div>
+                          </div>
+                          {pct > 0 && (
+                            <div style={{ marginTop: 8, fontSize: 12.5, color: '#92400e' }}>
+                              Ajuste estimado: <strong>S/ {formatoSoles(montoAjusteUnitario(item.limiteUnitario, pct))}</strong> por unidad •{' '}
+                              <strong>S/ {formatoSoles(montoAjusteItem(item, pct))}</strong> en total ({item.cantidad} unids)
+                            </div>
+                          )}
+                          {aprobado && (
+                            <div style={{ marginTop: 8, fontSize: 12, color: '#166534' }}>
+                              Ajuste aprobado ({item.ajusteFletePorcentaje}%). Para modificarlo debe solicitarse desde el detalle y ser aprobado por la administradora.
+                            </div>
+                          )}
+                          {estado === 'Rechazado' && item.ajusteFleteComentarioAdmin && (
+                            <div style={{ marginTop: 8, fontSize: 12, color: '#991b1b' }}>
+                              Rechazado por la administradora: {item.ajusteFleteComentarioAdmin}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                     {/* ── Proveedores y costos del ítem (N proveedores por ítem) ── */}
                     <div className="reg-prov-block">
                       <div className="reg-prov-head">
@@ -1810,63 +2040,146 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                 <label>
                   Marcas participantes <span style={{ color: '#ef4444' }}>*</span>
                 </label>
-                {selectedMarcas.length > 0 && (
-                  <div className="reg-quick-marcas">
-                    {selectedMarcas.map((m) => (
-                      <span key={m.id} className="reg-quick-marca-chip">
-                        {m.nombre}
+
+                <div className="reg-combobox" ref={quickMarcaRef}>
+                  <div className="reg-combobox__input-wrapper">
+                    <span className="reg-combobox__icon">
+                      <GoogleIcon name="search" size={18} color="#94a3b8" />
+                    </span>
+                    <input
+                      type="text"
+                      className="reg-combobox__input"
+                      placeholder="Buscar marca del catálogo... (ej. Dell, HP, Lenovo)"
+                      value={quickMarcaSearch}
+                      onChange={(e) => {
+                        setQuickMarcaSearch(e.target.value);
+                        setIsQuickMarcaOpen(true);
+                      }}
+                      onFocus={() => setIsQuickMarcaOpen(true)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          setIsQuickMarcaOpen(false);
+                        } else if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const query = quickMarcaSearch.trim().toLowerCase();
+                          if (query) {
+                            const match = marcasCatalogo.find((m) =>
+                              m.nombre.toLowerCase().includes(query)
+                            );
+                            if (match) {
+                              handleToggleQuickMarca(match);
+                            }
+                          }
+                        }
+                      }}
+                    />
+                    <div className="reg-combobox__actions">
+                      {quickMarcaSearch && (
                         <button
                           type="button"
-                          onClick={() => setSelectedMarcas((prev) => prev.filter((x) => x.id !== m.id))}
-                          title="Quitar"
+                          className="reg-combobox__clear"
+                          onClick={() => {
+                            setQuickMarcaSearch('');
+                            setIsQuickMarcaOpen(true);
+                          }}
+                          title="Limpiar búsqueda"
                         >
-                          <GoogleIcon name="close" size={12} />
+                          <GoogleIcon name="close" size={14} color="#94a3b8" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="reg-combobox__toggle"
+                        onClick={() => setIsQuickMarcaOpen((prev) => !prev)}
+                        title={isQuickMarcaOpen ? 'Cerrar opciones' : 'Mostrar opciones'}
+                      >
+                        <GoogleIcon
+                          name={isQuickMarcaOpen ? 'expand_less' : 'expand_more'}
+                          size={20}
+                          color="#64748b"
+                        />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Dropdown de opciones filtradas */}
+                  {isQuickMarcaOpen && (
+                    <div className="reg-combobox__dropdown">
+                      {marcasCatalogo.length === 0 ? (
+                        <div className="reg-combobox__empty">
+                          <GoogleIcon name="hourglass_empty" size={18} color="#94a3b8" />
+                          <span>Cargando marcas del catálogo…</span>
+                        </div>
+                      ) : (() => {
+                        const filtered = marcasCatalogo
+                          .filter((m) =>
+                            m.nombre.toLowerCase().includes(quickMarcaSearch.trim().toLowerCase())
+                          )
+                          .sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+                        if (filtered.length === 0) {
+                          return (
+                            <div className="reg-combobox__empty">
+                              <GoogleIcon name="search_off" size={18} color="#94a3b8" />
+                              <span>No se encontraron marcas con "{quickMarcaSearch}"</span>
+                            </div>
+                          );
+                        }
+
+                        return filtered.map((m) => {
+                          const activa = selectedMarcas.some((x) => x.id === m.id);
+                          return (
+                            <button
+                              type="button"
+                              key={m.id}
+                              className={`reg-combobox__item ${activa ? 'is-selected' : ''}`}
+                              onClick={() => handleToggleQuickMarca(m)}
+                            >
+                              <div className="reg-combobox__item-main">
+                                <span className="reg-combobox__item-check">
+                                  {activa ? (
+                                    <GoogleIcon name="check_circle" size={18} color={roleAccent} />
+                                  ) : (
+                                    <GoogleIcon name="radio_button_unchecked" size={18} color="#cbd5e1" />
+                                  )}
+                                </span>
+                                <span className="reg-combobox__item-name">{m.nombre}</span>
+                              </div>
+                              {activa ? (
+                                <span className="reg-combobox__item-badge" style={{ color: roleAccent }}>
+                                  Seleccionada
+                                </span>
+                              ) : (
+                                <span className="reg-combobox__item-add-hint">+ Añadir</span>
+                              )}
+                            </button>
+                          );
+                        });
+                      })()}
+                    </div>
+                  )}
+                </div>
+
+                {/* Chips de Marcas Seleccionadas */}
+                <div className="reg-quick-marcas">
+                  {selectedMarcas.length === 0 ? (
+                    <span className="reg-quick-marcas-empty">
+                      <GoogleIcon name="info" size={15} color="#f59e0b" />
+                      <span>Selecciona al menos una marca participante del catálogo</span>
+                    </span>
+                  ) : (
+                    selectedMarcas.map((m) => (
+                      <span key={m.id} className="reg-quick-marca-chip">
+                        <span>{m.nombre}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveMarca(m.id)}
+                          title={`Quitar ${m.nombre}`}
+                        >
+                          <GoogleIcon name="close" size={13} />
                         </button>
                       </span>
-                    ))}
-                  </div>
-                )}
-                <div className="reg-marca-picker" ref={quickMarcaRef}>
-                  <input
-                    type="text"
-                    placeholder="Buscar marca del catálogo..."
-                    value={marcaSearch}
-                    onChange={(e) => {
-                      setMarcaSearch(e.target.value);
-                      setIsQuickMarcaOpen(true);
-                    }}
-                    onFocus={() => setIsQuickMarcaOpen(true)}
-                  />
-                  {isQuickMarcaOpen && (
-                    <div className="reg-marca-dropdown">
-                      {marcasCatalogo.length === 0 ? (
-                        <div className="reg-marca-option">Cargando marcas…</div>
-                      ) : (
-                        marcasCatalogo
-                          .filter((m) => m.nombre.toLowerCase().includes(marcaSearch.toLowerCase()))
-                          .slice(0, 40)
-                          .map((m) => {
-                            const activa = selectedMarcas.some((x) => x.id === m.id);
-                            return (
-                              <button
-                                type="button"
-                                key={m.id}
-                                className={`reg-marca-option ${activa ? 'is-active' : ''}`}
-                                onClick={() => {
-                                  setSelectedMarcas((prev) =>
-                                    activa ? prev.filter((x) => x.id !== m.id) : [...prev, m]
-                                  );
-                                  setMarcaSearch('');
-                                  setIsQuickMarcaOpen(false);
-                                }}
-                              >
-                                <span>{m.nombre}</span>
-                                {activa && <GoogleIcon name="check" size={15} color={roleAccent} />}
-                              </button>
-                            );
-                          })
-                      )}
-                    </div>
+                    ))
                   )}
                 </div>
               </div>

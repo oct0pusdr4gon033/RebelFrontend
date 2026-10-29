@@ -11,8 +11,8 @@ namespace Domain.Interfaces.Services
         Task<OportunidadResponseDto?> ObtenerPorIdAsync(int id);
         Task<OportunidadResponseDto> CrearAsync(CrearOportunidadDto dto, string? usuarioId = null);
         
-        // REGLA DE NEGOCIO: Actualiza Empresa, Marcas y Productos. Convocatoria Perú Compras NO se edita.
-        Task<OportunidadResponseDto> ActualizarAsync(int id, ActualizarOportunidadDto dto);
+        // REGLA DE NEGOCIO: Actualiza Empresa, Marcas y Productos. Si está bloqueada/inmutable, solo el administrador puede editar.
+        Task<OportunidadResponseDto> ActualizarAsync(int id, ActualizarOportunidadDto dto, string? usuarioId = null, bool esAdmin = false);
 
         // Métodos de edición complementarios
         Task<OportunidadResponseDto> ActualizarMarcasAsync(int id, List<int> marcaIds);
@@ -22,12 +22,16 @@ namespace Domain.Interfaces.Services
         Task<OportunidadResponseDto> AgregarProductoAsync(int id, ProductoItemDto producto);
         Task<OportunidadResponseDto> EliminarProductoAsync(int id, int productoId);
 
+        // ── AJUSTE DE FLETE POR PRODUCTO (APROBACIÓN DE ADMINISTRADOR) ──
+        Task<OportunidadResponseDto> SolicitarAjusteFleteAsync(int oportunidadId, int productoId, SolicitarAjusteFleteDto dto, string usuarioId);
+        Task<OportunidadResponseDto> ResolverAjusteFleteAsync(int oportunidadId, int productoId, ResolverAjusteFleteDto dto, string usuarioId, bool esAdmin);
+
         // Cambio de estado (solo el creador puede cambiar)
         Task<OportunidadResponseDto> CambiarEstadoAsync(int id, CambiarEstadoDto dto, string usuarioId, bool esAdmin = false);
 
         // ── BLOQUE 2: ÓRDENES DE COMPRA Y OPERACIONES ──
         Task<OportunidadResponseDto> RegistrarOrdenCompraAsync(int id, RegistrarOrdenCompraDto dto, string usuarioId);
-        Task<OportunidadResponseDto> CambiarEstadoOCAsync(int id, CambiarEstadoOCDto dto, string usuarioId);
+        Task<OportunidadResponseDto> CambiarEstadoOCAsync(int id, CambiarEstadoOCDto dto, string usuarioId, bool esAdmin = false);
         Task<OportunidadResponseDto> RenegociarCostoAsync(int id, RenegociarCostoDto dto, string usuarioId);
         Task<OportunidadResponseDto> RegistrarEntregaAsync(int id, RegistrarEntregaDto dto, string usuarioId);
 

@@ -5,6 +5,8 @@ interface PrecioInputProps {
   onChange: (val: number) => void;
   placeholder?: string;
   min?: number;
+  /** Monto máximo permitido. Si se define (> 0), no se puede ingresar un valor mayor. */
+  max?: number;
   disabled?: boolean;
   className?: string;
   id?: string;
@@ -15,12 +17,21 @@ export const PrecioInput: React.FC<PrecioInputProps> = ({
   onChange,
   placeholder = '0.00',
   min = 0,
+  max,
   disabled = false,
   className = '',
   id,
 }) => {
+  const hasMax = typeof max === 'number' && max > 0;
   const [isFocused, setIsFocused] = useState(false);
+  const [exceeded, setExceeded] = useState(false);
   const [localText, setLocalText] = useState(() => (value > 0 ? String(value) : ''));
+
+  // Feedback visual breve cuando se intenta superar el máximo
+  const flashExceeded = () => {
+    setExceeded(true);
+    window.setTimeout(() => setExceeded(false), 900);
+  };
 
   useEffect(() => {
     if (!isFocused) {
@@ -40,8 +51,13 @@ export const PrecioInput: React.FC<PrecioInputProps> = ({
 
     // Permitir dígitos y hasta 2 decimales
     if (/^\d*(\.\d{0,2})?$/.test(raw)) {
-      setLocalText(raw);
       const parsed = parseFloat(raw);
+      // Bloquear montos mayores al máximo: se ignora la pulsación
+      if (hasMax && !isNaN(parsed) && parsed > (max as number)) {
+        flashExceeded();
+        return;
+      }
+      setLocalText(raw);
       if (!isNaN(parsed)) {
         onChange(Math.max(min, parsed));
       } else {
@@ -54,7 +70,8 @@ export const PrecioInput: React.FC<PrecioInputProps> = ({
     setIsFocused(false);
     const parsed = parseFloat(localText);
     if (!isNaN(parsed) && parsed > 0) {
-      const rounded = Math.round(parsed * 100) / 100;
+      let rounded = Math.round(parsed * 100) / 100;
+      if (hasMax && rounded > (max as number)) rounded = max as number;
       setLocalText(rounded.toFixed(2));
       onChange(rounded);
     } else {
@@ -73,7 +90,11 @@ export const PrecioInput: React.FC<PrecioInputProps> = ({
       e.preventDefault();
       const step = e.shiftKey ? 10 : 1;
       const current = parseFloat(localText) || 0;
-      const next = e.key === 'ArrowUp' ? current + step : Math.max(min, current - step);
+      let next = e.key === 'ArrowUp' ? current + step : Math.max(min, current - step);
+      if (hasMax && next > (max as number)) {
+        next = max as number;
+        flashExceeded();
+      }
       const rounded = Math.round(next * 100) / 100;
       setLocalText(rounded.toFixed(2));
       onChange(rounded);
@@ -81,7 +102,7 @@ export const PrecioInput: React.FC<PrecioInputProps> = ({
   };
 
   return (
-    <div className={`reg-price-box ${isFocused ? 'is-focused' : ''} ${className}`}>
+    <div className={`reg-price-box ${isFocused ? 'is-focused' : ''} ${exceeded ? 'is-exceeded' : ''} ${className}`}>
       <span className="reg-price-badge">S/</span>
       <input
         id={id}

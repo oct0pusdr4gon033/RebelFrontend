@@ -1,15 +1,8 @@
 import { useState, useEffect } from 'react';
-import type { EmpleadoDto, CrearEmpleadoRequest, ActualizarEmpleadoRequest } from '../../../../../api/Dtos/Empleado';
-import type { SedeDto } from '../../../../../api/Dtos/Sede';
-import { GoogleIcon } from '../../../../../components/GoogleIcon';
+import type { CrearEmpleadoRequest } from '../../../../../api/Dtos/Empleado';
+import { GoogleIcon } from '../../../../../components/GoogleIcon/GoogleIcon';
+import type { PropsEmpleadoModal } from './PropsEmpleadoModal';
 
-interface Props {
-  open: boolean;
-  empleado?: EmpleadoDto | null;
-  sedes: SedeDto[];
-  onClose: () => void;
-  onSave: (data: CrearEmpleadoRequest | ActualizarEmpleadoRequest) => Promise<void>;
-}
 
 const EMPTY: CrearEmpleadoRequest = {
   nombres: '',
@@ -22,7 +15,7 @@ const EMPTY: CrearEmpleadoRequest = {
   sedeId: undefined,
 };
 
-export default function EmpleadoFormModal({ open, empleado, sedes, onClose, onSave }: Props) {
+export default function EmpleadoFormModal({ open, empleado, sedes, onClose, onSave }: PropsEmpleadoModal) {
   const [form, setForm] = useState<CrearEmpleadoRequest>(EMPTY);
   const [errors, setErrors] = useState<Partial<Record<keyof CrearEmpleadoRequest, string>>>({});
   const [saving, setSaving] = useState(false);

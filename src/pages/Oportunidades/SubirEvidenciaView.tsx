@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { GoogleIcon } from '../../components/GoogleIcon';
+import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
 import { useAuth } from '../../context/AuthContext';
 import { isOportunidadOwner } from '../../utils/oportunidadUtils';
 import type { Oportunidad } from '../../types/oportunidades';
@@ -8,6 +8,7 @@ import {
   subirImagenOportunidadApi,
   eliminarImagenOportunidadApi,
   getImagenArchivoUrl,
+  cambiarEstadoApi,
   type OportunidadImagenItem,
 } from '../../api/services/oportunidades.service';
 
@@ -18,10 +19,10 @@ interface SubirEvidenciaViewProps {
 }
 
 /**
- * Estados considerados "Activos" para poder subir evidencias de cotización o capturas.
- * Las oportunidades adjudicadas / con OC / entregadas quedan fuera del combo.
+ * Estados considerados "Activos" para poder subir evidencias de cotización, capturas o constancias oficiales.
+ * Incluye Aceptada por el Administrador para adjuntar el documento oficial de Perú Compras y aceptar la oportunidad.
  */
-const ESTADOS_ACTIVOS = ['En Licitación'];
+const ESTADOS_ACTIVOS = ['En Licitación', 'En Competencia', 'Aceptada por el Administrador', 'Adjudicada'];
 
 const esPdf = (item: OportunidadImagenItem) => item.contentType === 'application/pdf' || item.nombreArchivo.toLowerCase().endsWith('.pdf');
 
@@ -172,7 +173,7 @@ export const SubirEvidenciaView: React.FC<SubirEvidenciaViewProps> = ({
       return;
     }
     if (!opcionesActivas.some((o) => String(o.id) === String(selectedOpId))) {
-      alert('El requerimiento ya no se encuentra en estado activo. Solo se admiten evidencias para En Licitación.');
+      alert('El requerimiento ya no se encuentra en estado habilitado para adjuntar evidencias o acreditar adjudicación.');
       return;
     }
 
@@ -191,7 +192,22 @@ export const SubirEvidenciaView: React.FC<SubirEvidenciaViewProps> = ({
 
       setImagenes((prev) => [nuevaImagen, ...prev]);
       const tipoMostrado = nuevaImagen.tipoEvidencia;
-      setSuccessMsg(`¡Evidencia "${archivo.name}" guardada con éxito (${tipoMostrado}) para ${opEncontrada.numeroRequerimiento}!`);
+
+      let mensajeExito = `¡Evidencia "${archivo.name}" guardada con éxito (${tipoMostrado}) para ${opEncontrada.numeroRequerimiento}!`;
+
+      // REGLA DE NEGOCIO: Si la oportunidad estaba Aceptada por el Administrador, al subir el documento oficial
+      // de Perú Compras pasa formalmente al estado "Aceptada por Perú Compras".
+      if (opEncontrada.estado === 'Aceptada por el Administrador' || opEncontrada.estado === 'Adjudicada') {
+        try {
+          await cambiarEstadoApi(selectedOpId, 'Aceptada por Perú Compras');
+          opEncontrada.estado = 'Aceptada por Perú Compras';
+          mensajeExito = `¡Documento oficial de Perú Compras subido con éxito! La oportunidad ${opEncontrada.numeroRequerimiento} ahora está ACEPTADA POR PERÚ COMPRAS.`;
+        } catch (statusErr) {
+          console.warn('[SubirEvidencia] No se pudo cambiar estado a Aceptada por Perú Compras:', statusErr);
+        }
+      }
+
+      setSuccessMsg(mensajeExito);
       setArchivo(null);
       setComentario('');
       if (fileInputRef.current) fileInputRef.current.value = '';

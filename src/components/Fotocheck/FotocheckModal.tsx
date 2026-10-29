@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FotocheckCard, type FotocheckData } from './FotocheckCard';
-import { GoogleIcon } from '../GoogleIcon';
+import { GoogleIcon } from '../GoogleIcon/GoogleIcon';
 import './Fotocheck.css';
 
 interface FotocheckModalProps {

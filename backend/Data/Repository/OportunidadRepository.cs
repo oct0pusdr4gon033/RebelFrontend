@@ -26,8 +26,10 @@ namespace Data.Repository
                 .Include(o => o.OportunidadMarcas)
                     .ThenInclude(om => om.Marca)
                 .Include(o => o.Productos)
+                    .ThenInclude(p => p.Proveedores)
                 .Include(o => o.OrdenCompra)
                 .Include(o => o.Imagenes)
+                    .ThenInclude(i => i.TipoEvidenciaRef)
                 .OrderByDescending(o => o.FechaRegistro)
                 .ToListAsync();
         }
@@ -41,8 +43,10 @@ namespace Data.Repository
                 .Include(o => o.OportunidadMarcas)
                     .ThenInclude(om => om.Marca)
                 .Include(o => o.Productos)
+                    .ThenInclude(p => p.Proveedores)
                 .Include(o => o.OrdenCompra)
                 .Include(o => o.Imagenes)
+                    .ThenInclude(i => i.TipoEvidenciaRef)
                 .FirstOrDefaultAsync(o => o.Id == id);
         }
 
@@ -90,10 +94,17 @@ namespace Data.Repository
                 .AnyAsync(o => o.NumeroRequerimiento.ToUpper() == numeroRequerimiento.Trim().ToUpper() && o.CreadoPorUsuarioId == usuarioId);
         }
 
+        public async Task<DateTime?> ObtenerPrimerRegistroAsync(string numeroRequerimiento)
+        {
+            return await _context.Oportunidades
+                .Where(o => o.NumeroRequerimiento.ToUpper() == numeroRequerimiento.Trim().ToUpper())
+                .MinAsync(o => (DateTime?)o.FechaRegistro);
+        }
+
         public async Task<bool> ExisteBuenaProAsync(string numeroRequerimiento, int? excluirId = null)
         {
             var reqNorm = (numeroRequerimiento ?? string.Empty).Trim().ToUpper();
-            var estadosBuenaPro = new[] { "Adjudicada", "OC_RECIBIDA", "OC_ACEPTADA", "ENTREGADA" };
+            var estadosBuenaPro = new[] { "Adjudicada", "Aceptada", "Aceptada por el Administrador", "Aceptada por Perú Compras", "OC_RECIBIDA", "OC_ACEPTADA", "ENTREGADA" };
             
             var query = _context.Oportunidades
                 .Where(o => o.NumeroRequerimiento.ToUpper() == reqNorm && estadosBuenaPro.Contains(o.Estado));
@@ -110,8 +121,17 @@ namespace Data.Repository
         public async Task<IEnumerable<OportunidadImagen>> ObtenerImagenesAsync(int oportunidadId)
         {
             return await _context.OportunidadImagenes
+                .Include(i => i.TipoEvidenciaRef)
                 .Where(i => i.OportunidadId == oportunidadId)
                 .OrderByDescending(i => i.FechaSubida)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<TipoEvidencia>> ObtenerTiposEvidenciaAsync()
+        {
+            return await _context.TiposEvidencia
+                .Where(t => t.Activo)
+                .OrderBy(t => t.Nombre)
                 .ToListAsync();
         }
 

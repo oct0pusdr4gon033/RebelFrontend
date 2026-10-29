@@ -1,16 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import type { SessionAlert } from '../../api/Dtos/Login';
 import { formatFechaHoraPeru } from '../../utils/dateUtils';
 import './SessionApprovalModal.css';
-
-interface SessionApprovalModalProps {
-  alert: SessionAlert | null;
-  terminatedReason: string | null;
-  isResolving: boolean;
-  onApprove: () => void;
-  onReject: () => void;
-  onDismissTerminated?: () => void;
-}
+import type { SessionApprovalModalProps } from './SessionApprovalModalProps';
 
 export const SessionApprovalModal: React.FC<SessionApprovalModalProps> = ({
   alert,
@@ -22,7 +13,6 @@ export const SessionApprovalModal: React.FC<SessionApprovalModalProps> = ({
 }) => {
   const [timeLeft, setTimeLeft] = useState(45);
 
-  // Contador regresivo de 45 segundos mientras la alerta está activa
   useEffect(() => {
     if (!alert) {
       setTimeLeft(45);

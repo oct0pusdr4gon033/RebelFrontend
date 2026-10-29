@@ -2,6 +2,11 @@
    Detalle Oportunidad View — Estilos Corporativos Flat & Premium
    ───────────────────────────────────────────────────────────────────────────── */
 
+/* Asegurar que SweetAlert2 SIEMPRE pase al frente de este modal (.det-overlay: 9999) */
+.swal2-container {
+  z-index: 1000000 !important;
+}
+
 .det-overlay {
   position: fixed;
   inset: 0;
