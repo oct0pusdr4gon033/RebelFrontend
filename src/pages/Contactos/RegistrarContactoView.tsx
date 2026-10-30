@@ -206,12 +206,12 @@ export const RegistrarContactoView: React.FC<RegistrarContactoViewProps> = ({
       return;
     }
 
-    // 2. Validar RUC cuando es Sin OCAM Relacionada (Contacto, RUC, Nombre Entidad)
-    if (sinOcamRelacionada && !rucEntidad.trim()) {
+    // 2. Validar RUC de la Entidad (obligatorio en todos los registros)
+    if (!rucEntidad.trim()) {
       Swal.fire({
         icon: 'warning',
         title: 'RUC de la Entidad requerido',
-        text: 'Para registrar un contacto sin número de OCAM relacionada, debes indicar el RUC y el Nombre de la Entidad.',
+        text: 'Debes indicar el RUC y el Nombre de la Entidad para asociar los contactos a un único registro de entidad.',
         confirmButtonColor: roleAccent,
       });
       return;
@@ -612,7 +612,7 @@ export const RegistrarContactoView: React.FC<RegistrarContactoViewProps> = ({
           >
             <div className="agenda-field" style={{ marginBottom: 0 }}>
               <label>
-                RUC de la Entidad {sinOcamRelacionada && <span className="req">*</span>}
+                RUC de la Entidad <span className="req">*</span>
               </label>
               <input
                 type="text"
@@ -622,7 +622,7 @@ export const RegistrarContactoView: React.FC<RegistrarContactoViewProps> = ({
                 value={rucEntidad}
                 onChange={(e) => setRucEntidad(e.target.value.replace(/[^\d]/g, ''))}
                 style={{ fontFamily: 'monospace', fontWeight: 700 }}
-                required={sinOcamRelacionada}
+                required
               />
             </div>
 

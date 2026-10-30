@@ -9,7 +9,6 @@ import { OCPanel, OC_ESTADO_CONFIG, OC_STATES, DetalleOCModal } from './OCPanel'
 import { formatFechaHoraPeru } from '../../utils/dateUtils';
 import { RegistrarOCScreen } from './RegistrarOCScreen';
 import { RegistrarPagoView } from '../Admin/Pagos/RegistrarPagoView';
-import { obtenerPoolDocumentosOC } from '../../utils/documentosPoolUtils';
 import './RegistroOportunidad.css';
 import './SeguimientoOC.css';
 
@@ -241,6 +240,17 @@ export const SeguimientoOCView: React.FC<SeguimientoOCProps> = ({ roleAccent = '
               <p>
                 Entidad: <strong>{opParaGestionar.entidadConvocante || opParaGestionar.empresaRazonSocial || 'No especificada'}</strong> &bull; Límite Total: <strong>S/ {Number(opParaGestionar.limiteTotal).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</strong>
               </p>
+              {opParaGestionar.ordenCompra && (
+                <p style={{ marginTop: 4 }}>
+                  {opParaGestionar.ordenCompra.codigoUnidadEjecutora && (
+                    <>Código U.E.: <strong>{opParaGestionar.ordenCompra.codigoUnidadEjecutora}</strong> &bull; </>
+                  )}
+                  Flete: <strong>S/ {Number(opParaGestionar.ordenCompra.flete || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</strong>
+                  {opParaGestionar.ordenCompra.fechaLimitePago && (
+                    <> &bull; Límite para solicitar pagos: <strong>{formatFechaHoraPeru(opParaGestionar.ordenCompra.fechaLimitePago, { dateStyle: 'short' })}</strong></>
+                  )}
+                </p>
+              )}
             </div>
           </div>
 
@@ -278,6 +288,12 @@ export const SeguimientoOCView: React.FC<SeguimientoOCProps> = ({ roleAccent = '
 
         {/* Panel de Gestión en Tarjeta reg-card */}
         <div className="reg-card">
+          {opParaGestionar.ordenCompra?.estadoOC === 'ENTREGADA' && !opParaGestionar.ordenCompra?.noGuiaRemision && (
+            <div style={{ marginBottom: 14, padding: '10px 14px', background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', fontSize: '12.5px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <GoogleIcon name="warning" size={18} color="#d97706" />
+              <span>Alerta: la Orden de Compra fue recibida en almacén, pero falta registrar la Guía de Remisión.</span>
+            </div>
+          )}
           <OCPanel
             op={opParaGestionar}
             isOwner={isOwner}
@@ -667,6 +683,11 @@ export const SeguimientoOCView: React.FC<SeguimientoOCProps> = ({ roleAccent = '
                           <GoogleIcon name={badge.icon} size={13} color={badge.color} />
                           <span>{badge.label}</span>
                         </span>
+                        {op.ordenCompra?.estadoOC === 'ENTREGADA' && !op.ordenCompra?.noGuiaRemision && (
+                          <div style={{ marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '10.5px', fontWeight: 700, color: '#b45309', background: '#fef3c7', border: '1px solid #fde68a', padding: '2px 6px', borderRadius: 4, whiteSpace: 'nowrap' }}>
+                            <GoogleIcon name="warning" size={11} color="#d97706" /> Falta Guía de Remisión
+                          </div>
+                        )}
                       </td>
 
                       {/* Margen Adicional */}

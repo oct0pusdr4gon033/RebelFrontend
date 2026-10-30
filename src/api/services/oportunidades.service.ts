@@ -159,9 +159,13 @@ export interface OrdenCompraApiResponse {
   fechaEntrega?: string | null;
   nroOCAM?: string | null;
   nroExpediente?: string | null;
-  unidad?: string | null;
+  codigoUnidadEjecutora?: string | null;
   codigoCIAF?: string | null;
   montoOCAM?: number | null;
+  flete?: number | null;
+  fechaLimitePago?: string | null;
+  requiereAprobacionAdmin?: boolean;
+  fechaAutorizacionAdmin?: string | null;
   fechaRegistro: string;
   fechaActualizacion?: string | null;
 }
@@ -369,9 +373,10 @@ export interface RegistrarOCRequest {
   nroExpediente?: string | null;
   nroFolio?: string | null;
   archivoOCUrl?: string | null;
-  unidad?: string | null;
+  codigoUnidadEjecutora?: string | null;
   codigoCIAF?: string | null;
   montoOCAM?: number | null;
+  flete?: number | null;
 }
 
 export interface CambiarEstadoOCRequest {

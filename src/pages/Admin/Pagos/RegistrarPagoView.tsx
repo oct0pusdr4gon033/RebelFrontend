@@ -248,10 +248,13 @@ export const RegistrarPagoView: React.FC<RegistrarPagoViewProps> = ({
     return ajusteFleteDetectadoOC;
   }, [montoAjusteFleteInput, ajusteFleteDetectadoOC]);
 
-  // TECHO TOTAL = Monto Orden de Compra + Ajustes del Flete
+  // Flete fijo registrado en la Orden de Compra (campo del seguimiento)
+  const fleteFijoOC = Number(oportunidadSeleccionada?.ordenCompra?.flete || 0);
+
+  // TECHO TOTAL = Monto Orden de Compra + Flete de la OC + Ajustes del Flete
   const montoTechoTotalConAjustes = useMemo(() => {
-    return Number((montoBaseOC + montoAjusteFleteOC).toFixed(2));
-  }, [montoBaseOC, montoAjusteFleteOC]);
+    return Number((montoBaseOC + fleteFijoOC + montoAjusteFleteOC).toFixed(2));
+  }, [montoBaseOC, fleteFijoOC, montoAjusteFleteOC]);
 
   // Conceptos dinámicos
   const [conceptosList, setConceptosList] = useState(CONCEPTOS_BASE);
@@ -417,10 +420,12 @@ export const RegistrarPagoView: React.FC<RegistrarPagoViewProps> = ({
   const montoActualNum = parseFloat(monto) || 0;
   const totalProyectado = totalAcumuladoPrevio + montoActualNum;
   const saldoDisponibleTotal = Math.max(0, montoTechoTotalConAjustes - totalAcumuladoPrevio);
+  // El importe debe ser ESTRICTAMENTE MENOR al saldo pendiente de la OC.
   const excedeTechoOCConAjustes =
     moneda === 'PEN' &&
     montoTechoTotalConAjustes > 0 &&
-    totalProyectado > montoTechoTotalConAjustes + 0.01;
+    montoActualNum > 0 &&
+    totalProyectado >= montoTechoTotalConAjustes - 0.005;
 
   // ── VALIDACIÓN 2: CUANDO SE PIDE FLETE, NO DEBE SER MAYOR A LOS MONTOS DEL AJUSTE DEL FLETE ──
   const esSolicitudFlete =
@@ -550,24 +555,23 @@ export const RegistrarPagoView: React.FC<RegistrarPagoViewProps> = ({
       return;
     }
 
-    // Validación Monto vs Orden de Compra + Ajustes del Flete
+    // Validación Monto vs Orden de Compra + Flete + Ajustes del Flete
     if (excedeTechoOCConAjustes) {
-      const exceso = totalProyectado - montoTechoTotalConAjustes;
       Swal.fire({
         icon: 'error',
-        title: 'Supera Orden de Compra + Ajustes del Flete',
+        title: 'El importe debe ser menor al saldo pendiente',
         html: `
           <div style="text-align: left; font-size: 13px; line-height: 1.5;">
-            <p>El monto del pago (y acumulado) <strong>NO PUEDE SER MAYOR</strong> a la Orden de Compra incluyendo los ajustes del flete:</p>
+            <p>El importe de la solicitud debe ser <strong>ESTRICTAMENTE MENOR</strong> al saldo pendiente de la Orden de Compra:</p>
             <ul style="margin: 8px 0; padding-left: 20px;">
               <li>Monto Orden de Compra (Base): <strong>S/ ${montoBaseOC.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</strong></li>
+              <li>Flete de la OC: <strong>+ S/ ${fleteFijoOC.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</strong></li>
               <li>Ajustes del Flete: <strong>+ S/ ${montoAjusteFleteOC.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</strong></li>
-              <li>Techo Total (OC + Ajustes Flete): <strong>S/ ${montoTechoTotalConAjustes.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</strong></li>
+              <li>Techo Total (OC + Flete + Ajustes): <strong>S/ ${montoTechoTotalConAjustes.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</strong></li>
               <li>Pagos acumulados previos: <strong>S/ ${totalAcumuladoPrevio.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</strong></li>
-              <li>Nuevo pago solicitado: <strong>S/ ${valorMonto.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</strong></li>
-              <li style="color: #dc2626;">Exceso no permitido: <strong>S/ ${exceso.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</strong></li>
+              <li style="color: #dc2626;">Saldo pendiente: <strong>S/ ${saldoDisponibleTotal.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</strong></li>
             </ul>
-            <p>El saldo máximo disponible es <strong>S/ ${saldoDisponibleTotal.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</strong>.</p>
+            <p>El nuevo importe (<strong>S/ ${valorMonto.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</strong>) debe ser menor a ese saldo.</p>
           </div>
         `,
         confirmButtonColor: '#dc2626',

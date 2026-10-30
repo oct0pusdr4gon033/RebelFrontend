@@ -26,8 +26,10 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [documentoParaVer, setDocumentoParaVer] = useState<DocumentoVisualizable | null>(null);
 
-  // Pool de documentos oficiales (soporta 1 o más documentos acumulados sin reemplazarse)
-  const initialPool = obtenerPoolDocumentosOC(op);
+  const MAX_DOCS_OC = 2;
+
+  // Pool de documentos oficiales (hasta 2 documentos acumulados sin reemplazarse)
+  const initialPool = obtenerPoolDocumentosOC(op).slice(0, MAX_DOCS_OC);
   const [documentosPool, setDocumentosPool] = useState<DocumentoOCItem[]>(initialPool);
 
   const [formOC, setFormOC] = useState({
@@ -36,9 +38,10 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
     nroOCAM: op.ordenCompra?.nroOCAM || '',
     nroExpediente: op.ordenCompra?.nroExpediente || '',
     nroFolio: op.ordenCompra?.nroFolio || '',
-    unidad: op.ordenCompra?.unidad || op.entidadConvocante || op.empresaRazonSocial || '',
+    codigoUnidadEjecutora: op.ordenCompra?.codigoUnidadEjecutora || op.entidadConvocante || op.empresaRazonSocial || '',
     codigoCIAF: op.ordenCompra?.codigoCIAF || '',
     montoOCAM: op.ordenCompra?.montoOCAM || Number(op.limiteTotal) || 0,
+    flete: op.ordenCompra?.flete ?? 0,
     archivoOCUrl: initialPool[0]?.url || op.ordenCompra?.archivoOCUrl || '',
     archivoNombre: initialPool[0]?.nombre || (op.ordenCompra as any)?.archivoNombre || '',
   });
@@ -61,11 +64,12 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
   useEffect(() => {
     cargarPoolCompletoAsync(op.id).then((poolCompleto) => {
       if (poolCompleto && poolCompleto.length > 0) {
-        setDocumentosPool(poolCompleto);
+        const limitado = poolCompleto.slice(0, MAX_DOCS_OC);
+        setDocumentosPool(limitado);
         setFormOC((prev) => ({
           ...prev,
-          archivoOCUrl: poolCompleto[0]?.url || prev.archivoOCUrl,
-          archivoNombre: poolCompleto[0]?.nombre || prev.archivoNombre,
+          archivoOCUrl: limitado[0]?.url || prev.archivoOCUrl,
+          archivoNombre: limitado[0]?.nombre || prev.archivoNombre,
         }));
       }
     });
@@ -74,10 +78,22 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
   // Agrega archivos acumulativamente al pool (no reemplaza los existentes)
   const agregarArchivosAlPool = async (files: FileList | File[]) => {
     if (!files || (files instanceof FileList && files.length === 0)) return;
-    const procesados = await procesarArchivosParaPool(files);
+    const disponibles = MAX_DOCS_OC - documentosPool.length;
+    if (disponibles <= 0) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Máximo de documentos alcanzado',
+        text: `Solo puedes adjuntar hasta ${MAX_DOCS_OC} documentos de la Orden de Compra.`,
+        confirmButtonColor: roleAccent,
+      });
+      return;
+    }
+
+    const lista = Array.from(files).slice(0, disponibles);
+    const procesados = await procesarArchivosParaPool(lista);
     if (!procesados.length) return;
 
-    const actualizado = [...documentosPool, ...procesados];
+    const actualizado = [...documentosPool, ...procesados].slice(0, MAX_DOCS_OC);
     sincronizarPool(actualizado);
   };
 
@@ -143,11 +159,11 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
       });
       return;
     }
-    if (!formOC.unidad.trim()) {
+    if (!formOC.codigoUnidadEjecutora.trim()) {
       Swal.fire({
         icon: 'warning',
-        title: 'Unidad de la entidad requerida',
-        text: 'Ingresa la unidad operativa o dependencia de la entidad.',
+        title: 'Código de Unidad Ejecutora requerido',
+        text: 'Ingresa el Código de Unidad Ejecutora (U.O.E.) de la entidad.',
         confirmButtonColor: roleAccent,
       });
       return;
@@ -179,11 +195,29 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
       });
       return;
     }
-    if (documentosPool.length === 0 && !formOC.archivoOCUrl.trim()) {
+    if (documentosPool.length === 0) {
       Swal.fire({
         icon: 'warning',
         title: 'Documento oficial obligatorio',
-        text: 'Adjunta al menos un archivo digital oficial en el pool de la Orden de Compra (PDF, imagen o documento).',
+        text: `Adjunta al menos un archivo digital oficial de la Orden de Compra (máximo ${MAX_DOCS_OC}).`,
+        confirmButtonColor: roleAccent,
+      });
+      return;
+    }
+    if (documentosPool.length > MAX_DOCS_OC) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Demasiados documentos',
+        text: `Solo puedes adjuntar hasta ${MAX_DOCS_OC} documentos de la Orden de Compra.`,
+        confirmButtonColor: roleAccent,
+      });
+      return;
+    }
+    if (formOC.flete != null && (isNaN(Number(formOC.flete)) || Number(formOC.flete) < 0)) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Flete inválido',
+        text: 'El flete debe ser un monto numérico mayor o igual a S/ 0.00.',
         confirmButtonColor: roleAccent,
       });
       return;
@@ -198,9 +232,10 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
         nroExpediente: formOC.nroExpediente.trim(),
         nroFolio: formOC.nroFolio.trim(),
         archivoOCUrl: formOC.archivoOCUrl || documentosPool[0]?.url || '',
-        unidad: formOC.unidad.trim(),
+        codigoUnidadEjecutora: formOC.codigoUnidadEjecutora.trim(),
         codigoCIAF: formOC.codigoCIAF.trim(),
         montoOCAM: formOC.montoOCAM,
+        flete: Number(formOC.flete) || 0,
       });
 
       // Pasar la oportunidad formalmente a Cotización
@@ -219,9 +254,10 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
         archivoOCUrl: formOC.archivoOCUrl || documentosPool[0]?.url || '',
         archivoNombre: formOC.archivoNombre || documentosPool[0]?.nombre || '',
         documentosPool: documentosPool,
-        unidad: formOC.unidad.trim(),
+        codigoUnidadEjecutora: formOC.codigoUnidadEjecutora.trim(),
         codigoCIAF: formOC.codigoCIAF.trim(),
         montoOCAM: formOC.montoOCAM,
+        flete: Number(formOC.flete) || 0,
       };
 
       guardarPoolDocumentosOC(op.id, documentosPool);
@@ -479,17 +515,17 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
 
             <div className="reg-field">
               <label htmlFor="reg-ocam-unidad">
-                Unidad (u.o.e.) <span className="required">*</span>
+                Código de Unidad Ejecutora (U.O.E.) <span className="required">*</span>
               </label>
               <input
                 id="reg-ocam-unidad"
                 type="text"
-                placeholder="Ej. Gerencia de Logística / Sede Central"
-                value={formOC.unidad}
-                onChange={(e) => setFormOC({ ...formOC, unidad: e.target.value })}
+                placeholder="Ej. 001-1234"
+                value={formOC.codigoUnidadEjecutora}
+                onChange={(e) => setFormOC({ ...formOC, codigoUnidadEjecutora: e.target.value })}
                 required
               />
-              <span className="reg-field-hint">Unidad operativa o dependencia convocante de la entidad</span>
+              <span className="reg-field-hint">Código de la Unidad Ejecutora de la entidad</span>
             </div>
           </div>
 
@@ -526,6 +562,19 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
                   Máximo permitido: S/ {limiteOCAMTexto} (límite total del requerimiento)
                 </span>
               )}
+            </div>
+
+            <div className="reg-field">
+              <label htmlFor="reg-ocam-flete">
+                Flete (S/)
+              </label>
+              <PrecioInput
+                value={Number(formOC.flete) || 0}
+                onChange={(val) => setFormOC({ ...formOC, flete: val })}
+                placeholder="0.00"
+                min={0}
+              />
+              <span className="reg-field-hint">Costo logístico acordado para la Orden de Compra</span>
             </div>
           </div>
         </div>
@@ -595,24 +644,25 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
               id={`archivo-oc-standalone-${op.id}`}
               accept=".pdf,image/*,.doc,.docx,.xls,.xlsx"
               onChange={handleArchivoOCChange}
+              disabled={documentosPool.length >= MAX_DOCS_OC}
               style={{ display: 'none' }}
             />
             <GoogleIcon name="cloud_upload" size={40} color={isDragging ? '#2563eb' : roleAccent} />
             <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>
               {documentosPool.length > 0
-                ? `Pool activo con ${documentosPool.length} documento(s) adjunto(s). Puedes arrastrar o seleccionar más archivos.`
-                : 'Selecciona o arrastra la Orden de Compra y documentos complementarios'}
+                ? `${documentosPool.length} de ${MAX_DOCS_OC} documento(s) adjunto(s).`
+                : `Selecciona o arrastra hasta ${MAX_DOCS_OC} documentos de la Orden de Compra`}
             </div>
             <span style={{ fontSize: '12px', color: '#64748b' }}>
-              Formatos soportados: <strong>PDF, JPG, PNG, DOCX, XLSX</strong> &bull; Puedes seleccionar varios archivos a la vez
+              Formatos soportados: <strong>PDF, JPG, PNG, DOCX, XLSX</strong> &bull; máximo {MAX_DOCS_OC} archivos
             </span>
             <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
               <label
                 htmlFor={`archivo-oc-standalone-${op.id}`}
                 className="reg-btn-quick-action"
                 style={{
-                  background: roleAccent,
-                  cursor: 'pointer',
+                  background: documentosPool.length >= MAX_DOCS_OC ? '#94a3b8' : roleAccent,
+                  cursor: documentosPool.length >= MAX_DOCS_OC ? 'not-allowed' : 'pointer',
                   padding: '9px 18px',
                   fontSize: '12.5px',
                   display: 'inline-flex',
@@ -621,7 +671,7 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
                 }}
               >
                 <GoogleIcon name="upload_file" size={16} color="#ffffff" />
-                <span>{documentosPool.length > 0 ? '+ Agregar Más Documentos al Pool' : 'Examinar Documentos (Pool)'}</span>
+                <span>{documentosPool.length >= MAX_DOCS_OC ? 'Máximo alcanzado' : documentosPool.length > 0 ? '+ Agregar Documento' : 'Examinar Documentos (Pool)'}</span>
               </label>
             </div>
           </div>
