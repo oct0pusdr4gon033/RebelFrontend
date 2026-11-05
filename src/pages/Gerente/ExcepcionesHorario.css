@@ -1,0 +1,585 @@
+.excepciones-horario-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.excepciones-horario-header h1 {
+  margin: 4px 0;
+  color: #0a2540;
+  font-size: 1.5rem;
+}
+
+.excepciones-horario-header p,
+.excepciones-results-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.excepciones-horario-eyebrow,
+.excepcion-modal-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #2563eb;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.excepciones-catalog-filters,
+.excepciones-employee-selector {
+  display: flex;
+  align-items: end;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 16px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.excepciones-field {
+  display: flex;
+  flex: 1 1 220px;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.excepciones-field label,
+.excepcion-form-field label {
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.excepciones-field input,
+.excepciones-field select,
+.excepcion-form-field input,
+.excepcion-form-field textarea {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 11px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 9px;
+  background: #fff;
+  color: #0a2540;
+  font: inherit;
+}
+
+.excepciones-field input:focus,
+.excepciones-field select:focus,
+.excepcion-form-field input:focus,
+.excepcion-form-field textarea:focus {
+  border-color: #3b5bdb;
+  outline: 2px solid rgba(59, 91, 219, 0.12);
+}
+
+.excepciones-field input:disabled,
+.excepciones-field select:disabled {
+  background: #f8fafc;
+  cursor: not-allowed;
+}
+
+.excepciones-search-field {
+  flex-grow: 2;
+}
+
+.excepciones-employee-selector .excepciones-field {
+  flex: 1 1 300px;
+}
+
+.excepciones-employee-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  border-radius: 20px;
+  background: rgba(34, 197, 94, 0.1);
+  color: #15803d;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.excepciones-employee-status--inactive {
+  border-color: rgba(217, 119, 6, 0.24);
+  background: rgba(254, 243, 199, 0.65);
+  color: #b45309;
+}
+
+.excepciones-button-primary,
+.excepciones-button-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 8px 13px;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.excepciones-button-primary {
+  border: 1px solid #2563eb;
+  background: #2563eb;
+  color: #fff;
+}
+
+.excepciones-button-primary:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.excepciones-button-secondary {
+  border: 1.5px solid rgba(37, 99, 235, 0.22);
+  background: rgba(37, 99, 235, 0.05);
+  color: #2563eb;
+}
+
+.excepciones-button-secondary:hover:not(:disabled) {
+  background: rgba(37, 99, 235, 0.1);
+}
+
+.excepciones-button-primary:disabled,
+.excepciones-button-secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.excepciones-results {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.excepciones-results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.excepciones-results-header h2 {
+  margin: 0 0 4px;
+  color: #0a2540;
+  font-size: 1.1rem;
+}
+
+.excepciones-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.excepcion-card {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  min-width: 0;
+  padding: 17px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.excepcion-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.excepcion-card-header h3 {
+  margin: 8px 0 0;
+  color: #0a2540;
+  font-size: 0.98rem;
+  font-weight: 650;
+}
+
+.excepcion-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid transparent;
+  border-radius: 20px;
+  padding: 4px 9px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.excepcion-kind--working {
+  border-color: rgba(34, 197, 94, 0.25);
+  background: rgba(34, 197, 94, 0.1);
+  color: #15803d;
+}
+
+.excepcion-kind--off {
+  border-color: rgba(100, 116, 139, 0.2);
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.excepcion-card-times {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.excepcion-card-times > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.excepcion-card-times span {
+  color: #64748b;
+  font-size: 0.76rem;
+}
+
+.excepcion-card-times strong {
+  color: #0a2540;
+  font-size: 0.8rem;
+}
+
+.excepcion-card-reason {
+  margin: 0;
+  color: #475569;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.excepciones-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 190px;
+  padding: 24px;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 14px;
+  background: #fff;
+  color: #64748b;
+  text-align: center;
+}
+
+.excepciones-state--compact {
+  min-height: 130px;
+}
+
+.excepciones-state h2,
+.excepciones-state h3,
+.excepciones-state p {
+  margin: 0;
+}
+
+.excepciones-state h2,
+.excepciones-state h3 {
+  color: #0a2540;
+  font-size: 1rem;
+}
+
+.excepciones-state p {
+  font-size: 0.85rem;
+}
+
+.excepciones-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 40px;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.excepciones-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid #dbeafe;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: excepciones-spin 0.75s linear infinite;
+}
+
+@keyframes excepciones-spin {
+  to { transform: rotate(360deg); }
+}
+
+.excepciones-alert,
+.excepciones-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1.5px solid rgba(220, 38, 38, 0.2);
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.07);
+  color: #b91c1c;
+  font-size: 0.85rem;
+}
+
+.excepciones-alert span,
+.excepciones-info span {
+  flex: 1;
+}
+
+.excepciones-alert button {
+  border: 0;
+  background: transparent;
+  color: #1d4ed8;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.excepciones-info {
+  border-color: rgba(217, 119, 6, 0.24);
+  background: rgba(254, 243, 199, 0.65);
+  color: #92400e;
+}
+
+.excepcion-modal-overlay {
+  position: fixed;
+  z-index: 1200;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.55);
+  overflow-y: auto;
+}
+
+.excepcion-modal {
+  width: min(100%, 660px);
+  max-height: calc(100vh - 40px);
+  padding: 22px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
+  overflow-y: auto;
+}
+
+.excepcion-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.excepcion-modal-header h2 {
+  margin: 6px 0 0;
+  color: #0a2540;
+  font-size: 1.2rem;
+}
+
+.excepcion-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  background: #fff;
+  color: #475569;
+  cursor: pointer;
+}
+
+.excepcion-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.excepcion-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.excepcion-form-field input[readonly] {
+  background: #f8fafc;
+}
+
+.excepcion-form-field textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+
+.excepcion-date-grid,
+.excepcion-time-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.excepcion-working-toggle {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  cursor: pointer;
+}
+
+.excepcion-working-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: #2563eb;
+}
+
+.excepcion-working-toggle span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.excepcion-working-toggle strong {
+  color: #0a2540;
+  font-size: 0.85rem;
+}
+
+.excepcion-working-toggle small,
+.excepcion-character-count {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.excepcion-character-count {
+  align-self: flex-end;
+}
+
+.excepcion-nonworking-note {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px;
+  border-radius: 9px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.82rem;
+}
+
+.excepcion-form-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-bottom: 14px;
+  padding: 11px 12px;
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  border-radius: 9px;
+  background: rgba(239, 68, 68, 0.07);
+  color: #b91c1c;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.excepcion-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  padding-top: 4px;
+}
+
+.excepcion-button-primary,
+.excepcion-button-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 8px 13px;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.excepcion-button-primary {
+  border: 1px solid #2563eb;
+  background: #2563eb;
+  color: #fff;
+}
+
+.excepcion-button-secondary {
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+}
+
+.excepcion-button-primary:disabled,
+.excepcion-button-secondary:disabled,
+.excepcion-modal-close:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (max-width: 700px) {
+  .excepcion-card-times {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .excepciones-catalog-filters,
+  .excepciones-employee-selector {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .excepciones-catalog-filters > button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .excepciones-results-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .excepciones-results-header > button {
+    width: 100%;
+  }
+
+  .excepcion-date-grid,
+  .excepcion-time-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .excepcion-modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .excepcion-modal {
+    width: 100%;
+    max-height: 92vh;
+    padding: 18px;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .excepcion-modal-footer {
+    flex-direction: column-reverse;
+  }
+
+  .excepcion-modal-footer button {
+    width: 100%;
+  }
+}

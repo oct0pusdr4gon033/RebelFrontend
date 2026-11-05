@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Sidebar, type NavItem } from '../../components/SideBar/Sidebar';
+import { Sidebar } from '../../components/SideBar/Sidebar';
+import type { NavItem } from '../../components/SideBar/NavItem';
 import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
 import { OportunidadesDashboard } from '../../components/OportunidadesDashboard';
 import { CampanaAlertasOportunidades } from '../../components/AlertasOportunidades/CampanaAlertasOportunidades';
+import NotificacionesGlobales from '../../components/NotificacionesGlobales/NotificacionesGlobales';
 import '../DashboardLayout.css';
 
 const ACCENT = '#2563eb';
@@ -100,6 +102,30 @@ export const adminNavItems: NavItem[] = [
   { icon: 'domain', label: 'Sedes', path: '/admin/empresa/sedes', section: 'Adm. Empresa' },
   { icon: 'badge', label: 'Empleados', path: '/admin/empresa/empleados', section: null },
   { icon: 'manage_accounts', label: 'Usuarios', path: '/admin/empresa/usuarios', section: null },
+  { icon: 'confirmation_number', label: 'Tickets', path: '/admin/tickets', section: 'Soporte Técnico' },
+  {
+    icon: 'schedule',
+    label: 'Asistencias',
+    path: '/admin/asistencias',
+    section: 'Personal',
+    pushButtons: [
+      {
+        id: 'admin-mi-asistencia',
+        label: 'Mi Asistencia',
+        path: '/admin/asistencias',
+      },
+      {
+        id: 'admin-estadisticas-asistencia',
+        label: 'Estadísticas de asistencia',
+        path: '/admin/estadisticas/asistencia',
+      },
+      {
+        id: 'admin-historial-asistencia',
+        label: 'Historial de asistencia',
+        path: '/admin/asistencias/historial',
+      },
+    ],
+  },
   { icon: 'person', label: 'Mi Cuenta', path: '/admin/mi-cuenta', section: 'Cuenta' },
 ];
 
@@ -221,6 +247,7 @@ export default function AdminLayout() {
             <span className="dash__header-title">Panel Administrativo</span>
           </div>
           <div className="dash__header-right" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <NotificacionesGlobales basePath="/admin" accent={ACCENT} />
             <CampanaAlertasOportunidades accent={ACCENT} />
             <span
               className="dash__header-badge"

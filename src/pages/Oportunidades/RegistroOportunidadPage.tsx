@@ -197,7 +197,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
               fechaEntrega: op.ordenCompra.fechaEntrega,
               nroOCAM: op.ordenCompra.nroOCAM,
               nroExpediente: op.ordenCompra.nroExpediente,
-              unidad: op.ordenCompra.unidad,
+              codigoUnidadEjecutora: op.ordenCompra.codigoUnidadEjecutora,
               codigoCIAF: op.ordenCompra.codigoCIAF,
               montoOCAM: op.ordenCompra.montoOCAM,
               fechaRegistro: op.ordenCompra.fechaRegistro,

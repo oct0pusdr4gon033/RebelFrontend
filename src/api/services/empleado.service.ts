@@ -2,6 +2,52 @@ import type { EmpleadoDto, CrearEmpleadoRequest, ActualizarEmpleadoRequest } fro
 import { getAuthHeaders } from './oportunidades.service';
 
 import { API_BASE } from '../../env/envoviment';
+import type {
+  CatalogoAsistenciaEmpleadoDto,
+  EstadoCatalogoAsistencia,
+} from '../Dtos/CatalogoAsistenciaEmpleado';
+
+export interface CatalogoAsistenciaParams {
+  sedeId?: number;
+  buscar?: string;
+  estado?: EstadoCatalogoAsistencia;
+}
+
+async function getCatalogoErrorMessage(response: Response): Promise<string> {
+  const fallback = `No se pudo consultar el catálogo de empleados (HTTP ${response.status}).`;
+
+  try {
+    const body: unknown = await response.json();
+    if (typeof body === 'object' && body !== null) {
+      const error = body as { mensaje?: unknown; message?: unknown; title?: unknown; detail?: unknown };
+      for (const value of [error.mensaje, error.message, error.title, error.detail]) {
+        if (typeof value === 'string' && value.trim()) return value;
+      }
+    }
+  } catch {
+    return fallback;
+  }
+
+  return fallback;
+}
+
+export async function getCatalogoAsistenciaEmpleados(
+  params: CatalogoAsistenciaParams = {},
+): Promise<CatalogoAsistenciaEmpleadoDto[]> {
+  const query = new URLSearchParams();
+  if (params.sedeId !== undefined) query.set('sedeId', String(params.sedeId));
+  if (params.buscar?.trim()) query.set('buscar', params.buscar.trim());
+  if (params.estado) query.set('estado', params.estado);
+
+  const queryString = query.toString();
+  const url = `${API_BASE}/api/Empleados/catalogo-asistencias${queryString ? `?${queryString}` : ''}`;
+  const response = await fetch(url, { headers: getAuthHeaders() });
+  if (!response.ok) {
+    throw new Error(await getCatalogoErrorMessage(response));
+  }
+
+  return response.json();
+}
 
 export async function getEmpleados(incluirInactivos = false): Promise<EmpleadoDto[]> {
   const url = `${API_BASE}/api/empleados?incluirInactivos=${incluirInactivos}`;

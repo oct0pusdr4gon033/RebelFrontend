@@ -9,7 +9,8 @@ import { getOportunidadesApi } from '../../api/services/oportunidades.service';
 import { mapApiToOportunidad } from '../../hooks/useOportunidades';
 import { useAuth } from '../../context/AuthContext';
 import { isOportunidadOwner } from '../../utils/oportunidadUtils';
-import { computeDashboardStats, type OportunidadRow } from './dashboardStats';
+import { computeDashboardStats } from './dashboardStats';
+import type { OportunidadRow } from './OportunidadRow';
 
 export type DashboardScope = 'sistema' | 'personal';
 

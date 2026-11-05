@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Sidebar, type NavItem } from '../../components/SideBar/Sidebar';
+import { Sidebar } from '../../components/SideBar/Sidebar';
+import type { NavItem } from '../../components/SideBar/NavItem';
 import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
+import NotificacionesGlobales from '../../components/NotificacionesGlobales/NotificacionesGlobales';
 import '../DashboardLayout.css';
 
 const ACCENT = '#2563eb';
@@ -55,6 +57,8 @@ export const masterNavItems: NavItem[] = [
   { icon: 'track_changes', label: 'Mis Metas', path: '/master/metas', section: null },
   { icon: 'local_shipping', label: 'Seguimiento OC', path: '/master/seguimiento-oc', section: 'Ventas' },
   { icon: 'payments', label: 'Solicitud de Pagos', path: '/master/pagos', section: 'Ventas' },
+  { icon: 'assignment', label: 'Solicitudes', path: '/master/solicitudes', section: 'Solicitudes' },
+  { icon: 'confirmation_number', label: 'Tickets', path: '/master/tickets', section: 'Soporte Técnico' },
   {
     icon: 'import_contacts',
     label: 'Agenda de Contactos',
@@ -82,6 +86,29 @@ export const masterNavItems: NavItem[] = [
   { icon: 'leaderboard', label: 'Ranking Equipo', path: '/master/ranking', section: null },
   { icon: 'military_tech', label: 'Mis Logros', path: '/master/logros', section: 'Rendimiento' },
   { icon: 'bar_chart', label: 'Reportes Master', path: '/master/reportes', section: null },
+  {
+    icon: 'schedule',
+    label: 'Asistencias',
+    path: '/master/asistencias',
+    section: 'Personal',
+    pushButtons: [
+      {
+        id: 'master-mi-asistencia',
+        label: 'Mi Asistencia',
+        path: '/master/asistencias',
+      },
+      {
+        id: 'master-estadisticas-asistencia',
+        label: 'Estadísticas de asistencia',
+        path: '/master/estadisticas/asistencia',
+      },
+      {
+        id: 'master-historial-asistencia',
+        label: 'Historial de asistencia',
+        path: '/master/asistencias/historial',
+      },
+    ],
+  },
   { icon: 'person', label: 'Mi Cuenta', path: '/master/mi-cuenta', section: 'Cuenta' },
 ];
 
@@ -203,7 +230,8 @@ export default function MasterLayout() {
             </button>
             <span className="dash__header-title">Panel Ejecutiva Master de Ventas</span>
           </div>
-          <div className="dash__header-right">
+          <div className="dash__header-right" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <NotificacionesGlobales basePath="/master" accent={ACCENT} />
             <span
               className="dash__header-badge"
               style={{

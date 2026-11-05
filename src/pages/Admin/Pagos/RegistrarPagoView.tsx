@@ -367,7 +367,7 @@ export const RegistrarPagoView: React.FC<RegistrarPagoViewProps> = ({
     }
     const fEntrega =
       oportunidadSeleccionada?.ordenCompra?.fechaEntrega?.slice(0, 10) ||
-      oportunidadSeleccionada?.anuncioograma?.slice(0, 10) ||
+      oportunidadSeleccionada?.fechaVencimiento?.slice(0, 10) ||
       '';
     if (fEntrega) {
       setFechaVencimientoOC(fEntrega);
