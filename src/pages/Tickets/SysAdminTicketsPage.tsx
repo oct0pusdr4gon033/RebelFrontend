@@ -18,7 +18,7 @@ import {
   ETIQUETAS_PRIORIDAD_TICKET,
   PRIORIDADES_TICKET,
 } from '../../api/Dtos/Ticket';
-import { obtenerTickets } from '../../api/services/ticket.service';
+import { obtenerMisTicketsAsignados, obtenerTickets } from '../../api/services/ticket.service';
 import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
 import { useAuth } from '../../context/AuthContext';
 import { useTicketListUpdates } from '../../hooks/useTicketListUpdates';
@@ -49,8 +49,18 @@ function parseFilter<T extends number>(
   if (option !== undefined) update(option);
 }
 
-export default function SysAdminTicketsPage() {
+interface SysAdminTicketsPageProps {
+  mode?: 'sysadmin' | 'tecnico';
+  basePath?: string;
+}
+
+export default function SysAdminTicketsPage({
+  mode = 'sysadmin',
+  basePath,
+}: SysAdminTicketsPageProps) {
   const { token } = useAuth();
+  const isTecnico = mode === 'tecnico';
+  const detailBasePath = basePath ?? (isTecnico ? '/tecnico/tickets' : '/sysadmin/tickets');
   const [tickets, setTickets] = useState<TicketResponseDto[]>([]);
   const [filters, setFilters] = useState<TicketFiltroRequest>({});
   const [loading, setLoading] = useState(true);
@@ -59,7 +69,9 @@ export default function SysAdminTicketsPage() {
 
   const loadTickets = useCallback(async (currentFilters: TicketFiltroRequest) => {
     try {
-      setTickets(await obtenerTickets(currentFilters));
+      setTickets(await (isTecnico
+        ? obtenerMisTicketsAsignados(currentFilters)
+        : obtenerTickets(currentFilters)));
       setError(null);
     } catch (reason) {
       setTickets([]);
@@ -67,7 +79,7 @@ export default function SysAdminTicketsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isTecnico]);
 
   const refreshTickets = useTicketListUpdates(
     tickets.map((ticket) => ticket.id),
@@ -104,10 +116,12 @@ export default function SysAdminTicketsPage() {
         <div>
           <div className="solicitudes-eyebrow">
             <GoogleIcon name="confirmation_number" size={18} color="#2563eb" />
-            Gestión de tickets
+            {isTecnico ? 'Soporte técnico' : 'Gestión de tickets'}
           </div>
-          <h1>Bandeja global</h1>
-          <p>Revisa, asigna y da seguimiento a los tickets de soporte.</p>
+          <h1>{isTecnico ? 'Mis tickets asignados' : 'Bandeja global'}</h1>
+          <p>{isTecnico
+            ? 'Atiende los tickets que SysAdmin te asignó.'
+            : 'Revisa, asigna y da seguimiento a los tickets de soporte.'}</p>
         </div>
         <button
           type="button"
@@ -226,11 +240,11 @@ export default function SysAdminTicketsPage() {
       )}
 
       {!loading && !error && tickets.length > 0 && (
-        <section className="solicitudes-list" aria-label="Bandeja global de tickets">
+        <section className="solicitudes-list" aria-label={isTecnico ? 'Tickets asignados' : 'Bandeja global de tickets'}>
           {tickets.map((ticket) => (
             <Link
               className="solicitud-card ticket-card"
-              to={`/sysadmin/tickets/${ticket.id}`}
+              to={`${detailBasePath}/${ticket.id}`}
               key={ticket.id}
             >
               <div className="solicitud-card__main">

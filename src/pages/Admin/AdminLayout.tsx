@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { withTecnicoTicketsNav } from '../Tickets/tecnicoNav';
 import { Sidebar } from '../../components/SideBar/Sidebar';
 import type { NavItem } from '../../components/SideBar/NavItem';
 import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
@@ -214,6 +215,7 @@ export function AdminDashboard() {
 }
 
 export default function AdminLayout() {
+  const { empleado } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
@@ -227,7 +229,7 @@ export default function AdminLayout() {
         accentBorder={ACCENT_BORDER}
         avatarGrad={AVATAR_GRAD}
         basePath="/admin"
-        navItems={adminNavItems}
+        navItems={withTecnicoTicketsNav(adminNavItems, '/admin', empleado?.puedeAtenderTickets)}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />

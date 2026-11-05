@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { withTecnicoTicketsNav } from '../Tickets/tecnicoNav';
 import { Sidebar } from '../../components/SideBar/Sidebar';
 import type { NavItem } from '../../components/SideBar/NavItem';
 import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
@@ -198,6 +199,7 @@ export function MasterDashboard() {
 }
 
 export default function MasterLayout() {
+  const { empleado } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
@@ -211,7 +213,7 @@ export default function MasterLayout() {
         accentBorder={ACCENT_BORDER}
         avatarGrad={AVATAR_GRAD}
         basePath="/master"
-        navItems={masterNavItems}
+        navItems={withTecnicoTicketsNav(masterNavItems, '/master', empleado?.puedeAtenderTickets)}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />

@@ -13,6 +13,7 @@ const EMPTY: CrearEmpleadoRequest = {
   email: '',
   fechaIngreso: new Date().toISOString().split('T')[0],
   sedeId: undefined,
+  puedeAtenderTickets: false,
 };
 
 export default function EmpleadoFormModal({ open, empleado, sedes, onClose, onSave }: PropsEmpleadoModal) {
@@ -39,6 +40,7 @@ export default function EmpleadoFormModal({ open, empleado, sedes, onClose, onSa
             ? new Date(empleado.fechaIngreso).toISOString().split('T')[0]
             : new Date().toISOString().split('T')[0],
           sedeId: empleado.sedeId,
+          puedeAtenderTickets: empleado.puedeAtenderTickets ?? false,
         });
       } else {
         setForm(EMPTY);
@@ -78,6 +80,7 @@ export default function EmpleadoFormModal({ open, empleado, sedes, onClose, onSa
         email: form.email?.trim() || undefined,
         fechaIngreso: form.fechaIngreso,
         sedeId: form.sedeId,
+        puedeAtenderTickets: form.puedeAtenderTickets,
       });
     } catch (err) {
       setApiError(err instanceof Error ? err.message : 'Error inesperado');
@@ -216,6 +219,18 @@ export default function EmpleadoFormModal({ open, empleado, sedes, onClose, onSa
                 ))}
               </select>
             </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="emp-puede-atender" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                id="emp-puede-atender"
+                type="checkbox"
+                checked={form.puedeAtenderTickets ?? false}
+                onChange={(e) => setForm((prev) => ({ ...prev, puedeAtenderTickets: e.target.checked }))}
+              />
+              Puede atender tickets de soporte
+            </label>
           </div>
 
           <div className="empresa-modal-footer">

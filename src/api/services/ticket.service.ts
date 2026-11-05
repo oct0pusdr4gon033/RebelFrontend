@@ -480,3 +480,81 @@ export async function descargarTicketEvidencia(
     nombreArchivoFallback,
   );
 }
+
+// ── Bandeja del técnico ───────────────────────────────────────────────────────
+
+export async function obtenerMisTicketsAsignados(
+  filtros?: TicketFiltroRequest,
+): Promise<TicketResponseDto[]> {
+  return fetchJson(
+    `${TICKETS_BASE}/asignados${queryString(filtros)}`,
+    { headers: getAuthHeaders() },
+    'No se pudieron consultar tus tickets asignados.',
+  );
+}
+
+export async function obtenerMiTicketAsignadoPorId(id: number): Promise<TicketResponseDto> {
+  return fetchJson(
+    `${TICKETS_BASE}/asignados/${id}`,
+    { headers: getAuthHeaders() },
+    'No se pudo consultar el ticket asignado.',
+  );
+}
+
+export async function obtenerMiSeguimientoAsignado(
+  id: number,
+): Promise<TicketSeguimientoResponseDto> {
+  return fetchJson(
+    `${TICKETS_BASE}/asignados/${id}/seguimiento`,
+    { headers: getAuthHeaders() },
+    'No se pudo consultar el seguimiento del ticket asignado.',
+  );
+}
+
+export async function agregarComentarioTicketAsignado(
+  id: number,
+  request: AgregarComentarioTicketRequest,
+): Promise<TicketResponseDto> {
+  return fetchJson(
+    `${TICKETS_BASE}/asignados/${id}/comentarios`,
+    {
+      method: 'POST',
+      headers: jsonHeaders(),
+      body: JSON.stringify(request),
+    },
+    'No se pudo agregar el comentario.',
+  );
+}
+
+export async function cambiarEstadoTicketAsignado(
+  id: number,
+  request: CambiarEstadoTicketRequest,
+): Promise<TicketResponseDto> {
+  return fetchJson(
+    `${TICKETS_BASE}/asignados/${id}/estado`,
+    {
+      method: 'PUT',
+      headers: jsonHeaders(),
+      body: JSON.stringify(request),
+    },
+    'No se pudo actualizar el estado del ticket.',
+  );
+}
+
+export async function agregarEvidenciasTicketAsignado(
+  id: number,
+  archivos: File[],
+): Promise<TicketResponseDto> {
+  validarArchivosTicket(archivos, false);
+  const formData = new FormData();
+  archivos.forEach((archivo) => formData.append('archivos', archivo, archivo.name));
+  return fetchJson(
+    `${TICKETS_BASE}/asignados/${id}/evidencias`,
+    {
+      method: 'POST',
+      headers: formHeaders(),
+      body: formData,
+    },
+    'No se pudieron adjuntar archivos al ticket.',
+  );
+}

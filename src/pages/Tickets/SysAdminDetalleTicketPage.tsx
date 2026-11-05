@@ -18,10 +18,15 @@ import {
 } from '../../api/Dtos/Ticket';
 import {
   agregarComentarioTicket,
+  agregarComentarioTicketAsignado,
   agregarEvidenciasTicket,
+  agregarEvidenciasTicketAsignado,
   asignarTicket,
   cambiarEstadoTicket,
+  cambiarEstadoTicketAsignado,
   obtenerEvidenciasTicket,
+  obtenerMiSeguimientoAsignado,
+  obtenerMiTicketAsignadoPorId,
   obtenerSeguimientoTicket,
   obtenerTecnicosAsignables,
   obtenerTicketPorId,
@@ -52,7 +57,7 @@ function formatDateTime(value: string | null): string {
 function getErrorMessage(reason: unknown, fallback: string): string {
   if (reason instanceof TicketHttpError) {
     if (reason.status === 401) return 'La sesión expiró. Inicia sesión nuevamente.';
-    if (reason.status === 403) return 'SYSADMIN no tiene permiso para esta operación.';
+    if (reason.status === 403) return 'No tienes permiso para esta operación.';
     if (reason.status === 409) {
       return `${reason.message} Actualiza el ticket e inténtalo nuevamente.`;
     }
@@ -70,10 +75,20 @@ function matchesTicketSnapshot(payload: unknown, current: TicketResponseDto | nu
   );
 }
 
-export default function SysAdminDetalleTicketPage() {
+interface SysAdminDetalleTicketPageProps {
+  mode?: 'sysadmin' | 'tecnico';
+  basePath?: string;
+}
+
+export default function SysAdminDetalleTicketPage({
+  mode = 'sysadmin',
+  basePath,
+}: SysAdminDetalleTicketPageProps) {
   const { id: idParam } = useParams();
   const id = Number(idParam);
   const validId = Number.isInteger(id) && id > 0;
+  const isTecnico = mode === 'tecnico';
+  const boardPath = basePath ?? (isTecnico ? '/tecnico/tickets' : '/sysadmin/tickets');
   const { empleado, token } = useAuth();
   const requestSequence = useRef(0);
   const [ticket, setTicket] = useState<TicketResponseDto | null>(null);
@@ -118,8 +133,8 @@ export default function SysAdminDetalleTicketPage() {
     }
     const sequence = ++requestSequence.current;
     const [ticketResult, followupResult, evidenceResult] = await Promise.allSettled([
-      obtenerTicketPorId(id),
-      obtenerSeguimientoTicket(id),
+      isTecnico ? obtenerMiTicketAsignadoPorId(id) : obtenerTicketPorId(id),
+      isTecnico ? obtenerMiSeguimientoAsignado(id) : obtenerSeguimientoTicket(id),
       obtenerEvidenciasTicket(id),
     ]);
     if (sequence !== requestSequence.current) return [];
@@ -156,7 +171,7 @@ export default function SysAdminDetalleTicketPage() {
     if (ticketResult.status === 'rejected') throw ticketResult.reason;
     if (followupResult.status === 'rejected') throw followupResult.reason;
     return followupResult.value.comentarios;
-  }, [id, updateTicket, validId]);
+  }, [id, isTecnico, updateTicket, validId]);
   const conversation = useTicketConversation(
     validId ? id : null,
     token,
@@ -206,13 +221,13 @@ export default function SysAdminDetalleTicketPage() {
       .finally(() => {
         if (active) setLoading(false);
       });
-    void loadTechnicians();
+    if (!isTecnico) void loadTechnicians();
 
     return () => {
       active = false;
       requestSequence.current += 1;
     };
-  }, [loadTechnicians, mergeComments, refreshTicketFromServer, validId]);
+  }, [isTecnico, loadTechnicians, mergeComments, refreshTicketFromServer, validId]);
 
   const applyTicketResponse = useCallback((updatedTicket: TicketResponseDto) => {
     updateTicket(updatedTicket);
@@ -253,11 +268,15 @@ export default function SysAdminDetalleTicketPage() {
 
   const handleStateChange = async (estado: EstadoTicket) => {
     if (!ticket) return;
-    const allowedState: EstadoTicket | null =
-      ticket.estado === 0 ? 1 :
-      ticket.estado === 1 ? 2 :
-      ticket.estado === 2 ? 3 :
-      null;
+    const allowedState: EstadoTicket | null = isTecnico
+      ? (ticket.estado === 1 ? 2 : null)
+      : ticket.estado === 0
+        ? 1
+        : ticket.estado === 1
+          ? 2
+          : ticket.estado === 2
+            ? 3
+            : null;
     if (allowedState !== estado) {
       setActionError('La transición solicitada no está permitida para el estado actual.');
       return;
@@ -286,7 +305,9 @@ export default function SysAdminDetalleTicketPage() {
     setBusy('state');
     setActionError(null);
     try {
-      applyTicketResponse(await cambiarEstadoTicket(ticket.id, request));
+      applyTicketResponse(await (isTecnico
+        ? cambiarEstadoTicketAsignado(ticket.id, request)
+        : cambiarEstadoTicket(ticket.id, request)));
       setStateDetail('');
     } catch (reason) {
       setActionError(getErrorMessage(reason, 'No se pudo actualizar el estado del ticket.'));
@@ -309,9 +330,9 @@ export default function SysAdminDetalleTicketPage() {
     setBusy('comment');
     setActionError(null);
     try {
-      const updatedTicket = await agregarComentarioTicket(ticket.id, {
-        comentario: cleanComment,
-      });
+      const updatedTicket = await (isTecnico
+        ? agregarComentarioTicketAsignado(ticket.id, { comentario: cleanComment })
+        : agregarComentarioTicket(ticket.id, { comentario: cleanComment }));
       applyTicketResponse(updatedTicket);
       setComment('');
     } catch (reason) {
@@ -329,7 +350,9 @@ export default function SysAdminDetalleTicketPage() {
     setBusy('upload');
     setEvidenceUploadError(null);
     try {
-      applyTicketResponse(await agregarEvidenciasTicket(ticket.id, files));
+      applyTicketResponse(await (isTecnico
+        ? agregarEvidenciasTicketAsignado(ticket.id, files)
+        : agregarEvidenciasTicket(ticket.id, files)));
       try {
         setEvidencias(await obtenerEvidenciasTicket(ticket.id));
         setEvidenceError(null);
@@ -351,12 +374,16 @@ export default function SysAdminDetalleTicketPage() {
 
   const displayedError = validId ? ticketError : 'El identificador del ticket no es válido.';
   const currentHistory = seguimiento?.historial ?? ticket?.historial ?? [];
-  const canAssign = ticket !== null && ticket.estado !== 2 && ticket.estado !== 3;
-  const nextStatus: EstadoTicket | null =
-    ticket?.estado === 0 ? 1 :
-    ticket?.estado === 1 ? 2 :
-    ticket?.estado === 2 ? 3 :
-    null;
+  const canAssign = !isTecnico && ticket !== null && ticket.estado !== 2 && ticket.estado !== 3;
+  const nextStatus: EstadoTicket | null = isTecnico
+    ? (ticket?.estado === 1 ? 2 : null)
+    : ticket?.estado === 0
+      ? 1
+      : ticket?.estado === 1
+        ? 2
+        : ticket?.estado === 2
+          ? 3
+          : null;
   const refreshTicket = () => {
     setLoading(true);
     setTicketError(null);
@@ -369,14 +396,16 @@ export default function SysAdminDetalleTicketPage() {
         <div>
           <div className="solicitudes-eyebrow">
             <GoogleIcon name="confirmation_number" size={18} color="#2563eb" />
-            Gestión de tickets
+            {isTecnico ? 'Soporte técnico' : 'Gestión de tickets'}
           </div>
           <h1>Detalle de ticket</h1>
-          <p>Asigna responsables, registra la atención y consulta el historial.</p>
+          <p>{isTecnico
+            ? 'Atiende el ticket asignado, comenta y adjunta evidencias.'
+            : 'Asigna responsables, registra la atención y consulta el historial.'}</p>
         </div>
-        <Link className="solicitudes-secondary-button" to="/sysadmin/tickets">
+        <Link className="solicitudes-secondary-button" to={boardPath}>
           <GoogleIcon name="arrow_back" size={18} color="#2563eb" />
-          Bandeja global
+          {isTecnico ? 'Mis tickets' : 'Bandeja global'}
         </Link>
       </header>
 
@@ -474,7 +503,9 @@ export default function SysAdminDetalleTicketPage() {
           <section className="ticket-panel" aria-labelledby="sys-ticket-assignment-title">
             <div className="ticket-panel__heading">
               <div>
-                <h3 id="sys-ticket-assignment-title">Asignación y atención</h3>
+                <h3 id="sys-ticket-assignment-title">
+                  {isTecnico ? 'Atención del ticket' : 'Asignación y atención'}
+                </h3>
                 <p>
                   Estado actual: <strong>{ETIQUETAS_ESTADO_TICKET[ticket.estado]}</strong>.
                   {' '}Solo se muestran transiciones permitidas por el backend.
@@ -483,7 +514,7 @@ export default function SysAdminDetalleTicketPage() {
               <GoogleIcon name="assignment_ind" size={20} color="#2563eb" />
             </div>
 
-            {canAssign ? (
+            {!isTecnico && (canAssign ? (
               <form className="sys-ticket-assignment" onSubmit={(event) => void handleAssign(event)}>
                 <div className="solicitudes-field">
                   <label htmlFor="sys-ticket-technician">Técnico asignable</label>
@@ -520,7 +551,7 @@ export default function SysAdminDetalleTicketPage() {
               <p className="ticket-readonly-note">
                 No se puede asignar un ticket atendido o cerrado.
               </p>
-            )}
+            ))}
 
             {nextStatus !== null ? (
               <div className="sys-ticket-state-transition">
@@ -545,14 +576,18 @@ export default function SysAdminDetalleTicketPage() {
                   <GoogleIcon name={busy === 'state' ? 'hourglass_top' : 'update'} size={18} color="#fff" />
                   {busy === 'state'
                     ? 'Actualizando...'
-                    : nextStatus === 3
-                      ? 'Cerrar ticket'
-                      : `Cambiar a ${ETIQUETAS_ESTADO_TICKET[nextStatus]}`}
+                    : isTecnico
+                      ? 'Marcar como atendido'
+                      : nextStatus === 3
+                        ? 'Cerrar ticket'
+                        : `Cambiar a ${ETIQUETAS_ESTADO_TICKET[nextStatus]}`}
                 </button>
               </div>
             ) : (
               <p className="ticket-readonly-note">
-                No hay otra transición administrativa disponible para el estado actual.
+                {isTecnico
+                  ? 'No hay una acción disponible para el estado actual del ticket.'
+                  : 'No hay otra transición administrativa disponible para el estado actual.'}
               </p>
             )}
           </section>

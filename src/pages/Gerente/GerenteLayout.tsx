@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { withTecnicoTicketsNav } from '../Tickets/tecnicoNav';
 import { Sidebar } from '../../components/SideBar/Sidebar';
 import type { NavItem } from '../../components/SideBar/NavItem';
 import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
@@ -141,6 +142,7 @@ export function GerenteDashboard() {
 }
 
 export default function GerenteLayout() {
+  const { empleado } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
@@ -154,7 +156,7 @@ export default function GerenteLayout() {
         accentBorder={ACCENT_BORDER}
         avatarGrad={AVATAR_GRAD}
         basePath="/gerente"
-        navItems={gerenteNavItems}
+        navItems={withTecnicoTicketsNav(gerenteNavItems, '/gerente', empleado?.puedeAtenderTickets)}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />

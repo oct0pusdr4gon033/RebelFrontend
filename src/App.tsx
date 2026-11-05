@@ -33,6 +33,7 @@ import MisTicketsPage from './pages/Tickets/MisTicketsPage';
 import NuevoTicketPage from './pages/Tickets/NuevoTicketPage';
 import DetalleTicketPage from './pages/Tickets/DetalleTicketPage';
 import TicketRoleRoute from './pages/Tickets/TicketRoleRoute';
+import TecnicoRoute from './pages/Tickets/TecnicoRoute';
 import SysAdminTicketsPage from './pages/Tickets/SysAdminTicketsPage';
 import SysAdminDetalleTicketPage from './pages/Tickets/SysAdminDetalleTicketPage';
 import {
@@ -97,6 +98,19 @@ function App() {
                 />
               }
             />
+            <Route
+              path="tecnico/tickets"
+              element={<TecnicoRoute fallbackPath="/gerente" />}
+            >
+              <Route
+                index
+                element={<SysAdminTicketsPage mode="tecnico" basePath="/gerente/tecnico/tickets" />}
+              />
+              <Route
+                path=":id"
+                element={<SysAdminDetalleTicketPage mode="tecnico" basePath="/gerente/tecnico/tickets" />}
+              />
+            </Route>
             <Route path="*" element={<Navigate to="/gerente" replace />} />
           </Route>
 
@@ -157,6 +171,19 @@ function App() {
                 </EstadisticasRoleRoute>
               }
             />
+            <Route
+              path="tecnico/tickets"
+              element={<TecnicoRoute fallbackPath="/sysadmin" />}
+            >
+              <Route
+                index
+                element={<SysAdminTicketsPage mode="tecnico" basePath="/sysadmin/tecnico/tickets" />}
+              />
+              <Route
+                path=":id"
+                element={<SysAdminDetalleTicketPage mode="tecnico" basePath="/sysadmin/tecnico/tickets" />}
+              />
+            </Route>
             <Route path="*" element={<Navigate to="/sysadmin" replace />} />
           </Route>
 
@@ -204,6 +231,19 @@ function App() {
               <Route index element={<MisTicketsPage basePath="/admin" />} />
               <Route path="nuevo" element={<NuevoTicketPage basePath="/admin" />} />
               <Route path=":id" element={<DetalleTicketPage basePath="/admin" />} />
+            </Route>
+            <Route
+              path="tecnico/tickets"
+              element={<TecnicoRoute fallbackPath="/admin" />}
+            >
+              <Route
+                index
+                element={<SysAdminTicketsPage mode="tecnico" basePath="/admin/tecnico/tickets" />}
+              />
+              <Route
+                path=":id"
+                element={<SysAdminDetalleTicketPage mode="tecnico" basePath="/admin/tecnico/tickets" />}
+              />
             </Route>
             <Route
               path="mi-cuenta"
@@ -280,6 +320,19 @@ function App() {
               element={<AgendaContactosPage roleAccent="#2563eb" />}
             />
             <Route
+              path="tecnico/tickets"
+              element={<TecnicoRoute fallbackPath="/master" />}
+            >
+              <Route
+                index
+                element={<SysAdminTicketsPage mode="tecnico" basePath="/master/tecnico/tickets" />}
+              />
+              <Route
+                path=":id"
+                element={<SysAdminDetalleTicketPage mode="tecnico" basePath="/master/tecnico/tickets" />}
+              />
+            </Route>
+            <Route
               path="mi-cuenta"
               element={
                 <MiCuentaPage
@@ -344,6 +397,19 @@ function App() {
               path="agenda-contactos"
               element={<AgendaContactosPage roleAccent="#2563eb" />}
             />
+            <Route
+              path="tecnico/tickets"
+              element={<TecnicoRoute fallbackPath="/ejecutiva" />}
+            >
+              <Route
+                index
+                element={<SysAdminTicketsPage mode="tecnico" basePath="/ejecutiva/tecnico/tickets" />}
+              />
+              <Route
+                path=":id"
+                element={<SysAdminDetalleTicketPage mode="tecnico" basePath="/ejecutiva/tecnico/tickets" />}
+              />
+            </Route>
             <Route
               path="mi-cuenta"
               element={
