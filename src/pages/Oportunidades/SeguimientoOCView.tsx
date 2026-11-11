@@ -60,6 +60,7 @@ export const SeguimientoOCView: React.FC<SeguimientoOCProps> = ({ roleAccent = '
   const [oportunidades, setOportunidades] = useState<Oportunidad[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState<FiltroOC>('todas');
+  const [filtroEjecutiva, setFiltroEjecutiva] = useState('todas');
   const [busqueda, setBusqueda] = useState('');
   const [detalleOp, setDetalleOp] = useState<Oportunidad | null>(null);
 
@@ -109,8 +110,19 @@ export const SeguimientoOCView: React.FC<SeguimientoOCProps> = ({ roleAccent = '
 
   const esActiva = (op: Oportunidad) => op.estado === 'OC_RECIBIDA' || op.estado === 'OC_ACEPTADA';
 
+  const ejecutivasUnicas = useMemo(() => {
+    const set = new Set<string>();
+    oportunidades.forEach((op) => {
+      if (op.creadoPor) set.add(op.creadoPor);
+    });
+    return Array.from(set).sort();
+  }, [oportunidades]);
+
   const filtradas = useMemo(() => {
     let lista = conOC;
+    if (filtroEjecutiva !== 'todas') {
+      lista = lista.filter((op) => op.creadoPor === filtroEjecutiva);
+    }
     switch (filtro) {
       case 'activas':
         lista = lista.filter(esActiva);
@@ -152,7 +164,7 @@ export const SeguimientoOCView: React.FC<SeguimientoOCProps> = ({ roleAccent = '
       const fb = b.ordenCompra?.fechaRegistro || b.fechaRegistro || '';
       return fb.localeCompare(fa);
     });
-  }, [conOC, filtro, busqueda]);
+  }, [conOC, filtro, busqueda, filtroEjecutiva]);
 
   // Al cambiar de filtro o búsqueda, volver a la página 1
   useEffect(() => {
@@ -525,6 +537,33 @@ export const SeguimientoOCView: React.FC<SeguimientoOCProps> = ({ roleAccent = '
                 </button>
               )}
             </div>
+
+            {/* Filtro por Ejecutiva para roles de supervisión (Master / Admin) */}
+            {esAdminOC && ejecutivasUnicas.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Ejecutiva:</span>
+                <select
+                  value={filtroEjecutiva}
+                  onChange={(e) => setFiltroEjecutiva(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: 6,
+                    border: '1.5px solid #cbd5e1',
+                    background: '#ffffff',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: '#334155',
+                    cursor: 'pointer',
+                    minWidth: '220px',
+                  }}
+                >
+                  <option value="todas">👥 Todas las Ejecutivas ({conOC.length})</option>
+                  {ejecutivasUnicas.map((ej) => (
+                    <option key={ej} value={ej}>👤 {ej}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Fila Inferior: Chips de Filtro de Estado */}
@@ -570,6 +609,7 @@ export const SeguimientoOCView: React.FC<SeguimientoOCProps> = ({ roleAccent = '
               <thead>
                 <tr>
                   <th>N° Requerimiento</th>
+                  <th>Ejecutiva</th>
                   <th>Entidad Convocante</th>
                   <th style={{ textAlign: 'right' }}>Límite Total</th>
                   <th>N° Orden de Compra</th>
@@ -602,6 +642,16 @@ export const SeguimientoOCView: React.FC<SeguimientoOCProps> = ({ roleAccent = '
                           </span>
                           <span style={{ fontSize: '11px', color: '#64748b' }}>
                             {op.items?.length || 0} {op.items?.length === 1 ? 'producto' : 'productos'}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Ejecutiva Propietaria */}
+                      <td>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#f8fafc', padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                          <GoogleIcon name="person" size={14} color="#64748b" />
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap' }}>
+                            {op.creadoPor || 'Ejecutiva'}
                           </span>
                         </div>
                       </td>

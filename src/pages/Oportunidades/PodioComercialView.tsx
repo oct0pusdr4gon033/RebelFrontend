@@ -3,12 +3,8 @@ import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
 import type { Oportunidad, TipoPodio } from '../../types/oportunidades';
 import type { EjecutivaRanking } from '../../models/EjecutivaRanking.model';
 import { formatHoraExacta, formatDiferenciaTiempo } from '../../utils/dateUtils';
+import type { PodioComercialViewProps } from './PodioComercialViewProps'
 
-interface PodioComercialViewProps {
-  oportunidades: Oportunidad[];
-  roleAccent: string;
-  initialTipo?: TipoPodio;
-}
 
 export const PodioComercialView: React.FC<PodioComercialViewProps> = ({
   oportunidades,

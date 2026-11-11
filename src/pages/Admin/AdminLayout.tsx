@@ -21,7 +21,7 @@ export const adminNavItems: NavItem[] = [
     icon: 'gavel',
     label: 'Resolver Oportunidades',
     path: '/admin/resolver-oportunidades',
-    section: 'Licitaciones',
+    section: 'Licitaciones y Ventas',
     pushButtons: [
       {
         id: 'bandeja',
@@ -40,35 +40,12 @@ export const adminNavItems: NavItem[] = [
       },
     ],
   },
-  { icon: 'handshake', label: 'Acuerdos Marco', path: '/admin/acuerdos', section: 'Comercial' },
-  { icon: 'local_shipping', label: 'Seguimiento OC', path: '/admin/seguimiento-oc', section: 'Licitaciones' },
-  {
-    icon: 'import_contacts',
-    label: 'Agenda de Contactos',
-    path: '/admin/agenda-contactos',
-    section: 'Licitaciones',
-    pushButtons: [
-      {
-        id: 'agenda-registrar',
-        tabKey: 'registrar',
-        label: 'Registrar',
-        path: '/admin/agenda-contactos?tab=registrar',
-        description: 'Nuevo contacto de OCAM',
-      },
-      {
-        id: 'agenda-contactos',
-        tabKey: 'agenda',
-        label: 'Agenda',
-        path: '/admin/agenda-contactos?tab=agenda',
-        description: 'Directorio y filtros por OCAM',
-      },
-    ],
-  },
+  { icon: 'local_shipping', label: 'Seguimiento OC', path: '/admin/seguimiento-oc', section: null },
   {
     icon: 'payments',
-    label: 'Pagos',
+    label: 'Gestión de Pagos',
     path: '/admin/pagos',
-    section: 'Licitaciones',
+    section: null,
     pushButtons: [
       {
         id: 'historial-pagos',
@@ -94,16 +71,35 @@ export const adminNavItems: NavItem[] = [
       },
     ],
   },
-  { icon: 'corporate_fare', label: 'Empresas', path: '/admin/empresas', section: null },
-  { icon: 'badge', label: 'Empleados', path: '/admin/empleados', section: 'Gestión' },
-  { icon: 'domain', label: 'Mi Sede', path: '/admin/sede', section: null },
-  { icon: 'bar_chart', label: 'Reportes', path: '/admin/reportes', section: 'Análisis' },
-  { icon: 'calendar_month', label: 'Calendario', path: '/admin/calendario', section: null },
+  {
+    icon: 'import_contacts',
+    label: 'Agenda de Contactos',
+    path: '/admin/agenda-contactos',
+    section: null,
+    pushButtons: [
+      {
+        id: 'agenda-registrar',
+        tabKey: 'registrar',
+        label: 'Registrar',
+        path: '/admin/agenda-contactos?tab=registrar',
+        description: 'Nuevo contacto de OCAM',
+      },
+      {
+        id: 'agenda-contactos',
+        tabKey: 'agenda',
+        label: 'Agenda',
+        path: '/admin/agenda-contactos?tab=agenda',
+        description: 'Directorio y filtros por OCAM',
+      },
+    ],
+  },
   // ── Administración de Empresa ──
-  { icon: 'domain', label: 'Sedes', path: '/admin/empresa/sedes', section: 'Adm. Empresa' },
+  { icon: 'domain', label: 'Sedes', path: '/admin/empresa/sedes', section: 'Administración' },
   { icon: 'badge', label: 'Empleados', path: '/admin/empresa/empleados', section: null },
   { icon: 'manage_accounts', label: 'Usuarios', path: '/admin/empresa/usuarios', section: null },
+  // ── Soporte Técnico ──
   { icon: 'confirmation_number', label: 'Tickets', path: '/admin/tickets', section: 'Soporte Técnico' },
+  // ── Personal ──
   {
     icon: 'schedule',
     label: 'Asistencias',
@@ -127,6 +123,7 @@ export const adminNavItems: NavItem[] = [
       },
     ],
   },
+  // ── Cuenta ──
   { icon: 'person', label: 'Mi Cuenta', path: '/admin/mi-cuenta', section: 'Cuenta' },
 ];
 

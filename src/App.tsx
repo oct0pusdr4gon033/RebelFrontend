@@ -5,6 +5,7 @@ import LoginPage from './pages/Login';
 import SysAdminLayout, { SysAdminDashboard } from './pages/SysAdmin';
 import AdminLayout, { AdminDashboard } from './pages/Admin';
 import MasterLayout, { MasterDashboard } from './pages/Master';
+import { SupervisionMasterPage } from './pages/Master/SupervisionMasterPage';
 import EjecutivaLayout, { EjecutivaDashboard } from './pages/Ejecutiva';
 import GerenteLayout, { GerenteDashboard } from './pages/Gerente';
 import MiCuentaPage from './pages/MiCuenta';
@@ -299,6 +300,10 @@ function App() {
               <Route path="dashboard" element={<Navigate to="/master/tickets" replace />} />
               <Route path=":id" element={<DetalleTicketPage basePath="/master" />} />
             </Route>
+            <Route
+              path="supervision"
+              element={<SupervisionMasterPage roleAccent="#0284c7" />}
+            />
             <Route
               path="registro-oportunidad"
               element={<RegistroOportunidadPage roleAccent="#2563eb" />}

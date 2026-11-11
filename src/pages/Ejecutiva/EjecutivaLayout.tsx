@@ -20,7 +20,7 @@ export const ejecutivaNavItems: NavItem[] = [
     icon: 'bolt',
     label: 'Oportunidades',
     path: '/ejecutiva/registro-oportunidad',
-    section: 'Ventas',
+    section: 'Ventas y Licitaciones',
     pushButtons: [
       {
         id: 'registrar',
@@ -56,16 +56,13 @@ export const ejecutivaNavItems: NavItem[] = [
       },
     ],
   },
-  { icon: 'track_changes', label: 'Mis Metas', path: '/ejecutiva/metas', section: null },
-  { icon: 'local_shipping', label: 'Seguimiento OC', path: '/ejecutiva/seguimiento-oc', section: 'Ventas' },
-  { icon: 'payments', label: 'Solicitud de Pagos', path: '/ejecutiva/pagos', section: 'Ventas' },
-  { icon: 'assignment', label: 'Solicitudes', path: '/ejecutiva/solicitudes', section: 'Solicitudes' },
-  { icon: 'confirmation_number', label: 'Tickets', path: '/ejecutiva/tickets', section: 'Soporte Técnico' },
+  { icon: 'local_shipping', label: 'Seguimiento OC', path: '/ejecutiva/seguimiento-oc', section: null },
+  { icon: 'payments', label: 'Solicitud de Pagos', path: '/ejecutiva/pagos', section: null },
   {
     icon: 'import_contacts',
     label: 'Agenda de Contactos',
     path: '/ejecutiva/agenda-contactos',
-    section: 'Ventas',
+    section: null,
     pushButtons: [
       {
         id: 'ejec-agenda-registrar',
@@ -83,6 +80,8 @@ export const ejecutivaNavItems: NavItem[] = [
       },
     ],
   },
+  { icon: 'assignment', label: 'Mis Solicitudes', path: '/ejecutiva/solicitudes', section: 'Gestión Interna' },
+  { icon: 'confirmation_number', label: 'Tickets', path: '/ejecutiva/tickets', section: null },
   {
     icon: 'schedule',
     label: 'Asistencias',

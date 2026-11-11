@@ -7,13 +7,26 @@ export function withTecnicoTicketsNav(
 ): NavItem[] {
   if (!puedeAtenderTickets) return items;
 
-  return [
-    ...items,
-    {
-      icon: 'support_agent',
-      label: 'Tickets asignados',
-      path: `${basePath}/tecnico/tickets`,
-      section: 'Soporte Técnico',
-    },
-  ];
+  const ticketIndex = items.findIndex((it) => it.label.toLowerCase().includes('ticket'));
+  const tecnicoItem: NavItem = {
+    icon: 'support_agent',
+    label: 'Tickets Asignados',
+    path: `${basePath}/tecnico/tickets`,
+    section: ticketIndex >= 0 ? null : 'Soporte Técnico',
+  };
+
+  if (ticketIndex >= 0) {
+    const next = [...items];
+    next.splice(ticketIndex + 1, 0, tecnicoItem);
+    return next;
+  }
+
+  const cuentaIndex = items.findIndex((it) => it.label === 'Mi Cuenta');
+  if (cuentaIndex >= 0) {
+    const next = [...items];
+    next.splice(cuentaIndex, 0, tecnicoItem);
+    return next;
+  }
+
+  return [...items, tecnicoItem];
 }

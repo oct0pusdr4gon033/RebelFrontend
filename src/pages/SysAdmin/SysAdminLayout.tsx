@@ -16,10 +16,28 @@ const AVATAR_GRAD = 'linear-gradient(135deg, #2563eb, #1d4ed8)';
 
 export const sysAdminNavItems: NavItem[] = [
   { icon: 'dashboard', label: 'Dashboard & Telemetría', path: '/sysadmin', section: null },
-  { icon: 'group', label: 'Usuarios', path: '/sysadmin/usuarios', section: 'Sistema' },
+  { icon: 'group', label: 'Usuarios', path: '/sysadmin/usuarios', section: 'Administración del Sistema' },
   { icon: 'vpn_key', label: 'Roles y Permisos', path: '/sysadmin/roles', section: null },
   { icon: 'domain', label: 'Sedes', path: '/sysadmin/sedes', section: null },
-  { icon: 'monitoring', label: 'Auditoría', path: '/sysadmin/auditoria', section: null },
+  { icon: 'payments', label: 'Gestión de Pagos', path: '/sysadmin/pagos', section: null },
+  {
+    icon: 'confirmation_number',
+    label: 'Tickets',
+    path: '/sysadmin/tickets',
+    section: 'Soporte Técnico',
+    pushButtons: [
+      {
+        id: 'sysadmin-tickets-global',
+        label: 'Bandeja global',
+        path: '/sysadmin/tickets',
+      },
+      {
+        id: 'sysadmin-reportes-globales',
+        label: 'Reportes globales',
+        path: '/sysadmin/tickets/reportes',
+      },
+    ],
+  },
   {
     icon: 'schedule',
     label: 'Asistencias',
@@ -43,25 +61,6 @@ export const sysAdminNavItems: NavItem[] = [
       },
     ],
   },
-  {
-    icon: 'confirmation_number',
-    label: 'Tickets',
-    path: '/sysadmin/tickets',
-    section: 'Soporte Técnico',
-    pushButtons: [
-      {
-        id: 'sysadmin-tickets-global',
-        label: 'Bandeja global',
-        path: '/sysadmin/tickets',
-      },
-      {
-        id: 'sysadmin-reportes-globales',
-        label: 'Reportes globales',
-        path: '/sysadmin/tickets/reportes',
-      },
-    ],
-  },
-  { icon: 'settings', label: 'Configuración', path: '/sysadmin/configuracion', section: 'Sistema' },
   { icon: 'person', label: 'Mi Cuenta', path: '/sysadmin/mi-cuenta', section: 'Cuenta' },
 ];
 

@@ -19,7 +19,7 @@ export const gerenteNavItems: NavItem[] = [
     icon: 'event_available',
     label: 'Asistencias',
     path: '/gerente/asistencias',
-    section: 'Asistencias',
+    section: 'Gestión de Personal',
     pushButtons: [
       {
         id: 'consultar-asistencias',
@@ -47,7 +47,7 @@ export const gerenteNavItems: NavItem[] = [
     icon: 'assignment',
     label: 'Solicitudes',
     path: '/gerente/solicitudes',
-    section: 'Solicitudes',
+    section: 'Gestión de Solicitudes',
     pushButtons: [
       {
         id: 'solicitudes-pendientes',
@@ -61,6 +61,7 @@ export const gerenteNavItems: NavItem[] = [
       },
     ],
   },
+  { icon: 'person', label: 'Mi Cuenta', path: '/gerente/mi-cuenta', section: 'Cuenta' },
 ];
 
 export function GerenteDashboard() {

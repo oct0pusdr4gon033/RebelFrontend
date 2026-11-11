@@ -1600,6 +1600,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                         Aprobado: { c: '#166534', b: '#dcfce7' },
                         Rechazado: { c: '#991b1b', b: '#fee2e2' },
                       };
+                      const colorBadge = (estado && colores[estado]) || null;
                       return (
                         <div style={{ margin: '12px 0', padding: 12, border: '1.5px dashed #fdba74', background: '#fffbeb', borderRadius: 6 }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
@@ -1607,8 +1608,8 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
                               <GoogleIcon name="local_shipping" size={16} color="#d97706" />
                               <span>Ajuste de flete (precio desfasado)</span>
                             </div>
-                            {estado && (
-                              <span style={{ fontSize: 11, fontWeight: 800, padding: '2px 10px', borderRadius: 999, color: colores[estado].c, background: colores[estado].b }}>
+                            {colorBadge && (
+                              <span style={{ fontSize: 11, fontWeight: 800, padding: '2px 10px', borderRadius: 999, color: colorBadge.c, background: colorBadge.b }}>
                                 {estado}
                               </span>
                             )}

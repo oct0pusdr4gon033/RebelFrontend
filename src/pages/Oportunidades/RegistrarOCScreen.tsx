@@ -10,7 +10,7 @@ import {
   getDocumentoVisualProps,
   cargarPoolCompletoAsync,
 } from '../../utils/documentosPoolUtils';
-import { registrarOCApi, cambiarEstadoApi } from '../../api/services/oportunidades.service';
+import { registrarOCApi } from '../../api/services/oportunidades.service';
 import { PrecioInput } from '../../components/FormInputs/PrecioInput';
 import './RegistroOportunidad.css';
 import type { RegistrarOCScreenProps } from './RegistrarOCScreenProps';
@@ -238,13 +238,6 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
         flete: Number(formOC.flete) || 0,
       });
 
-      // Pasar la oportunidad formalmente a Cotización
-      try {
-        await cambiarEstadoApi(op.id, 'Cotización');
-      } catch (err) {
-        console.warn('Estado cambiado en backend/local:', err);
-      }
-
       const ocActualizada = {
         ...(res.ordenCompra || {}),
         numeroOC: formOC.numeroOC.trim(),
@@ -264,7 +257,7 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
 
       const opFinal: Oportunidad = {
         ...op,
-        estado: 'Cotización',
+        estado: (res.estado as any) || 'OC_RECIBIDA',
         ordenCompra: ocActualizada as any,
       };
 
@@ -276,7 +269,7 @@ export const RegistrarOCScreen: React.FC<RegistrarOCScreenProps> = ({
             <p>Se registró formalmente la OC <strong>${formOC.numeroOC}</strong> para el requerimiento <strong>${op.numeroRequerimiento}</strong>.</p>
             <p>Documentos adjuntados en el pool: <strong>${documentosPool.length}</strong> archivo(s).</p>
             <div style="background: #ecfdf5; border: 1px solid #86efac; border-radius: 4px; padding: 10px; margin: 10px 0; color: #166534; font-size: 13px;">
-              ✓ La oportunidad pasó al estado <strong>Cotización</strong> y quedaron <strong>habilitadas las solicitudes de pago</strong>.
+              ✓ La oportunidad pasó al estado <strong>OC Recibida</strong> y quedaron <strong>habilitadas las solicitudes de pago</strong>.
             </div>
           </div>
         `,

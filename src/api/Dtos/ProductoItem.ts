@@ -28,6 +28,6 @@ export interface ProductoItem {
     ajusteFletePorcentaje?: number | null;
     ajusteFleteSolicitadoPorcentaje?: number | null;
     ajusteFleteMotivo?: string | null;
-    ajusteFleteEstado?: 'Pendiente' | 'Aprobado' | 'Rechazado' | null;
+    ajusteFleteEstado?: 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Sin Ajuste' | null;
     ajusteFleteComentarioAdmin?: string | null;
 }
