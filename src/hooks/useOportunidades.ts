@@ -110,9 +110,13 @@ export function mapApiToOportunidad(op: any): Oportunidad {
                 }]
               : undefined;
           })(),
-          unidad: op.ordenCompra.unidad,
+          codigoUnidadEjecutora: op.ordenCompra.codigoUnidadEjecutora,
           codigoCIAF: op.ordenCompra.codigoCIAF,
           montoOCAM: op.ordenCompra.montoOCAM,
+          flete: op.ordenCompra.flete ?? null,
+          fechaLimitePago: op.ordenCompra.fechaLimitePago ?? null,
+          requiereAprobacionAdmin: op.ordenCompra.requiereAprobacionAdmin ?? false,
+          fechaAutorizacionAdmin: op.ordenCompra.fechaAutorizacionAdmin ?? null,
           fechaRegistro: op.ordenCompra.fechaRegistro,
           fechaActualizacion: op.ordenCompra.fechaActualizacion,
         }

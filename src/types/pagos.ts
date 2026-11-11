@@ -124,7 +124,7 @@ export interface RegistrarPagoInput {
   montoAjusteFlete?: number;
   moneda: 'PEN' | 'USD';
   fechaPago: string;
-  fechaVencimientoOC?: string;
+  fechaVencimientoOC: string;
   metodoPago: MetodoPago;
   banco?: string;
   entidadCorrespondiente?: string;

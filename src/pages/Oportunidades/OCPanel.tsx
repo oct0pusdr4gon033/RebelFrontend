@@ -103,10 +103,6 @@ const ConfirmModal: React.FC<{
           </button>
         </div>
       </div>
-      <VerDocumentoModal
-        documento={documentoParaVer}
-        onClose={() => setDocumentoParaVer(null)}
-      />
     </>
   );
 };
@@ -144,6 +140,7 @@ export const DetalleOCModal: React.FC<{ open: boolean; onClose: () => void; op: 
   if (oc.transportista) logistica.push({ label: 'Transportista', value: oc.transportista });
   if (oc.noGuiaRemision) logistica.push({ label: 'N° de guía', value: oc.noGuiaRemision });
   if (oc.fechaEntrega) logistica.push({ label: 'Fecha de entrega', value: formatFechaHoraPeru(oc.fechaEntrega) });
+  if (oc.fechaLimitePago) logistica.push({ label: 'Límite para solicitar pagos (10 días)', value: formatFechaHoraPeru(oc.fechaLimitePago) });
 
   return (
     <>
@@ -220,14 +217,16 @@ export const DetalleOCModal: React.FC<{ open: boolean; onClose: () => void; op: 
               : <Row label="Fecha de decisión" value={oc.fechaDecisionOC ? formatFechaHoraPeru(oc.fechaDecisionOC) : '—'} />}
           </Seccion>
 
-          {(oc.nroOCAM || oc.nroExpediente || oc.nroFolio || oc.archivoOCUrl || oc.unidad || oc.codigoCIAF || oc.montoOCAM != null) && (
+          {(oc.nroOCAM || oc.nroExpediente || oc.nroFolio || oc.archivoOCUrl || oc.codigoUnidadEjecutora || oc.codigoCIAF || oc.montoOCAM != null) && (
             <Seccion title="Orden de Compra Oficial (Perú Compras)">
               {oc.nroOCAM && <Row label="N° OCAM" value={oc.nroOCAM} mono />}
               {oc.nroExpediente && <Row label="N° Expediente" value={oc.nroExpediente} mono />}
               {oc.nroFolio && <Row label="N° Folio" value={oc.nroFolio} mono />}
-              {oc.unidad && <Row label="Unidad" value={oc.unidad} />}
+              {oc.codigoUnidadEjecutora && <Row label="Código de Unidad Ejecutora (U.O.E.)" value={oc.codigoUnidadEjecutora} />}
               {oc.codigoCIAF && <Row label="Código CIAF" value={oc.codigoCIAF} mono />}
               {oc.montoOCAM != null && <Row label="Monto OCAM (Techo)" value={money(oc.montoOCAM)} accent="#059669" />}
+              {oc.flete != null && <Row label="Flete" value={money(oc.flete)} />}
+              {oc.requiereAprobacionAdmin && <Row label="Autorización Administrador" value="Sí (monto excede costo de productos)" accent="#b45309" />}
               {poolDocs.length > 0 ? (
                 <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <div style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -348,6 +347,12 @@ export const DetalleOCModal: React.FC<{ open: boolean; onClose: () => void; op: 
           {logistica.length > 0 && (
             <Seccion title="Despacho y entrega">
               {logistica.map((f) => <Row key={f.label} label={f.label} value={f.value} />)}
+              {oc.estadoOC === 'ENTREGADA' && !oc.noGuiaRemision && (
+                <div style={{ marginTop: 10, padding: '9px 12px', background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <GoogleIcon name="warning" size={16} color="#d97706" />
+                  <span>Alerta: la OC fue entregada pero no se registró la Guía de Remisión.</span>
+                </div>
+              )}
             </Seccion>
           )}
 
@@ -376,6 +381,10 @@ export const DetalleOCModal: React.FC<{ open: boolean; onClose: () => void; op: 
           </Seccion>
         </div>
       </div>
+      <VerDocumentoModal
+        documento={documentoParaVer}
+        onClose={() => setDocumentoParaVer(null)}
+      />
     </>
   );
 };
@@ -421,12 +430,13 @@ export const OCPanel: React.FC<{
     nroOCAM: '',
     nroExpediente: '',
     nroFolio: '',
-    unidad: '',
+    codigoUnidadEjecutora: '',
     codigoCIAF: '',
     montoOCAM: '',
-    archivoOCUrl: '',
-    archivoNombre: '',
+    flete: '',
   });
+  const [documentosPool, setDocumentosPool] = useState<DocumentoOCItem[]>(() => obtenerPoolDocumentosOC(op));
+  const [docParaVer, setDocParaVer] = useState<DocumentoVisualizable | null>(null);
   const [motivoRechazo, setMotivoRechazo] = useState('');
   const [costoRenegociadoInput, setCostoRenegociadoInput] = useState('');
   const [formEntrega, setFormEntrega] = useState({
@@ -451,18 +461,35 @@ export const OCPanel: React.FC<{
     });
   };
 
-  const handleArchivoOCChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setFormOC((prev) => ({
-        ...prev,
-        archivoOCUrl: (event.target?.result as string) || '',
-        archivoNombre: file.name,
-      }));
-    };
-    reader.readAsDataURL(file);
+  const MAX_DOCS_OC = 2;
+
+  const handleAgregarDocsOC = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const disponibles = MAX_DOCS_OC - documentosPool.length;
+    if (disponibles <= 0) {
+      flash(true, `Solo puedes adjuntar hasta ${MAX_DOCS_OC} documentos de la Orden de Compra.`);
+      e.target.value = '';
+      return;
+    }
+
+    const seleccionados = Array.from(files).slice(0, disponibles);
+    if (files.length > disponibles) {
+      flash(true, `Solo se agregaron ${disponibles} archivo(s): el máximo es ${MAX_DOCS_OC}.`);
+    }
+
+    const nuevos = await procesarArchivosParaPool(seleccionados);
+    const actualizado = [...documentosPool, ...nuevos].slice(0, MAX_DOCS_OC);
+    setDocumentosPool(actualizado);
+    guardarPoolDocumentosOC(op.id, actualizado);
+    e.target.value = '';
+  };
+
+  const handleQuitarDocOC = (id?: string | number) => {
+    const actualizado = documentosPool.filter((doc) => doc.id !== id);
+    setDocumentosPool(actualizado);
+    guardarPoolDocumentosOC(op.id, actualizado);
   };
 
   const handleRegistrarOC = async () => {
@@ -477,7 +504,7 @@ export const OCPanel: React.FC<{
     if (!formOC.nroOCAM.trim()) { flash(true, 'El N° OCAM de la Orden de Compra (Perú Compras) es obligatorio.'); return; }
     if (!formOC.nroExpediente.trim()) { flash(true, 'El N° de Expediente oficial de Perú Compras es obligatorio.'); return; }
     if (!formOC.nroFolio.trim()) { flash(true, 'El N° de Folio de la Orden de Compra es obligatorio.'); return; }
-    if (!formOC.unidad.trim()) { flash(true, 'Indique la Unidad (u.o.e.) de la entidad.'); return; }
+    if (!formOC.codigoUnidadEjecutora.trim()) { flash(true, 'Indique el Código de Unidad Ejecutora (U.O.E.) de la entidad.'); return; }
     if (!formOC.codigoCIAF.trim()) { flash(true, 'El Código CIAF de la orden de compra es obligatorio.'); return; }
     const montoOCAM = Number(formOC.montoOCAM);
     if (!montoOCAM || montoOCAM <= 0) { flash(true, 'El Monto de la OCAM (techo financiero) debe ser mayor a S/ 0.00.'); return; }
@@ -485,7 +512,11 @@ export const OCPanel: React.FC<{
       flash(true, `El Monto de la OCAM no puede ser mayor al límite total del requerimiento (S/ ${costoInicialRequerimiento.toLocaleString('es-PE', { minimumFractionDigits: 2 })}).`);
       return;
     }
-    if (documentosPool.length === 0 && !formOC.archivoOCUrl.trim()) { flash(true, 'Es obligatorio subir al menos un documento oficial en el pool (PDF o imagen).'); return; }
+    if (documentosPool.length === 0) { flash(true, 'Es obligatorio subir al menos un documento oficial (PDF o imagen), hasta un máximo de 2.'); return; }
+    if (documentosPool.length > MAX_DOCS_OC) { flash(true, `Solo puedes adjuntar hasta ${MAX_DOCS_OC} documentos oficiales.`); return; }
+
+    const fleteNum = formOC.flete.trim() ? Number(formOC.flete) : null;
+    if (fleteNum != null && (isNaN(fleteNum) || fleteNum < 0)) { flash(true, 'El flete debe ser un monto numérico mayor o igual a S/ 0.00.'); return; }
 
     setRegistrarBusy(true);
     try {
@@ -495,10 +526,10 @@ export const OCPanel: React.FC<{
         nroOCAM: formOC.nroOCAM.trim(),
         nroExpediente: formOC.nroExpediente.trim(),
         nroFolio: formOC.nroFolio.trim(),
-        archivoOCUrl: formOC.archivoOCUrl,
-        unidad: formOC.unidad.trim(),
+        codigoUnidadEjecutora: formOC.codigoUnidadEjecutora.trim(),
         codigoCIAF: formOC.codigoCIAF.trim(),
         montoOCAM: montoOCAM,
+        flete: fleteNum,
       });
 
       // Pasar formalmente la oportunidad al estado Cotización con la OCAM de Perú Compras
@@ -514,10 +545,11 @@ export const OCPanel: React.FC<{
         nroOCAM: formOC.nroOCAM.trim(),
         nroExpediente: formOC.nroExpediente.trim(),
         nroFolio: formOC.nroFolio.trim(),
-        archivoOCUrl: formOC.archivoOCUrl,
-        unidad: formOC.unidad.trim(),
+        codigoUnidadEjecutora: formOC.codigoUnidadEjecutora.trim(),
         codigoCIAF: formOC.codigoCIAF.trim(),
         montoOCAM: montoOCAM,
+        flete: fleteNum,
+        documentosPool,
       };
 
       aplicar({
@@ -527,7 +559,7 @@ export const OCPanel: React.FC<{
       });
 
       setMostrarRegistrar(false);
-      setFormOC({ numeroOC: '', fechaEmisionOC: '', nroOCAM: '', nroExpediente: '', nroFolio: '', unidad: '', codigoCIAF: '', montoOCAM: '', archivoOCUrl: '', archivoNombre: '' });
+      setFormOC({ numeroOC: '', fechaEmisionOC: '', nroOCAM: '', nroExpediente: '', nroFolio: '', codigoUnidadEjecutora: '', codigoCIAF: '', montoOCAM: '', flete: '' });
       flash(false, `¡OC ${formOC.numeroOC} y datos oficiales de Perú Compras registrados! Estado avanzó a 'Cotización' y los pagos quedaron habilitados.`);
     } catch (err: any) {
       flash(true, err.message || 'Error al registrar la OC');
@@ -815,25 +847,29 @@ export const OCPanel: React.FC<{
                               type="file"
                               id={`archivo-oc-fullscreen-${op.id}`}
                               accept=".pdf,image/*"
-                              onChange={handleArchivoOCChange}
+                              multiple
+                              onChange={handleAgregarDocsOC}
+                              disabled={documentosPool.length >= MAX_DOCS_OC}
                               style={{ display: 'none' }}
                             />
                             <GoogleIcon name="cloud_upload" size={40} color="#2563eb" />
                             <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
-                              {formOC.archivoNombre ? formOC.archivoNombre : 'Selecciona o arrastra la Orden de Compra de Perú Compras'}
+                              {documentosPool.length > 0
+                                ? `${documentosPool.length} de ${MAX_DOCS_OC} documento(s) adjunto(s)`
+                                : `Adjunta hasta ${MAX_DOCS_OC} documentos de la Orden de Compra`}
                             </div>
                             <div style={{ fontSize: '11.5px', color: '#64748b' }}>
-                              Formatos soportados: <strong>PDF, JPG, PNG</strong>
+                              Formatos soportados: <strong>PDF, JPG, PNG</strong> · máximo {MAX_DOCS_OC} archivos
                             </div>
                             <label
                               htmlFor={`archivo-oc-fullscreen-${op.id}`}
                               style={{
                                 padding: '9px 18px',
-                                background: '#0f172a',
+                                background: documentosPool.length >= MAX_DOCS_OC ? '#94a3b8' : '#0f172a',
                                 color: '#ffffff',
                                 fontSize: '12.5px',
                                 fontWeight: 700,
-                                cursor: 'pointer',
+                                cursor: documentosPool.length >= MAX_DOCS_OC ? 'not-allowed' : 'pointer',
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: 6,
@@ -842,14 +878,59 @@ export const OCPanel: React.FC<{
                               }}
                             >
                               <GoogleIcon name="upload_file" size={16} color="#ffffff" />
-                              <span>{formOC.archivoNombre ? 'Cambiar Archivo' : 'Examinar Documento Oficial'}</span>
+                              <span>{documentosPool.length >= MAX_DOCS_OC ? 'Máximo alcanzado' : 'Examinar Documentos'}</span>
                             </label>
                           </div>
 
-                          {formOC.archivoOCUrl && (
-                            <div style={{ marginTop: 14, padding: 12, background: '#f0fdf4', border: '1px solid #86efac', display: 'flex', alignItems: 'center', gap: 8, fontSize: '12px', color: '#166534' }}>
-                              <GoogleIcon name="verified" size={18} color="#16a34a" />
-                              <span>Documento verificado y adjuntado con éxito. Se habilitarán los pagos al guardar.</span>
+                          {documentosPool.length > 0 && (
+                            <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              {documentosPool.map((doc, idx) => {
+                                const visual = getDocumentoVisualProps(doc.nombre, doc.tipo);
+                                return (
+                                  <div
+                                    key={doc.id || idx}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'space-between',
+                                      gap: 8,
+                                      padding: '7px 10px',
+                                      background: '#f8fafc',
+                                      border: '1px solid #e2e8f0',
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                                      <span style={{ width: 24, height: 24, borderRadius: 3, background: visual.badgeBg, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                        <GoogleIcon name={visual.icon} size={14} color={visual.color} />
+                                      </span>
+                                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: 220 }} title={doc.nombre}>
+                                        {doc.nombre}
+                                      </span>
+                                      {doc.tamanoTexto && <span style={{ fontSize: '11px', color: '#94a3b8' }}>({doc.tamanoTexto})</span>}
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                      <button
+                                        type="button"
+                                        onClick={() => setDocParaVer({ nombre: doc.nombre, url: doc.url, tipo: doc.tipo })}
+                                        style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb', padding: '3px 8px', cursor: 'pointer', fontWeight: 700, fontSize: '11.5px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                      >
+                                        <GoogleIcon name="visibility" size={13} color="#2563eb" /> Ver
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleQuitarDocOC(doc.id)}
+                                        style={{ background: '#fee2e2', border: '1px solid #fecaca', color: '#dc2626', padding: '3px 8px', cursor: 'pointer', fontWeight: 700, fontSize: '11.5px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                      >
+                                        <GoogleIcon name="delete" size={13} color="#dc2626" /> Quitar
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              <div style={{ padding: 10, background: '#f0fdf4', border: '1px solid #86efac', display: 'flex', alignItems: 'center', gap: 8, fontSize: '12px', color: '#166534' }}>
+                                <GoogleIcon name="verified" size={18} color="#16a34a" />
+                                <span>Documento(s) listo(s). Se habilitarán los pagos al guardar.</span>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -890,8 +971,8 @@ export const OCPanel: React.FC<{
                             <Field label="N° de Folio *" value={
                               <input style={{ ...inputStyle, borderRadius: 0, padding: '11px 12px' }} placeholder="FOLIO-001" value={formOC.nroFolio} onChange={(e) => setFormOC({ ...formOC, nroFolio: e.target.value })} />
                             } />
-                            <Field label="Unidad (u.o.e.) *" value={
-                              <input style={{ ...inputStyle, borderRadius: 0, padding: '11px 12px' }} placeholder="Ej: Municipalidad de Lima" value={formOC.unidad} onChange={(e) => setFormOC({ ...formOC, unidad: e.target.value })} />
+                            <Field label="Código de Unidad Ejecutora (U.O.E.) *" value={
+                              <input style={{ ...inputStyle, borderRadius: 0, padding: '11px 12px' }} placeholder="Ej: 001-1234" value={formOC.codigoUnidadEjecutora} onChange={(e) => setFormOC({ ...formOC, codigoUnidadEjecutora: e.target.value })} />
                             } />
                             <Field label="Código CIAF *" value={
                               <input style={{ ...inputStyle, borderRadius: 0, padding: '11px 12px' }} placeholder="CIAF-2026-000001" value={formOC.codigoCIAF} onChange={(e) => setFormOC({ ...formOC, codigoCIAF: e.target.value })} />
@@ -922,6 +1003,17 @@ export const OCPanel: React.FC<{
                                   </div>
                                 )}
                               </>
+                            } />
+                            <Field label="Flete (S/)" value={
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                style={{ ...inputStyle, borderRadius: 0, padding: '11px 12px', fontWeight: 700, color: '#0f172a', fontSize: '14px' }}
+                                placeholder="0.00"
+                                value={formOC.flete}
+                                onChange={(e) => setFormOC({ ...formOC, flete: e.target.value })}
+                              />
                             } />
                           </div>
                         </div>
@@ -1180,6 +1272,8 @@ export const OCPanel: React.FC<{
         }}
         onCancel={() => setConfirmarDecision(null)}
       />
+
+      <VerDocumentoModal documento={docParaVer} onClose={() => setDocParaVer(null)} />
 
       <DetalleOCModal open={verDetalle} onClose={() => setVerDetalle(false)} op={op} />
     </div>

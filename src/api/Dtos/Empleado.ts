@@ -10,6 +10,7 @@ export interface EmpleadoDto {
   fotoUrl?: string;
   fechaIngreso: string;
   activo: boolean;
+  puedeAtenderTickets: boolean;
   fechaCreacion?: string;
   fechaActualizacion?: string;
 
@@ -35,6 +36,7 @@ export interface CrearEmpleadoRequest {
   email?: string;
   fechaIngreso?: string;
   sedeId?: number;
+  puedeAtenderTickets?: boolean;
 }
 
 export interface ActualizarEmpleadoRequest {
@@ -46,4 +48,5 @@ export interface ActualizarEmpleadoRequest {
   email?: string;
   fechaIngreso?: string;
   sedeId?: number;
+  puedeAtenderTickets?: boolean;
 }

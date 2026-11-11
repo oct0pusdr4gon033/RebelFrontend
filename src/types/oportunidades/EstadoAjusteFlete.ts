@@ -1,3 +1,1 @@
-
-/** Estado de una solicitud de ajuste de flete */
-export type EstadoAjusteFlete = 'Pendiente' | 'Aprobado' | 'Rechazado';
+export type EstadoAjusteFlete = 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Sin Ajuste';

@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Sidebar, type NavItem } from '../../components/SideBar/Sidebar';
+import { withTecnicoTicketsNav } from '../Tickets/tecnicoNav';
+import { Sidebar } from '../../components/SideBar/Sidebar';
+import type { NavItem } from '../../components/SideBar/NavItem';
 import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
+import NotificacionesGlobales from '../../components/NotificacionesGlobales/NotificacionesGlobales';
 import { OportunidadesDashboard } from '../../components/OportunidadesDashboard';
 import '../DashboardLayout.css';
 
@@ -17,7 +20,7 @@ export const ejecutivaNavItems: NavItem[] = [
     icon: 'bolt',
     label: 'Oportunidades',
     path: '/ejecutiva/registro-oportunidad',
-    section: 'Ventas',
+    section: 'Ventas y Licitaciones',
     pushButtons: [
       {
         id: 'registrar',
@@ -53,14 +56,13 @@ export const ejecutivaNavItems: NavItem[] = [
       },
     ],
   },
-  { icon: 'track_changes', label: 'Mis Metas', path: '/ejecutiva/metas', section: null },
-  { icon: 'local_shipping', label: 'Seguimiento OC', path: '/ejecutiva/seguimiento-oc', section: 'Ventas' },
-  { icon: 'payments', label: 'Solicitud de Pagos', path: '/ejecutiva/pagos', section: 'Ventas' },
+  { icon: 'local_shipping', label: 'Seguimiento OC', path: '/ejecutiva/seguimiento-oc', section: null },
+  { icon: 'payments', label: 'Solicitud de Pagos', path: '/ejecutiva/pagos', section: null },
   {
     icon: 'import_contacts',
     label: 'Agenda de Contactos',
     path: '/ejecutiva/agenda-contactos',
-    section: 'Ventas',
+    section: null,
     pushButtons: [
       {
         id: 'ejec-agenda-registrar',
@@ -75,6 +77,31 @@ export const ejecutivaNavItems: NavItem[] = [
         label: 'Agenda',
         path: '/ejecutiva/agenda-contactos?tab=agenda',
         description: 'Directorio y filtros por OCAM',
+      },
+    ],
+  },
+  { icon: 'assignment', label: 'Mis Solicitudes', path: '/ejecutiva/solicitudes', section: 'Gestión Interna' },
+  { icon: 'confirmation_number', label: 'Tickets', path: '/ejecutiva/tickets', section: null },
+  {
+    icon: 'schedule',
+    label: 'Asistencias',
+    path: '/ejecutiva/asistencias',
+    section: 'Personal',
+    pushButtons: [
+      {
+        id: 'ejecutiva-mi-asistencia',
+        label: 'Mi Asistencia',
+        path: '/ejecutiva/asistencias',
+      },
+      {
+        id: 'ejecutiva-estadisticas-asistencia',
+        label: 'Estadísticas de asistencia',
+        path: '/ejecutiva/estadisticas/asistencia',
+      },
+      {
+        id: 'ejecutiva-historial-asistencia',
+        label: 'Historial de asistencia',
+        path: '/ejecutiva/asistencias/historial',
       },
     ],
   },
@@ -153,6 +180,7 @@ export function EjecutivaDashboard() {
 }
 
 export default function EjecutivaLayout() {
+  const { empleado } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
@@ -166,7 +194,7 @@ export default function EjecutivaLayout() {
         accentBorder={ACCENT_BORDER}
         avatarGrad={AVATAR_GRAD}
         basePath="/ejecutiva"
-        navItems={ejecutivaNavItems}
+        navItems={withTecnicoTicketsNav(ejecutivaNavItems, '/ejecutiva', empleado?.puedeAtenderTickets)}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
@@ -185,7 +213,8 @@ export default function EjecutivaLayout() {
             </button>
             <span className="dash__header-title">Mi Panel de Ventas</span>
           </div>
-          <div className="dash__header-right">
+          <div className="dash__header-right" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <NotificacionesGlobales basePath="/ejecutiva" accent={ACCENT} />
             <span
               className="dash__header-badge"
               style={{

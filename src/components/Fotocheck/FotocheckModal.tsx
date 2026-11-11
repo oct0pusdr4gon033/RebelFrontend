@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FotocheckCard, type FotocheckData } from './FotocheckCard';
+import { FotocheckCard } from './FotocheckCard';
+import type { FotocheckData } from './FotocheckData';
 import { GoogleIcon } from '../GoogleIcon/GoogleIcon';
 import './Fotocheck.css';
 

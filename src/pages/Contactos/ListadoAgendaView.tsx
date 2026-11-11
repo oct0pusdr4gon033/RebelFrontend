@@ -22,6 +22,7 @@ export const ListadoAgendaView: React.FC<ListadoAgendaViewProps> = ({
   const [filtroEmpresa, setFiltroEmpresa] = useState('todos');
   const [filtroTipoRelacion, setFiltroTipoRelacion] = useState('todos');
   const [filtroCaso, setFiltroCaso] = useState<'todos' | 'caso1' | 'caso2' | 'otros'>('todos');
+  const [filtroEjecutiva, setFiltroEjecutiva] = useState('todos');
 
   // Listas únicas para los comboboxes de filtro
   const listaOcams = useMemo(() => {
@@ -36,6 +37,14 @@ export const ListadoAgendaView: React.FC<ListadoAgendaViewProps> = ({
     const set = new Set<string>();
     contactos.forEach((c) => {
       if (c.empresaRelacionada) set.add(c.empresaRelacionada);
+    });
+    return Array.from(set).sort();
+  }, [contactos]);
+
+  const listaEjecutivas = useMemo(() => {
+    const set = new Set<string>();
+    contactos.forEach((c) => {
+      if (c.registradoPor) set.add(c.registradoPor);
     });
     return Array.from(set).sort();
   }, [contactos]);
@@ -71,6 +80,11 @@ export const ListadoAgendaView: React.FC<ListadoAgendaViewProps> = ({
 
       // Filtro por Empresa
       if (filtroEmpresa !== 'todos' && c.empresaRelacionada !== filtroEmpresa) {
+        return false;
+      }
+
+      // Filtro por Ejecutiva que registró
+      if (filtroEjecutiva !== 'todos' && c.registradoPor !== filtroEjecutiva) {
         return false;
       }
 
@@ -180,6 +194,22 @@ export const ListadoAgendaView: React.FC<ListadoAgendaViewProps> = ({
             <option value="Entidad / Marca de Cotización">Entidad / Marca de Cotización</option>
             <option value="Relación Exterior">Relación Exterior (Transporte, Embalaje, etc.)</option>
           </select>
+
+          {/* Filtro por Ejecutiva / Registrado Por */}
+          {listaEjecutivas.length > 0 && (
+            <select
+              className="agenda-filter-select"
+              value={filtroEjecutiva}
+              onChange={(e) => setFiltroEjecutiva(e.target.value)}
+            >
+              <option value="todos">Todas las Ejecutivas ({listaEjecutivas.length})</option>
+              {listaEjecutivas.map((ej) => (
+                <option key={ej} value={ej}>
+                  👤 {ej}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         {/* Chips de filtro por caso de respuesta */}
@@ -231,6 +261,7 @@ export const ListadoAgendaView: React.FC<ListadoAgendaViewProps> = ({
             filtroOcam !== 'todos' ||
             filtroEmpresa !== 'todos' ||
             filtroTipoRelacion !== 'todos' ||
+            filtroEjecutiva !== 'todos' ||
             filtroCaso !== 'todos') && (
             <button
               type="button"
@@ -241,6 +272,7 @@ export const ListadoAgendaView: React.FC<ListadoAgendaViewProps> = ({
                 setFiltroOcam('todos');
                 setFiltroEmpresa('todos');
                 setFiltroTipoRelacion('todos');
+                setFiltroEjecutiva('todos');
                 setFiltroCaso('todos');
               }}
             >

@@ -36,9 +36,13 @@ export interface OrdenCompra {
     archivoNombre?: string | null;
     /** Colección / Pool de documentos adjuntos a la Orden de Compra */
     documentosPool?: DocumentoOCItem[];
-    unidad?: string | null;
+    codigoUnidadEjecutora?: string | null;
     codigoCIAF?: string | null;
     montoOCAM?: number | null;
+    flete?: number | null;
+    fechaLimitePago?: string | null;
+    requiereAprobacionAdmin?: boolean;
+    fechaAutorizacionAdmin?: string | null;
     fechaRegistro: string;
     fechaActualizacion?: string | null;
 }

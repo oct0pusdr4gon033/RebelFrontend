@@ -1,0 +1,443 @@
+.asistencia-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.asistencia-history-filters {
+  flex-wrap: wrap;
+}
+
+.asistencia-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.asistencia-history-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.asistencia-history-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.asistencia-page--personal .asistencia-history-status {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: 2px;
+  padding: 5px 10px;
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.asistencia-history-status--incomplete {
+  border-color: rgba(217, 119, 6, 0.25);
+  background: rgba(254, 243, 199, 0.65);
+  color: #b45309;
+}
+
+.asistencia-header,
+.asistencia-date-toolbar,
+.asistencia-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.asistencia-page--personal .asistencia-header {
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 14px;
+}
+
+.asistencia-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #2563eb;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.asistencia-header h1 {
+  margin: 3px 0 4px;
+  color: #0a2540;
+  font-size: 1.5rem;
+}
+
+.asistencia-header p,
+.asistencia-card-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.asistencia-page--personal .asistencia-primary-button,
+.asistencia-page--personal .asistencia-refresh-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 2px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.asistencia-primary-button {
+  border: none;
+  padding: 10px 16px;
+  background: #2563eb;
+  color: #fff;
+}
+
+.asistencia-page--personal .asistencia-primary-button:disabled,
+.asistencia-page--personal .asistencia-refresh-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.asistencia-page--personal .asistencia-date-toolbar {
+  justify-content: flex-start;
+  padding: 14px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 2px;
+  background: #fff;
+}
+
+.asistencia-page--personal .asistencia-date-toolbar label {
+  color: #475569;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.asistencia-page--personal .asistencia-date-toolbar input {
+  border: 1px solid #cbd5e1;
+  border-radius: 2px;
+  padding: 8px 10px;
+  color: #0a2540;
+  font: inherit;
+}
+
+.asistencia-page--personal .asistencia-refresh-button {
+  border: 1px solid rgba(37, 99, 235, 0.28);
+  padding: 8px 12px;
+  background: rgba(37, 99, 235, 0.06);
+  color: #2563eb;
+}
+
+.asistencia-page--personal .asistencia-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 2px;
+  padding: 12px 14px;
+  font-size: 0.88rem;
+}
+
+.asistencia-alert--error {
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  background: rgba(254, 226, 226, 0.7);
+  color: #991b1b;
+}
+
+.asistencia-alert--info {
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  background: rgba(219, 234, 254, 0.65);
+  color: #1e40af;
+}
+
+.asistencia-summary-grid,
+.asistencia-marks-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.asistencia-summary-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.asistencia-page--personal .asistencia-summary-card,
+.asistencia-page--personal .asistencia-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 2px;
+  background: #fff;
+}
+
+.asistencia-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+}
+
+.asistencia-page--personal .asistencia-summary-card span {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.asistencia-page--personal .asistencia-summary-card strong {
+  color: #0a2540;
+  font-size: 1.05rem;
+}
+
+.asistencia-card {
+  padding: 20px;
+}
+
+.asistencia-page--personal .asistencia-card-header h2 {
+  margin: 0 0 4px;
+  color: #0a2540;
+  font-size: 1.05rem;
+}
+
+.asistencia-page--personal .asistencia-count {
+  border-radius: 2px;
+  padding: 5px 10px;
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.asistencia-marks-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 20px;
+}
+
+.asistencia-page--personal .asistencia-mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid #e2e8f0;
+  border-radius: 2px;
+  background: #f8fafc;
+}
+
+.asistencia-page--personal .asistencia-mark--done {
+  border-color: rgba(34, 197, 94, 0.25);
+  background: rgba(240, 253, 244, 0.8);
+}
+
+.asistencia-page--personal .asistencia-mark-icon {
+  display: inline-flex;
+  color: #94a3b8;
+}
+
+.asistencia-page--personal .asistencia-mark--done .asistencia-mark-icon {
+  color: #16a34a;
+}
+
+.asistencia-page--personal .asistencia-mark strong,
+.asistencia-page--personal .asistencia-mark span {
+  display: block;
+}
+
+.asistencia-page--personal .asistencia-mark strong {
+  color: #0a2540;
+  font-size: 0.82rem;
+}
+
+.asistencia-page--personal .asistencia-mark div > span {
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.asistencia-page--personal .asistencia-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 220px;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 2px;
+  color: #64748b;
+  text-align: center;
+}
+
+.asistencia-page--personal .asistencia-state p {
+  margin: 0;
+}
+
+.asistencia-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #dbeafe;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: asistencia-spin 0.8s linear infinite;
+}
+
+@keyframes asistencia-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 760px) {
+  .asistencia-summary-grid,
+  .asistencia-marks-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .asistencia-summary-grid,
+  .asistencia-marks-grid,
+  .asistencia-history-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .asistencia-page--personal .asistencia-primary-button {
+    width: 100%;
+  }
+
+  .asistencia-history-filters {
+    align-items: stretch;
+  }
+}
+
+.gerente-asistencia-filters {
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.gerente-asistencia-filter {
+  display: flex;
+  flex: 1 1 190px;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 160px;
+}
+
+.gerente-asistencia-filter label {
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.gerente-asistencia-filter select,
+.gerente-asistencia-filter input {
+  width: 100%;
+  min-height: 38px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: #fff;
+  color: #0a2540;
+  font: inherit;
+}
+
+.gerente-asistencia-filter select:focus,
+.gerente-asistencia-filter input:focus {
+  border-color: #3b5bdb;
+  outline: 2px solid rgba(59, 91, 219, 0.12);
+}
+
+.gerente-asistencia-hint,
+.gerente-asistencia-result-count {
+  margin: -8px 0 0;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.gerente-asistencia-results,
+.gerente-asistencia-employee,
+.asistencia-detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.gerente-asistencia-employee > h2 {
+  margin: 4px 0 0;
+  color: #0a2540;
+  font-size: 1rem;
+}
+
+.asistencia-detail {
+  padding: 0;
+  overflow: hidden;
+}
+
+.asistencia-detail-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.asistencia-detail-summary::-webkit-details-marker {
+  display: none;
+}
+
+.asistencia-detail-summary::marker {
+  content: '';
+}
+
+.asistencia-detail-summary h3 {
+  margin: 0 0 4px;
+  color: #0a2540;
+  font-size: 0.95rem;
+}
+
+.asistencia-detail-summary > div > span {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.asistencia-detail-employee {
+  display: block;
+  margin-bottom: 4px;
+  color: #2563eb;
+  font-size: 0.8rem;
+}
+
+.asistencia-detail-summary .asistencia-history-status {
+  gap: 5px;
+}
+
+.asistencia-detail[open] .asistencia-detail-summary {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.asistencia-detail[open] .asistencia-detail-summary .asistencia-history-status svg {
+  transform: rotate(180deg);
+}
+
+.asistencia-detail-content {
+  padding: 16px 20px 20px;
+}
+
+@media (max-width: 640px) {
+  .gerente-asistencia-filters {
+    align-items: stretch;
+  }
+
+  .asistencia-detail-summary,
+  .asistencia-detail-content {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .asistencia-detail-summary .asistencia-history-status {
+    white-space: normal;
+  }
+}

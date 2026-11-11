@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Sidebar, type NavItem } from '../../components/SideBar/Sidebar';
+import { withTecnicoTicketsNav } from '../Tickets/tecnicoNav';
+import { Sidebar } from '../../components/SideBar/Sidebar';
+import type { NavItem } from '../../components/SideBar/NavItem';
 import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
 import { OportunidadesDashboard } from '../../components/OportunidadesDashboard';
 import { CampanaAlertasOportunidades } from '../../components/AlertasOportunidades/CampanaAlertasOportunidades';
+import NotificacionesGlobales from '../../components/NotificacionesGlobales/NotificacionesGlobales';
 import '../DashboardLayout.css';
 
 const ACCENT = '#2563eb';
@@ -18,7 +21,7 @@ export const adminNavItems: NavItem[] = [
     icon: 'gavel',
     label: 'Resolver Oportunidades',
     path: '/admin/resolver-oportunidades',
-    section: 'Licitaciones',
+    section: 'Licitaciones y Ventas',
     pushButtons: [
       {
         id: 'bandeja',
@@ -37,35 +40,12 @@ export const adminNavItems: NavItem[] = [
       },
     ],
   },
-  { icon: 'handshake', label: 'Acuerdos Marco', path: '/admin/acuerdos', section: 'Comercial' },
-  { icon: 'local_shipping', label: 'Seguimiento OC', path: '/admin/seguimiento-oc', section: 'Licitaciones' },
-  {
-    icon: 'import_contacts',
-    label: 'Agenda de Contactos',
-    path: '/admin/agenda-contactos',
-    section: 'Licitaciones',
-    pushButtons: [
-      {
-        id: 'agenda-registrar',
-        tabKey: 'registrar',
-        label: 'Registrar',
-        path: '/admin/agenda-contactos?tab=registrar',
-        description: 'Nuevo contacto de OCAM',
-      },
-      {
-        id: 'agenda-contactos',
-        tabKey: 'agenda',
-        label: 'Agenda',
-        path: '/admin/agenda-contactos?tab=agenda',
-        description: 'Directorio y filtros por OCAM',
-      },
-    ],
-  },
+  { icon: 'local_shipping', label: 'Seguimiento OC', path: '/admin/seguimiento-oc', section: null },
   {
     icon: 'payments',
-    label: 'Pagos',
+    label: 'Gestión de Pagos',
     path: '/admin/pagos',
-    section: 'Licitaciones',
+    section: null,
     pushButtons: [
       {
         id: 'historial-pagos',
@@ -91,15 +71,59 @@ export const adminNavItems: NavItem[] = [
       },
     ],
   },
-  { icon: 'corporate_fare', label: 'Empresas', path: '/admin/empresas', section: null },
-  { icon: 'badge', label: 'Empleados', path: '/admin/empleados', section: 'Gestión' },
-  { icon: 'domain', label: 'Mi Sede', path: '/admin/sede', section: null },
-  { icon: 'bar_chart', label: 'Reportes', path: '/admin/reportes', section: 'Análisis' },
-  { icon: 'calendar_month', label: 'Calendario', path: '/admin/calendario', section: null },
+  {
+    icon: 'import_contacts',
+    label: 'Agenda de Contactos',
+    path: '/admin/agenda-contactos',
+    section: null,
+    pushButtons: [
+      {
+        id: 'agenda-registrar',
+        tabKey: 'registrar',
+        label: 'Registrar',
+        path: '/admin/agenda-contactos?tab=registrar',
+        description: 'Nuevo contacto de OCAM',
+      },
+      {
+        id: 'agenda-contactos',
+        tabKey: 'agenda',
+        label: 'Agenda',
+        path: '/admin/agenda-contactos?tab=agenda',
+        description: 'Directorio y filtros por OCAM',
+      },
+    ],
+  },
   // ── Administración de Empresa ──
-  { icon: 'domain', label: 'Sedes', path: '/admin/empresa/sedes', section: 'Adm. Empresa' },
+  { icon: 'domain', label: 'Sedes', path: '/admin/empresa/sedes', section: 'Administración' },
   { icon: 'badge', label: 'Empleados', path: '/admin/empresa/empleados', section: null },
   { icon: 'manage_accounts', label: 'Usuarios', path: '/admin/empresa/usuarios', section: null },
+  // ── Soporte Técnico ──
+  { icon: 'confirmation_number', label: 'Tickets', path: '/admin/tickets', section: 'Soporte Técnico' },
+  // ── Personal ──
+  {
+    icon: 'schedule',
+    label: 'Asistencias',
+    path: '/admin/asistencias',
+    section: 'Personal',
+    pushButtons: [
+      {
+        id: 'admin-mi-asistencia',
+        label: 'Mi Asistencia',
+        path: '/admin/asistencias',
+      },
+      {
+        id: 'admin-estadisticas-asistencia',
+        label: 'Estadísticas de asistencia',
+        path: '/admin/estadisticas/asistencia',
+      },
+      {
+        id: 'admin-historial-asistencia',
+        label: 'Historial de asistencia',
+        path: '/admin/asistencias/historial',
+      },
+    ],
+  },
+  // ── Cuenta ──
   { icon: 'person', label: 'Mi Cuenta', path: '/admin/mi-cuenta', section: 'Cuenta' },
 ];
 
@@ -188,6 +212,7 @@ export function AdminDashboard() {
 }
 
 export default function AdminLayout() {
+  const { empleado } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
@@ -201,7 +226,7 @@ export default function AdminLayout() {
         accentBorder={ACCENT_BORDER}
         avatarGrad={AVATAR_GRAD}
         basePath="/admin"
-        navItems={adminNavItems}
+        navItems={withTecnicoTicketsNav(adminNavItems, '/admin', empleado?.puedeAtenderTickets)}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
@@ -221,6 +246,7 @@ export default function AdminLayout() {
             <span className="dash__header-title">Panel Administrativo</span>
           </div>
           <div className="dash__header-right" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <NotificacionesGlobales basePath="/admin" accent={ACCENT} />
             <CampanaAlertasOportunidades accent={ACCENT} />
             <span
               className="dash__header-badge"

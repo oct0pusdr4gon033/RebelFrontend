@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Sidebar, type NavItem } from '../../components/SideBar/Sidebar';
+import { withTecnicoTicketsNav } from '../Tickets/tecnicoNav';
+import { Sidebar } from '../../components/SideBar/Sidebar';
+import type { NavItem } from '../../components/SideBar/NavItem';
 import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
+import { OportunidadesDashboard } from '../../components/OportunidadesDashboard';
+import NotificacionesGlobales from '../../components/NotificacionesGlobales/NotificacionesGlobales';
 import '../DashboardLayout.css';
 
 const ACCENT = '#2563eb';
@@ -13,10 +17,54 @@ const AVATAR_GRAD = 'linear-gradient(135deg, #2563eb, #1d4ed8)';
 export const masterNavItems: NavItem[] = [
   { icon: 'dashboard', label: 'Dashboard', path: '/master', section: null },
   {
+    icon: 'monitoring',
+    label: 'Supervisión Master',
+    path: '/master/supervision',
+    section: 'Supervisión de Equipo',
+    pushButtons: [
+      {
+        id: 'sup-resumen',
+        tabKey: 'resumen',
+        label: 'Resumen y Métricas',
+        path: '/master/supervision?tab=resumen',
+        description: 'Desempeño y volumen del equipo',
+      },
+      {
+        id: 'sup-oportunidades',
+        tabKey: 'oportunidades',
+        label: 'Todas las Oportunidades',
+        path: '/master/supervision?tab=oportunidades',
+        description: 'Todas las licitaciones registradas',
+      },
+      {
+        id: 'sup-ocams',
+        tabKey: 'ocams',
+        label: 'Todas las OCAMs / OCs',
+        path: '/master/supervision?tab=ocams',
+        description: 'Todas las órdenes de compra emitidas',
+      },
+      {
+        id: 'sup-contactos',
+        tabKey: 'contactos',
+        label: 'Agenda Global',
+        path: '/master/supervision?tab=contactos',
+        description: 'Directorio de contactos del equipo',
+      },
+      {
+        id: 'sup-ranking',
+        tabKey: 'ranking',
+        label: 'Ranking de Ejecutivas',
+        path: '/master/supervision?tab=ranking',
+        badge: 'Top',
+        description: 'Comparativo individual de ventas',
+      },
+    ],
+  },
+  {
     icon: 'bolt',
     label: 'Oportunidades',
     path: '/master/registro-oportunidad',
-    section: 'Ventas',
+    section: 'Ventas y Licitaciones',
     pushButtons: [
       {
         id: 'registrar',
@@ -52,14 +100,13 @@ export const masterNavItems: NavItem[] = [
       },
     ],
   },
-  { icon: 'track_changes', label: 'Mis Metas', path: '/master/metas', section: null },
-  { icon: 'local_shipping', label: 'Seguimiento OC', path: '/master/seguimiento-oc', section: 'Ventas' },
-  { icon: 'payments', label: 'Solicitud de Pagos', path: '/master/pagos', section: 'Ventas' },
+  { icon: 'local_shipping', label: 'Seguimiento OC', path: '/master/seguimiento-oc', section: null },
+  { icon: 'payments', label: 'Solicitud de Pagos', path: '/master/pagos', section: null },
   {
     icon: 'import_contacts',
     label: 'Agenda de Contactos',
     path: '/master/agenda-contactos',
-    section: 'Ventas',
+    section: null,
     pushButtons: [
       {
         id: 'master-agenda-registrar',
@@ -77,11 +124,31 @@ export const masterNavItems: NavItem[] = [
       },
     ],
   },
-  { icon: 'folder_shared', label: 'Mi Cartera', path: '/master/cartera', section: null },
-  { icon: 'group', label: 'Mi Equipo', path: '/master/equipo', section: 'Equipo' },
-  { icon: 'leaderboard', label: 'Ranking Equipo', path: '/master/ranking', section: null },
-  { icon: 'military_tech', label: 'Mis Logros', path: '/master/logros', section: 'Rendimiento' },
-  { icon: 'bar_chart', label: 'Reportes Master', path: '/master/reportes', section: null },
+  { icon: 'assignment', label: 'Mis Solicitudes', path: '/master/solicitudes', section: 'Gestión Interna' },
+  { icon: 'confirmation_number', label: 'Tickets', path: '/master/tickets', section: null },
+  {
+    icon: 'schedule',
+    label: 'Asistencias',
+    path: '/master/asistencias',
+    section: 'Personal',
+    pushButtons: [
+      {
+        id: 'master-mi-asistencia',
+        label: 'Mi Asistencia',
+        path: '/master/asistencias',
+      },
+      {
+        id: 'master-estadisticas-asistencia',
+        label: 'Estadísticas de asistencia',
+        path: '/master/estadisticas/asistencia',
+      },
+      {
+        id: 'master-historial-asistencia',
+        label: 'Historial de asistencia',
+        path: '/master/asistencias/historial',
+      },
+    ],
+  },
   { icon: 'person', label: 'Mi Cuenta', path: '/master/mi-cuenta', section: 'Cuenta' },
 ];
 
@@ -107,62 +174,48 @@ export function MasterDashboard() {
         </p>
       </div>
 
-      <p className="dash__section-title">Mi Rendimiento</p>
-      <div className="dash__stats">
-        {[
-          { icon: 'payments', value: 'S/ 45k', label: 'Ventas este mes' },
-          { icon: 'track_changes', value: '87%', label: 'Meta alcanzada' },
-          { icon: 'group', value: '6', label: 'Ejecutivas a cargo' },
-          { icon: 'military_tech', value: '#2', label: 'Ranking general' },
-        ].map((s, i) => (
-          <div key={i} className="dash__stat-card" style={{ borderColor: i === 0 ? ACCENT_BORDER : undefined }}>
-            <div className="dash__stat-icon">
-              <GoogleIcon name={s.icon} size={24} color={i === 0 ? ACCENT : '#64748b'} />
-            </div>
-            <div className="dash__stat-value" style={{ color: i === 0 ? ACCENT : undefined }}>
-              {s.value}
-            </div>
-            <div className="dash__stat-label">{s.label}</div>
-          </div>
-        ))}
-      </div>
+      <OportunidadesDashboard
+        scope="sistema"
+        detailPath="/master/supervision?tab=oportunidades"
+        accent={ACCENT}
+      />
 
-      <p className="dash__section-title">Acciones Rápidas</p>
+      <p className="dash__section-title">Centro de Control Master</p>
       <div className="dash__actions-grid">
+        <Link to="/master/supervision?tab=oportunidades" style={{ textDecoration: 'none' }}>
+          <button className="dash__action-btn" style={{ borderColor: ACCENT_BORDER, width: '100%' }}>
+            <div className="dash__action-btn-icon">
+              <GoogleIcon name="monitoring" size={24} color={ACCENT} />
+            </div>
+            <strong>Todas las Oportunidades</strong>
+            <span>Control general de licitaciones</span>
+          </button>
+        </Link>
+        <Link to="/master/supervision?tab=ocams" style={{ textDecoration: 'none' }}>
+          <button className="dash__action-btn" style={{ borderColor: ACCENT_BORDER, width: '100%' }}>
+            <div className="dash__action-btn-icon">
+              <GoogleIcon name="local_shipping" size={24} color={ACCENT} />
+            </div>
+            <strong>Todas las OCAMs</strong>
+            <span>Órdenes de compra del equipo</span>
+          </button>
+        </Link>
+        <Link to="/master/supervision?tab=contactos" style={{ textDecoration: 'none' }}>
+          <button className="dash__action-btn" style={{ borderColor: ACCENT_BORDER, width: '100%' }}>
+            <div className="dash__action-btn-icon">
+              <GoogleIcon name="import_contacts" size={24} color={ACCENT} />
+            </div>
+            <strong>Agenda Global</strong>
+            <span>Directorio y llamadas de ejecutivas</span>
+          </button>
+        </Link>
         <Link to="/master/registro-oportunidad" style={{ textDecoration: 'none' }}>
           <button className="dash__action-btn" style={{ borderColor: ACCENT_BORDER, width: '100%' }}>
             <div className="dash__action-btn-icon">
               <GoogleIcon name="assignment" size={24} color={ACCENT} />
             </div>
-            <strong>Registro Oportunidad</strong>
-            <span>Licitación Perú Compras</span>
-          </button>
-        </Link>
-        <Link to="/master/cartera" style={{ textDecoration: 'none' }}>
-          <button className="dash__action-btn" style={{ borderColor: ACCENT_BORDER, width: '100%' }}>
-            <div className="dash__action-btn-icon">
-              <GoogleIcon name="folder_shared" size={24} color={ACCENT} />
-            </div>
-            <strong>Ver Cartera</strong>
-            <span>Mis clientes activos</span>
-          </button>
-        </Link>
-        <Link to="/master/ranking" style={{ textDecoration: 'none' }}>
-          <button className="dash__action-btn" style={{ borderColor: ACCENT_BORDER, width: '100%' }}>
-            <div className="dash__action-btn-icon">
-              <GoogleIcon name="leaderboard" size={24} color={ACCENT} />
-            </div>
-            <strong>Ranking Equipo</strong>
-            <span>Rendimiento del grupo</span>
-          </button>
-        </Link>
-        <Link to="/master/reportes" style={{ textDecoration: 'none' }}>
-          <button className="dash__action-btn" style={{ borderColor: ACCENT_BORDER, width: '100%' }}>
-            <div className="dash__action-btn-icon">
-              <GoogleIcon name="bar_chart" size={24} color={ACCENT} />
-            </div>
-            <strong>Reporte Master</strong>
-            <span>Análisis consolidado</span>
+            <strong>Registrar Oportunidad</strong>
+            <span>Nueva licitación Perú Compras</span>
           </button>
         </Link>
       </div>
@@ -171,6 +224,7 @@ export function MasterDashboard() {
 }
 
 export default function MasterLayout() {
+  const { empleado } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
@@ -184,7 +238,7 @@ export default function MasterLayout() {
         accentBorder={ACCENT_BORDER}
         avatarGrad={AVATAR_GRAD}
         basePath="/master"
-        navItems={masterNavItems}
+        navItems={withTecnicoTicketsNav(masterNavItems, '/master', empleado?.puedeAtenderTickets)}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
@@ -203,7 +257,8 @@ export default function MasterLayout() {
             </button>
             <span className="dash__header-title">Panel Ejecutiva Master de Ventas</span>
           </div>
-          <div className="dash__header-right">
+          <div className="dash__header-right" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <NotificacionesGlobales basePath="/master" accent={ACCENT} />
             <span
               className="dash__header-badge"
               style={{

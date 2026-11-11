@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Sidebar, type NavItem } from '../../components/SideBar/Sidebar';
+import { withTecnicoTicketsNav } from '../Tickets/tecnicoNav';
+import { Sidebar } from '../../components/SideBar/Sidebar';
+import type { NavItem } from '../../components/SideBar/NavItem';
 import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
+import NotificacionesGlobales from '../../components/NotificacionesGlobales/NotificacionesGlobales';
 import '../DashboardLayout.css';
 import './SysAdminTelemetry.css';
 
@@ -13,12 +16,51 @@ const AVATAR_GRAD = 'linear-gradient(135deg, #2563eb, #1d4ed8)';
 
 export const sysAdminNavItems: NavItem[] = [
   { icon: 'dashboard', label: 'Dashboard & Telemetría', path: '/sysadmin', section: null },
-  { icon: 'group', label: 'Usuarios', path: '/sysadmin/usuarios', section: 'Sistema' },
+  { icon: 'group', label: 'Usuarios', path: '/sysadmin/usuarios', section: 'Administración del Sistema' },
   { icon: 'vpn_key', label: 'Roles y Permisos', path: '/sysadmin/roles', section: null },
   { icon: 'domain', label: 'Sedes', path: '/sysadmin/sedes', section: null },
-  { icon: 'bar_chart', label: 'Reportes Globales', path: '/sysadmin/reportes', section: 'Reportes' },
-  { icon: 'monitoring', label: 'Auditoría', path: '/sysadmin/auditoria', section: null },
-  { icon: 'settings', label: 'Configuración', path: '/sysadmin/configuracion', section: 'Sistema' },
+  { icon: 'payments', label: 'Gestión de Pagos', path: '/sysadmin/pagos', section: null },
+  {
+    icon: 'confirmation_number',
+    label: 'Tickets',
+    path: '/sysadmin/tickets',
+    section: 'Soporte Técnico',
+    pushButtons: [
+      {
+        id: 'sysadmin-tickets-global',
+        label: 'Bandeja global',
+        path: '/sysadmin/tickets',
+      },
+      {
+        id: 'sysadmin-reportes-globales',
+        label: 'Reportes globales',
+        path: '/sysadmin/tickets/reportes',
+      },
+    ],
+  },
+  {
+    icon: 'schedule',
+    label: 'Asistencias',
+    path: '/sysadmin/asistencias',
+    section: 'Personal',
+    pushButtons: [
+      {
+        id: 'sysadmin-mi-asistencia',
+        label: 'Mi Asistencia',
+        path: '/sysadmin/asistencias',
+      },
+      {
+        id: 'sysadmin-estadisticas-asistencia',
+        label: 'Estadísticas de asistencia',
+        path: '/sysadmin/estadisticas/asistencia',
+      },
+      {
+        id: 'sysadmin-historial-asistencia',
+        label: 'Historial de asistencia',
+        path: '/sysadmin/asistencias/historial',
+      },
+    ],
+  },
   { icon: 'person', label: 'Mi Cuenta', path: '/sysadmin/mi-cuenta', section: 'Cuenta' },
 ];
 
@@ -661,6 +703,7 @@ export function SysAdminDashboard() {
 }
 
 export default function SysAdminLayout() {
+  const { empleado } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
@@ -674,7 +717,7 @@ export default function SysAdminLayout() {
         accentBorder={ACCENT_BORDER}
         avatarGrad={AVATAR_GRAD}
         basePath="/sysadmin"
-        navItems={sysAdminNavItems}
+        navItems={withTecnicoTicketsNav(sysAdminNavItems, '/sysadmin', empleado?.puedeAtenderTickets)}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
@@ -693,7 +736,8 @@ export default function SysAdminLayout() {
             </button>
             <span className="dash__header-title">Panel de Administración del Sistema & Telemetría</span>
           </div>
-          <div className="dash__header-right">
+          <div className="dash__header-right" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <NotificacionesGlobales basePath="/sysadmin" accent={ACCENT} />
             <span
               className="dash__header-badge"
               style={{

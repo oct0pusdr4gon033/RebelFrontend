@@ -28,11 +28,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   // Estado para expandir/colapsar grupos con push buttons (abiertos por defecto)
   const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>({
+    'Supervisión Master': true,
     'Oportunidades': true,
     'Registro Oportunidad': true,
     'Resolver Oportunidades': true,
     'Pagos': true,
+    'Gestión de Pagos': true,
+    'Solicitud de Pagos': true,
     'Agenda de Contactos': true,
+    'Asistencias': true,
+    'Solicitudes': true,
+    'Tickets': true,
+    'Tickets Globales': true,
   });
 
   const toggleGroup = (label: string) => {

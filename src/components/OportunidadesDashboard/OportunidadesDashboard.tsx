@@ -8,8 +8,8 @@ import {
   fmtMoney,
   fmtMoneyCompact,
   fmtRelative,
-  type OportunidadRow,
 } from './dashboardStats';
+import type { OportunidadRow } from './OportunidadRow';
 import { formatFechaHoraPeru } from '../../utils/dateUtils';
 import './OportunidadesDashboard.css';
 

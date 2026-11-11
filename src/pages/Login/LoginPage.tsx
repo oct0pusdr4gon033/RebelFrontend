@@ -11,6 +11,7 @@ import './LoginPage.css';
 export function getRouteForRole(rol?: string | null): string {
   if (!rol) return '/login';
   const r = rol.trim().toLowerCase();
+  if (r === 'gerente') return '/gerente';
   if (r.includes('sysadmin')) return '/sysadmin';
   if (r.includes('admin')) return '/admin';
   if (r.includes('master')) return '/master';
@@ -19,6 +20,7 @@ export function getRouteForRole(rol?: string | null): string {
 }
 
 const ROLE_ROUTES: Record<string, string> = {
+  GERENTE: '/gerente',
   'SysAdmin': '/sysadmin',
   'Administrador': '/admin',
   'Admin': '/admin',

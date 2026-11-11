@@ -686,6 +686,7 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
                                 Aprobado: { c: '#166534', b: '#dcfce7' },
                                 Rechazado: { c: '#991b1b', b: '#fee2e2' },
                               };
+                              const colorBadge = (estado && colores[estado]) || null;
                               const ocupado = procesandoAjuste === it.id;
                               const btn: React.CSSProperties = { fontSize: 11.5, fontWeight: 700, padding: '4px 10px', borderRadius: 6, border: '1.5px solid #cbd5e1', background: '#fff', cursor: ocupado ? 'wait' : 'pointer' };
                               return (
@@ -695,8 +696,8 @@ export const DetalleOportunidadView: React.FC<DetalleOportunidadViewProps> = ({
                                       Vigente: <strong>{it.ajusteFletePorcentaje}%</strong> (S/ {formatoSoles(montoAjusteUnitario(it.limiteUnitario, it.ajusteFletePorcentaje ?? 0))} / unid)
                                     </span>
                                   )}
-                                  {estado && (
-                                    <span style={{ alignSelf: 'flex-start', fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 999, color: colores[estado].c, background: colores[estado].b }}>
+                                  {colorBadge && (
+                                    <span style={{ alignSelf: 'flex-start', fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 999, color: colorBadge.c, background: colorBadge.b }}>
                                       {estado === 'Aprobado' ? 'Aprobado' : `${estado}: ${it.ajusteFleteSolicitadoPorcentaje ?? 0}%`}
                                     </span>
                                   )}
