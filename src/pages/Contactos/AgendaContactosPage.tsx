@@ -7,10 +7,7 @@ import { DetalleContactoModal } from './DetalleContactoModal';
 import { getContactosApi } from '../../api/services/contactos.service';
 import type { ContactoOCAM } from '../../types/contactos';
 import './AgendaContactos.css';
-
-interface AgendaContactosPageProps {
-  roleAccent?: string;
-}
+import type { AgendaContactosPageProps } from './AgendaContactosPageProps';
 
 export const AgendaContactosPage: React.FC<AgendaContactosPageProps> = ({
   roleAccent = '#2563eb',
