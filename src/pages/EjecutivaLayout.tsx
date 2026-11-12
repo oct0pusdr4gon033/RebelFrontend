@@ -1,2 +1,2 @@
-export { default, EjecutivaDashboard, ejecutivaNavItems } from './Ejecutiva';
-export { default as EjecutivaLayout } from './Ejecutiva';
+export { default as EjecutivaDashboard } from '../pages/Ejecutiva/EjecutivaDashboard';
+export { default as EjecutivaLayout } from '../pages/Ejecutiva/EjecutivaLayout';
