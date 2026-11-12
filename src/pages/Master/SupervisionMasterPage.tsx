@@ -9,10 +9,8 @@ import type { ContactoOCAM } from '../../types/contactos';
 import { DetalleOportunidadView } from '../Oportunidades/DetalleOportunidadView';
 import { formatFechaHoraPeru } from '../../utils/dateUtils';
 import './SupervisionMaster.css';
+import type { SupervisionMasterPageProps } from './SupervisionMasterPageProps'
 
-interface SupervisionMasterPageProps {
-  roleAccent?: string;
-}
 
 type TabType = 'resumen' | 'oportunidades' | 'ocams' | 'contactos' | 'ranking';
 
@@ -410,10 +408,10 @@ export const SupervisionMasterPage: React.FC<SupervisionMasterPageProps> = ({
                       idx === 0
                         ? 'sup-rank-1'
                         : idx === 1
-                        ? 'sup-rank-2'
-                        : idx === 2
-                        ? 'sup-rank-3'
-                        : 'sup-rank-other';
+                          ? 'sup-rank-2'
+                          : idx === 2
+                            ? 'sup-rank-3'
+                            : 'sup-rank-other';
                     const tasa = row.licitaciones > 0 ? Math.round((row.ocsGanadas / row.licitaciones) * 100) : 0;
 
                     return (
@@ -782,8 +780,8 @@ export const SupervisionMasterPage: React.FC<SupervisionMasterPageProps> = ({
           todasOportunidades={oportunidades}
           roleAccent={roleAccent}
           onClose={() => setDetalleOp(null)}
-          onEdit={() => {}}
-          onSubirEvidencia={() => {}}
+          onEdit={() => { }}
+          onSubirEvidencia={() => { }}
           onEstadoCambiado={(opActualizada) => {
             setOportunidades((prev) =>
               prev.map((o) => (String(o.id) === String(opActualizada.id) ? opActualizada : o))
