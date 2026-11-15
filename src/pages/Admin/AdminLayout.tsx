@@ -93,6 +93,24 @@ export const adminNavItems: NavItem[] = [
       },
     ],
   },
+  {
+    icon: 'support_agent',
+    label: 'Control de Llamadas',
+    path: '/admin/llamadas',
+    section: 'Gestión Comercial',
+    pushButtons: [
+      {
+        id: 'admin-llamadas-supervision',
+        label: 'Supervisión del equipo',
+        path: '/admin/llamadas?tab=supervision',
+      },
+      {
+        id: 'admin-llamadas-carga',
+        label: 'Carga masiva',
+        path: '/admin/llamadas?tab=carga',
+      },
+    ],
+  },
   // ── Administración de Empresa ──
   { icon: 'domain', label: 'Sedes', path: '/admin/empresa/sedes', section: 'Administración' },
   { icon: 'badge', label: 'Empleados', path: '/admin/empresa/empleados', section: null },

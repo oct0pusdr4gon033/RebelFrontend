@@ -5,6 +5,7 @@ import { withTecnicoTicketsNav } from '../Tickets/tecnicoNav';
 import { Sidebar } from '../../components/SideBar/Sidebar';
 import { GoogleIcon } from '../../components/GoogleIcon/GoogleIcon';
 import NotificacionesGlobales from '../../components/NotificacionesGlobales/NotificacionesGlobales';
+import { LlamadaCuotaWidget } from '../../components/LlamadaCuotaWidget/LlamadaCuotaWidget';
 import '../DashboardLayout.css';
 import { ejecutivaNavItems } from './ejecutivaNavItems'
 import { ColorVariable } from './ColorsVariables'
@@ -45,6 +46,7 @@ export default function EjecutivaLayout() {
             <span className="dash__header-title">Mi Panel de Ventas</span>
           </div>
           <div className="dash__header-right" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <LlamadaCuotaWidget accent={colores.ACCENT} basePath="/ejecutiva" />
             <NotificacionesGlobales basePath="/ejecutiva" accent={colores.ACCENT} />
             <span
               className="dash__header-badge"

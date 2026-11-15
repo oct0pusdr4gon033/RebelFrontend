@@ -21,6 +21,24 @@ export const sysAdminNavItems: NavItem[] = [
   { icon: 'domain', label: 'Sedes', path: '/sysadmin/sedes', section: null },
   { icon: 'payments', label: 'Gestión de Pagos', path: '/sysadmin/pagos', section: null },
   {
+    icon: 'support_agent',
+    label: 'Control de Llamadas',
+    path: '/sysadmin/llamadas',
+    section: null,
+    pushButtons: [
+      {
+        id: 'sysadmin-llamadas-supervision',
+        label: 'Supervisión del equipo',
+        path: '/sysadmin/llamadas?tab=supervision',
+      },
+      {
+        id: 'sysadmin-llamadas-carga',
+        label: 'Carga masiva',
+        path: '/sysadmin/llamadas?tab=carga',
+      },
+    ],
+  },
+  {
     icon: 'confirmation_number',
     label: 'Tickets',
     path: '/sysadmin/tickets',

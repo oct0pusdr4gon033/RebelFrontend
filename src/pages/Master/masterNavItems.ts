@@ -37,6 +37,13 @@ export const masterNavItems: NavItem[] = [
                 description: 'Directorio de contactos del equipo',
             },
             {
+                id: 'sup-llamadas',
+                tabKey: 'llamadas',
+                label: 'Control de Llamadas',
+                path: '/master/supervision?tab=llamadas',
+                description: 'Cuota diaria, desbloqueos y carga semanal',
+            },
+            {
                 id: 'sup-ranking',
                 tabKey: 'ranking',
                 label: 'Ranking de Ejecutivas',

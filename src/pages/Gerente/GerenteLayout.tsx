@@ -61,6 +61,24 @@ export const gerenteNavItems: NavItem[] = [
       },
     ],
   },
+  {
+    icon: 'support_agent',
+    label: 'Llamadas',
+    path: '/gerente/llamadas',
+    section: 'Gestión Comercial',
+    pushButtons: [
+      {
+        id: 'gerente-llamadas-supervision',
+        label: 'Supervisión del equipo',
+        path: '/gerente/llamadas?tab=supervision',
+      },
+      {
+        id: 'gerente-llamadas-carga',
+        label: 'Carga masiva',
+        path: '/gerente/llamadas?tab=carga',
+      },
+    ],
+  },
   { icon: 'person', label: 'Mi Cuenta', path: '/gerente/mi-cuenta', section: 'Cuenta' },
 ];
 
@@ -136,6 +154,18 @@ export function GerenteDashboard() {
           </div>
           <strong>Solicitudes pendientes</strong>
           <span>Revisar solicitudes por atender</span>
+        </button>
+        <button
+          type="button"
+          className="dash__action-btn"
+          style={{ borderColor: ACCENT_BORDER }}
+          onClick={() => navigate('/gerente/llamadas')}
+        >
+          <div className="dash__action-btn-icon">
+            <GoogleIcon name="support_agent" size={24} color={ACCENT} />
+          </div>
+          <strong>Control de llamadas</strong>
+          <span>Supervisar cuota y cargar directorio semanal</span>
         </button>
       </div>
     </>

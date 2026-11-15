@@ -72,6 +72,15 @@ export function MasterDashboard() {
             <span>Directorio y llamadas de ejecutivas</span>
           </button>
         </Link>
+        <Link to="/master/supervision?tab=llamadas" style={{ textDecoration: 'none' }}>
+          <button className="dash__action-btn" style={{ borderColor: ACCENT_BORDER, width: '100%' }}>
+            <div className="dash__action-btn-icon">
+              <GoogleIcon name="support_agent" size={24} color={ACCENT} />
+            </div>
+            <strong>Control de Llamadas</strong>
+            <span>Cuota diaria, desbloqueos y carga semanal</span>
+          </button>
+        </Link>
         <Link to="/master/registro-oportunidad" style={{ textDecoration: 'none' }}>
           <button className="dash__action-btn" style={{ borderColor: ACCENT_BORDER, width: '100%' }}>
             <div className="dash__action-btn-icon">

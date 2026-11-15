@@ -118,7 +118,7 @@ export const ListadoAgendaView: React.FC<ListadoAgendaViewProps> = ({
 
       return true;
     });
-  }, [contactos, busqueda, filtroOcam, filtroEmpresa, filtroTipoRelacion, filtroCaso]);
+  }, [contactos, busqueda, filtroOcam, filtroEmpresa, filtroEjecutiva, filtroTipoRelacion, filtroCaso]);
 
   const formatFecha = (iso: string) => {
     try {

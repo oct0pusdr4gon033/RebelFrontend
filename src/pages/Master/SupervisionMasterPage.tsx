@@ -8,11 +8,12 @@ import type { Oportunidad } from '../../types/oportunidades';
 import type { ContactoOCAM } from '../../types/contactos';
 import { DetalleOportunidadView } from '../Oportunidades/DetalleOportunidadView';
 import { formatFechaHoraPeru } from '../../utils/dateUtils';
+import { CargaLlamadasExcel, SupervisionLlamadasView } from '../Llamadas';
 import './SupervisionMaster.css';
 import type { SupervisionMasterPageProps } from './SupervisionMasterPageProps'
 
 
-type TabType = 'resumen' | 'oportunidades' | 'ocams' | 'contactos' | 'ranking';
+type TabType = 'resumen' | 'oportunidades' | 'ocams' | 'contactos' | 'llamadas' | 'ranking';
 
 export const SupervisionMasterPage: React.FC<SupervisionMasterPageProps> = ({
   roleAccent = '#0284c7',
@@ -210,7 +211,11 @@ export const SupervisionMasterPage: React.FC<SupervisionMasterPageProps> = ({
       const data = mapa.get(ej)!;
       data.licitaciones += 1;
       data.montoLicitaciones += Number(op.limiteTotal) || 0;
-      if (op.ordenCompra || ['Adjudicada', 'OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(op.estado)) {
+      const estadoOC = op.ordenCompra?.estadoOC;
+      const ocGanada = estadoOC
+        ? estadoOC !== 'OC_RECHAZADA'
+        : ['Adjudicada', 'OC_RECIBIDA', 'OC_ACEPTADA', 'ENTREGADA'].includes(op.estado);
+      if (ocGanada) {
         data.ocsGanadas += 1;
         data.montoOCs += Number(op.ordenCompra?.montoOCAM || op.limiteTotal) || 0;
       }
@@ -364,6 +369,15 @@ export const SupervisionMasterPage: React.FC<SupervisionMasterPageProps> = ({
 
         <button
           type="button"
+          className={`sup-tab-btn ${currentTab === 'llamadas' ? 'sup-tab-btn--active' : ''}`}
+          onClick={() => setTab('llamadas')}
+        >
+          <GoogleIcon name="call" size={18} />
+          <span>Control de Llamadas</span>
+        </button>
+
+        <button
+          type="button"
           className={`sup-tab-btn ${currentTab === 'ranking' ? 'sup-tab-btn--active' : ''}`}
           onClick={() => setTab('ranking')}
         >
@@ -475,13 +489,19 @@ export const SupervisionMasterPage: React.FC<SupervisionMasterPageProps> = ({
                 style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', fontSize: '0.86rem', fontWeight: 600, color: '#334155' }}
               >
                 <option value="todos">Todos los Estados</option>
+                <option value="Asignación de Oportunidad">Asignación de Oportunidad</option>
                 <option value="En Licitación">En Licitación</option>
                 <option value="En Competencia">En Competencia</option>
+                <option value="Cotización">Cotización</option>
+                <option value="Por Vencer">Por Vencer</option>
                 <option value="Adjudicada">Adjudicada</option>
                 <option value="Aceptada por el Administrador">Aceptada por Administrador</option>
                 <option value="Aceptada por Perú Compras">Aceptada por Perú Compras</option>
+                <option value="Aceptada Desestimada">Aceptada Desestimada</option>
                 <option value="OC_RECIBIDA">OC Recibida</option>
                 <option value="OC_ACEPTADA">OC Aceptada</option>
+                <option value="OC_RECHAZADA">OC Rechazada</option>
+                <option value="ENTREGADA">Entregada</option>
                 <option value="Desestimada">Desestimada</option>
               </select>
             </div>
@@ -730,7 +750,15 @@ export const SupervisionMasterPage: React.FC<SupervisionMasterPageProps> = ({
         </div>
       )}
 
-      {/* ── VISTA 5: RANKING EXCLUSIVO ── */}
+      {/* ── VISTA 5: CONTROL DE LLAMADAS ── */}
+      {currentTab === 'llamadas' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <SupervisionLlamadasView roleAccent={roleAccent} />
+          <CargaLlamadasExcel roleAccent={roleAccent} />
+        </div>
+      )}
+
+      {/* ── VISTA 6: RANKING EXCLUSIVO ── */}
       {currentTab === 'ranking' && (
         <div className="sup-card">
           <h3 style={{ margin: '0 0 16px', fontSize: '1.15rem' }}>Métricas Comerciales Individuales por Ejecutiva</h3>

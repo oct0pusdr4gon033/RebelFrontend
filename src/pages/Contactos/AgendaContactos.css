@@ -82,7 +82,8 @@
 
 /* ── Push Button Tabs de Navegación (Padre e Hijo) ────────────────────────── */
 .agenda-push-tabs {
-  display: inline-flex;
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   background: #f1f5f9;
   padding: 6px;

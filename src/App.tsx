@@ -26,6 +26,7 @@ import {
 import HorariosSedePage from './pages/Gerente/HorariosSedePage';
 import ExcepcionesHorarioPage from './pages/Gerente/ExcepcionesHorarioPage';
 import DiasNoLaborablesPage from './pages/Gerente/DiasNoLaborablesPage';
+import GerenteLlamadasPage from './pages/Llamadas/GerenteLlamadasPage';
 import MisSolicitudesPage from './pages/Solicitudes/MisSolicitudesPage';
 import NuevaSolicitudPage from './pages/Solicitudes/NuevaSolicitudPage';
 import DetalleSolicitudPage from './pages/Solicitudes/DetalleSolicitudPage';
@@ -87,6 +88,7 @@ function App() {
             <Route path="asistencias/horarios" element={<HorariosSedePage />} />
             <Route path="asistencias/excepciones" element={<ExcepcionesHorarioPage />} />
             <Route path="asistencias/dias-no-laborables" element={<DiasNoLaborablesPage />} />
+            <Route path="llamadas" element={<GerenteLlamadasPage roleAccent="#2563eb" />} />
             <Route path="solicitudes" element={<GerenteSolicitudesPage mode="pendientes" />} />
             <Route path="solicitudes/historial" element={<GerenteSolicitudesPage mode="historial" />} />
             <Route path="solicitudes/:id" element={<GerenteDetalleSolicitudPage />} />
@@ -141,6 +143,7 @@ function App() {
             <Route path="sedes" element={<SedesPage />} />
             <Route path="usuarios" element={<UsuariosPage />} />
             <Route path="pagos" element={<PagosPage roleAccent="#2563eb" />} />
+            <Route path="llamadas" element={<GerenteLlamadasPage roleAccent="#2563eb" />} />
             <Route path="asistencias" element={<MiAsistenciaPage />} />
             <Route path="asistencias/historial" element={<HistorialMiAsistenciaPage />} />
             <Route
@@ -225,6 +228,7 @@ function App() {
               path="pagos"
               element={<PagosPage roleAccent="#2563eb" />}
             />
+            <Route path="llamadas" element={<GerenteLlamadasPage roleAccent="#2563eb" />} />
             <Route
               path="agenda-contactos"
               element={<AgendaContactosPage roleAccent="#2563eb" />}
