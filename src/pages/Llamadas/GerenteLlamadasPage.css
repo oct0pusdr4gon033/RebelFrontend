@@ -1,0 +1,126 @@
+.gerente-llamadas {
+  --llamadas-accent: #2563eb;
+  width: 100%;
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 24px 26px 48px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.gerente-llamadas__hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 22px 26px;
+  border-radius: 16px;
+  border: 1.5px solid #bfdbfe;
+  background: linear-gradient(135deg, #eff6ff 0%, #f8fbff 55%, #ecfdf5 100%);
+}
+
+.gerente-llamadas__hero-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.gerente-llamadas__icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1.5px solid #dbeafe;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 5px 14px rgba(37, 99, 235, 0.1);
+}
+
+.gerente-llamadas__hero h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.gerente-llamadas__hero p {
+  margin: 4px 0 0;
+  font-size: 0.84rem;
+  color: #475569;
+  max-width: 720px;
+}
+
+.gerente-llamadas__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 13px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1.5px solid #dbeafe;
+  color: #1d4ed8;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.gerente-llamadas__tabs {
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 7px;
+  padding: 6px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 13px;
+}
+
+.gerente-llamadas__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748b;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.gerente-llamadas__tab:hover {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.gerente-llamadas__tab--active {
+  background: #ffffff;
+  color: var(--llamadas-accent);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.07);
+}
+
+@media (max-width: 760px) {
+  .gerente-llamadas {
+    padding: 16px;
+  }
+
+  .gerente-llamadas__hero {
+    padding: 18px;
+  }
+
+  .gerente-llamadas__tabs {
+    width: 100%;
+  }
+
+  .gerente-llamadas__tab {
+    flex: 1;
+    justify-content: center;
+  }
+}
