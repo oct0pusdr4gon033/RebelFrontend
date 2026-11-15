@@ -4149,3 +4149,65 @@ input[type="number"] {
   color: #059669 !important;
 }
 
+
+.reg-bloqueo-llamadas {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+  border: 1.5px solid #fecaca;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fef2f2, #fff7f7);
+  box-shadow: 0 4px 14px rgba(185, 28, 28, 0.07);
+}
+
+.reg-bloqueo-llamadas__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fee2e2;
+  flex-shrink: 0;
+}
+
+.reg-bloqueo-llamadas__content {
+  flex: 1 1 320px;
+}
+
+.reg-bloqueo-llamadas__content strong {
+  display: block;
+  color: #991b1b;
+  font-size: 0.95rem;
+  margin-bottom: 3px;
+}
+
+.reg-bloqueo-llamadas__content p {
+  margin: 0;
+  color: #7f1d1d;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.reg-bloqueo-llamadas__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 9px;
+  background: #dc2626;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.24);
+}
+
+.reg-bloqueo-llamadas__btn:hover {
+  background: #b91c1c;
+}

@@ -20,7 +20,9 @@ import { formatFechaHoraPeru, formatHoraPeru } from '../../utils/dateUtils';
 import './RegistroOportunidad.css';
 import { BuscadorEmpresaModal } from '../../components/BuscadorEmpresaModal/BuscadorEmpresaModal';
 import { PrecioInput, CantidadStepper } from '../../components/FormInputs/PrecioInput';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLlamadaCuota } from '../../hooks/useLlamadaCuota';
+import { formatearHoraCuota } from '../../utils/llamadasUtils';
 import type { OportunidadTab } from './OportunidadNavButtons';
 import { ListadoOportunidadesView } from './ListadoOportunidadesView';
 import { PodioComercialView } from './PodioComercialView';
@@ -50,6 +52,7 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
   roleAccent = '#2563eb',
 }) => {
   const { empleado } = useAuth();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Tab de navegación push button sincronizado con URL y Sidebar
@@ -74,6 +77,9 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
 
   // Modo Edición / Actualización
   const [editingId, setEditingId] = useState<string | number | null>(null);
+
+  const { cuota: cuotaLlamadas } = useLlamadaCuota();
+  const bloqueoLlamadas = Boolean(!editingId && cuotaLlamadas?.estaBloqueado);
 
   // 1. Convocatoria Perú Compras (Inmutables en edición)
   const [numeroRequerimiento, setNumeroRequerimiento] = useState('');
@@ -529,6 +535,18 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
     if (e) e.preventDefault();
     if (loading || isSubmittingRef.current) return;
 
+    if (!editingId && cuotaLlamadas?.estaBloqueado) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Registro de oportunidades bloqueado',
+        text:
+          cuotaLlamadas.mensaje ||
+          'Debes completar tus 20 llamadas diarias antes de registrar nuevas oportunidades.',
+        confirmButtonColor: roleAccent || '#0284c7',
+      });
+      return;
+    }
+
     // Si aún no se ha guardado expresamente, guiar al usuario a completar el Paso 1
     if (!editingId) {
       if (!isFormValid) {
@@ -936,6 +954,18 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
   const handleQuickContinue = async () => {
     if (loading || isSubmittingRef.current) return;
 
+    if (!editingId && cuotaLlamadas?.estaBloqueado) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Registro de oportunidades bloqueado',
+        text:
+          cuotaLlamadas.mensaje ||
+          'Debes completar tus 20 llamadas diarias antes de registrar nuevas oportunidades.',
+        confirmButtonColor: roleAccent || '#0284c7',
+      });
+      return;
+    }
+
     const reqUpper = numeroRequerimiento.toUpperCase().trim();
     if (reqUpper.length === 0 || selectedMarcas.length === 0) {
       Swal.fire({
@@ -1083,6 +1113,34 @@ export const RegistroOportunidadPage: React.FC<RegistroOportunidadPageProps> = (
       {/* ── VISTA 1: REGISTRAR (Formulario Exprés / Modo Edición) ── */}
       {activeTab === 'registrar' && (
         <>
+          {bloqueoLlamadas && (
+            <div className="reg-bloqueo-llamadas">
+              <div className="reg-bloqueo-llamadas__icon">
+                <GoogleIcon name="lock" size={24} color="#b91c1c" />
+              </div>
+              <div className="reg-bloqueo-llamadas__content">
+                <strong>Registro de oportunidades bloqueado</strong>
+                <p>
+                  {cuotaLlamadas?.mensaje ||
+                    'No cumples la cuota mínima de llamadas del día.'}{' '}
+                  La ventana de llamadas es de{' '}
+                  {formatearHoraCuota(cuotaLlamadas?.horaInicio)} a{' '}
+                  {formatearHoraCuota(cuotaLlamadas?.horaFin)}. Avance:{' '}
+                  {cuotaLlamadas?.realizadasHoy ?? 0}/
+                  {cuotaLlamadas?.limiteDiario ?? 20} llamadas.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="reg-bloqueo-llamadas__btn"
+                onClick={() => navigate('/ejecutiva/agenda-contactos?tab=llamada')}
+              >
+                <GoogleIcon name="call" size={16} color="#ffffff" />
+                Registrar llamadas
+              </button>
+            </div>
+          )}
+
           {/* ── Banner Informativo de Modo Edición ── */}
           {editingId && (
             <div className="reg-edit-banner">
