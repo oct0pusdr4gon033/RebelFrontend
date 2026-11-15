@@ -40,6 +40,12 @@
   padding: 8px 11px;
 }
 
+.llamadas-field .llamadas-search {
+  flex: 0 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .llamadas-search input {
   border: none;
   outline: none;
