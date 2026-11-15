@@ -110,6 +110,7 @@ const ConfirmModal: React.FC<{
 /** Modal de solo lectura con todos los detalles de la Orden de Compra */
 export const DetalleOCModal: React.FC<{ open: boolean; onClose: () => void; op: Oportunidad }> = ({ open, onClose, op }) => {
   const oc = op.ordenCompra;
+  const [documentoParaVer, setDocumentoParaVer] = useState<DocumentoVisualizable | null>(null);
   if (!open || !oc) return null;
   const cfg = OC_ESTADO_CONFIG[oc.estadoOC];
 
@@ -128,7 +129,6 @@ export const DetalleOCModal: React.FC<{ open: boolean; onClose: () => void; op: 
   );
 
   const costos: { label: string; value: string }[] = [];
-  const [documentoParaVer, setDocumentoParaVer] = useState<DocumentoVisualizable | null>(null);
   const poolDocs = obtenerPoolDocumentosOC(op);
   if (oc.costoInicial != null) costos.push({ label: 'Costo inicial', value: money(oc.costoInicial) });
   if (oc.costoRenegociado != null) costos.push({ label: 'Costo renegociado', value: money(oc.costoRenegociado) });
